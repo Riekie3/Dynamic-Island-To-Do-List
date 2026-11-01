@@ -135,7 +135,10 @@ TaskIsland/
 │       ├── app.manifest                   # PerMonitorV2 DPI, Windows 10/11 supportedOS
 │       ├── Logging/FileLogger.cs
 │       ├── Themes/Dark.xaml, Light.xaml, Controls.xaml (styles/templates), Animations.xaml
-│       ├── Controls/IslandHost.cs         # morph control (§6.2)
+│       ├── Controls/IslandHost.cs         # morph control (§6.2), clip-geometry based
+│       ├── Controls/FluentEase.cs         # cubic-bezier(0.2,0,0,1) easing (§6.0)
+│       ├── Services/MotionPolicy.cs       # reduced-motion decision + duration tokens (§6.7)
+│       ├── Services/EfficiencyMode.cs     # EcoQoS on/off while collapsed (§6.7), P/Invoke in Windows project
 │       ├── Controls/PriorityChip.xaml(.cs)
 │       ├── Views/IslandWindow.xaml(.cs)   # the notch + panel
 │       ├── Views/TaskRow.xaml(.cs)        # one row: display + inline edit
@@ -344,7 +347,8 @@ Rules (unit-tested):
 | `HorizontalOffset` | `0` | Appearance | slider −400…+400 px from centre ("Notch position") |
 | `TopMargin` | `8` | Appearance | 0–40 px |
 | `PanelOpacity` | `0.94` | Appearance | 0.70–1.00 |
-| `AnimationsEnabled` | `true` | Appearance | false → durations become 0 |
+| `AnimationsEnabled` | `true` | Appearance | false → durations become 0 (reduced motion also turns on automatically, §6.7) |
+| `AccentSource` | `Default` | Appearance | `Default` (TaskIsland blue) / `Windows` (Windows accent colour). New key, add to `AppSettings` + tests in Phase 5 |
 | `Density` | `Comfortable` | Appearance | Comfortable (row 52 px) / Compact (row 38 px) |
 | `HideInFullScreen` | `true` | Behaviour | |
 | `MonitorDeviceName` | `""` | Behaviour | empty = primary. Missing monitor → primary |
@@ -365,57 +369,118 @@ Settings apply **live** (no restart) and save immediately.
 
 ## 6. UI / visual specification
 
-### 6.1 Visual tokens (from the reference image)
+### 6.0 Design direction (updated 2026-11-01: modern and light on resources)
+
+Two goals, equal weight:
+1. **Modern look.** A clean, calm Windows 11 style (Fluent-aligned spacing, type and icons) with the Dynamic Island
+   personality: a pure black pill that grows into a dark graphite card. Few colours, generous spacing, soft depth,
+   motion that is quick and purposeful.
+2. **Light on power.** TaskIsland sits on screen all day, so it must cost close to nothing while you are not using it:
+   **0 % CPU and 0 % GPU when idle**, small memory, and no work at all in the background except one-shot timers.
+   The budget and rules are in §6.7. When a visual idea conflicts with the budget, the budget wins.
+
+Design principles:
+- **8 px grid** for spacing (4 px for tight gaps). Radii: pill = height/2, panel 24, inputs and rows 12, chips fully round.
+- **Colour is information, not decoration.** Neutral surfaces; one accent colour (tick, add button, focus, links);
+  priority colours appear only in the small priority chip and the overdue label.
+- **Clean rows.** No separator lines. Row actions (✎ 🗑) appear on hover **and on keyboard focus** (so they stay accessible).
+- **Depth from a hairline, not heavy effects.** 1 px border + a faint top highlight; one soft shadow, pre-rendered (§6.2).
+- **Motion tokens**, used everywhere (no ad-hoc durations): `fast` 120 ms (hover, press), `normal` 200 ms (rows, chips),
+  `morph` 260 ms expand / 180 ms collapse. One shared easing: `FluentEase` (a small `IEasingFunction` implementing
+  cubic-bezier(0.2, 0, 0, 1), "emphasised decelerate"); collapse uses its mirror (accelerate). No bouncy overshoot.
+- **Respect the user's system:** follow Windows "Animation effects" off, Battery saver and Remote Desktop by switching to
+  **reduced motion** automatically (§6.7). Visible 2 px accent focus ring for keyboard users. Text contrast ≥ 4.5:1.
+
+### 6.1 Visual tokens
+
+Neutral surface scale (Dark / Light). Pill stays black in both themes, like a real island.
 
 | Token | Dark | Light |
 |---|---|---|
-| Pill background | `#0B0D12` (opaque) | `#0B0D12` (pill stays black in both themes, like a real island) |
-| Panel background | `#141A24` at `PanelOpacity` + top-to-bottom gradient to `#10151E` | `#F7F9FC` at `PanelOpacity` |
-| Panel border | 1 px `#FFFFFF` @ 8% | 1 px `#000000` @ 8% |
-| Primary text | `#F2F5FA` | `#121722` |
-| Secondary text | `#8C97A8` | `#5B6575` |
-| Accent (tick, add, links) | `#1E90FF` → hover `#3AA0FF` | same |
-| Input background | `#FFFFFF` @ 6% | `#000000` @ 5% |
-| High chip | bg `#3A1218`, fg `#FF5A6A`, icon ↑ | bg `#FFE3E6`, fg `#C8102E` |
-| Medium chip | bg `#3A2A08`, fg `#FFB020`, icon ↑ | bg `#FFF1D6`, fg `#9A6200` |
-| Low chip | bg `#0F2E1C`, fg `#3DDC84`, icon ✓-circle | bg `#DDF7E8`, fg `#11803F` |
-| Shadow | `DropShadowEffect` blur 24, depth 4, opacity 0.45 | opacity 0.18 |
-| Font | `Segoe UI Variable Text` (fallback `Segoe UI`). Title 18 semibold, rows 14.5, footer 13 | |
-| Icons | `Segoe Fluent Icons` glyphs (fallback `Segoe MDL2 Assets`): Accept `E73E`, ChevronDown `E70D`, Edit `E70F`, Delete `E74D`, Settings `E713`, Add `E710`, Forward `E72A`, More `E712`, Cancel `E711`, BarChart `E9D2`, Clock `E823` | |
+| `Pill` | `#000000` (opaque) | `#000000` |
+| `PillHover` | `#121418` | `#121418` |
+| `Surface` (panel) | `#15171C` at `PanelOpacity` | `#FAFBFC` at `PanelOpacity` |
+| `SurfaceRaised` (input, hovered row, popups) | `#FFFFFF` @ 6% | `#000000` @ 4% |
+| `SurfacePressed` | `#FFFFFF` @ 10% | `#000000` @ 8% |
+| `Stroke` (panel border) | 1 px `#FFFFFF` @ 9% | 1 px `#000000` @ 8% |
+| `TopHighlight` (inner 1 px line on the panel's top edge) | `#FFFFFF` @ 6% | none |
+| `TextPrimary` | `#F3F4F6` | `#111318` |
+| `TextSecondary` | `#9AA1AD` | `#5A606B` |
+| `TextTertiary` (hints, placeholders) | `#6B7280` | `#8A9099` |
+| `Accent` / `AccentHover` / `AccentPressed` | `#2F8CFF` / `#4C9DFF` / `#1F75E0` | `#0A6CF0` / `#2A80F5` / `#085BCB` |
+| `OnAccent` (tick, arrow on accent) | `#FFFFFF` | `#FFFFFF` |
+| `Overdue` | `#FF6B6B` | `#D22B2B` |
+| High chip | dot `#FF6B6B`, bg `#FF6B6B` @ 14%, label "High" | dot `#D22B2B`, bg `#D22B2B` @ 10% |
+| Medium chip | dot `#F5B83D`, bg `#F5B83D` @ 14%, label "Medium" | dot `#A86A00`, bg `#A86A00` @ 10% |
+| Low chip | dot `#3DD68C`, bg `#3DD68C` @ 14%, label "Low" | dot `#11803F`, bg `#11803F` @ 10% |
+| Shadow | pre-rendered, black @ 35%, blur 28, offset y 8 (§6.2) | black @ 14% |
+| Font | `Segoe UI Variable` (fallback `Segoe UI`): Display 20 semibold (title) · Text 14 (rows) · Small 12 (meta, footer). Counters use `Typography.NumeralAlignment="Tabular"` so numbers don't jiggle. | |
+| Icons | `Segoe Fluent Icons` (fallback `Segoe MDL2 Assets`), 16 px, monochrome: Accept `E73E`, ChevronDown `E70D`, Edit `E70F`, Delete `E74D`, Settings `E713`, Add `E710`, Forward `E72A`, More `E712`, Cancel `E711`, Clock `E823`, Calendar `E787` | |
 
-Priority always shows **text label + colour + icon** (accessibility).
+Accent: `Accent` above by default. Setting `AccentSource = Windows` uses the Windows accent colour instead (registry
+`HKCU\Software\Microsoft\Windows\DWM\AccentColor`, re-read on `UserPreferenceChanged`, never polled).
+Priority always shows **text label + colour dot** (never colour alone).
 
-### 6.2 The island morph (core technique)
+### 6.2 The island morph (core technique, built for low cost)
 
-- `IslandWindow`: `WindowStyle=None`, `AllowsTransparency=True`, `Background=Transparent`,
-  `ShowInTaskbar=False`, `Topmost=True`, `ResizeMode=NoResize`, `ShowActivated=False`.
-  Fixed size = max expanded size + shadow margin: **470 × 620 DIP**. Never resize the window during animation.
-- In a layered (AllowsTransparency) window, fully transparent pixels are **automatically click-through**.
-  So the empty area under a collapsed pill does not block the desktop. Keep the root `Grid`
-  `Background="{x:Null}"`, not `Transparent`. (`Transparent` brushes are hit-testable inside WPF but still
-  pass through at the OS level when alpha is 0. Use `{x:Null}` anyway to be safe.) Verify by clicking a desktop
-  icon/window directly below the pill area during Phase 2.
-- `IslandHost` (custom `ContentControl`) has a `double Morph` DependencyProperty (0 = pill, 1 = panel).
-  On change it lerps: `Width` (NotchWidth → 420), `Height` (46 → measured panel height, max 550),
-  `CornerRadius` (23 → 26). CornerRadius isn't animatable, so it is computed in the callback.
-  Top edge stays fixed. The pill grows **downward and outward**, centred.
-- Expand: `DoubleAnimation` Morph 0→1, **240 ms**, `CubicEase EaseOut` (try a subtle `BackEase Amplitude 0.25`
-  and keep it if it looks good). Collapse: 1→0, **190 ms**, `CubicEase EaseIn`.
-- Content crossfade: pill content opacity = `1 - clamp(Morph/0.35)`. Panel content opacity =
-  `clamp((Morph-0.4)/0.6)` with a 6 px upward slide-in (TranslateTransform). This prevents both
-  layouts showing at once.
-- Panel height: measure panel content `DesiredSize` at width 420 before animating. Re-animate height
-  (150 ms) when the list length changes while expanded. Inner list scrolls once 550 is reached.
-- Hover on pill: background lightens to `#161A22`, chevron nudges 2 px down (120 ms).
-- Peek on hover (§2): after 400 ms hover, width animates to `min(NotchWidth+140, 360)` and text
-  crossfades to the top task title (ellipsis). Revert on leave.
-- Reminder pulse: accent-coloured outer glow ring scales 1→1.15 and fades out, 2 cycles, 600 ms each.
-- `AnimationsEnabled=false` → all durations 0.
+**Window.** `IslandWindow`: `WindowStyle=None`, `AllowsTransparency=True`, `Background={x:Null}`,
+`ShowInTaskbar=False`, `Topmost=True`, `ResizeMode=NoResize`, `ShowActivated=False`.
+A layered window is needed for the anti-aliased rounded morph (DWM corners are fixed at 8 px and a window region has
+jagged edges). A layered window re-uploads its pixels every frame it animates, so **keep the window small when idle**:
+- **Collapsed size: 376 × 64 DIP** (room for the widest peek, 360). **Expanded size: 452 × 600 DIP** (420 panel +
+  16 px each side for the shadow, 550 max panel height + shadow below).
+- The island is always drawn **top-centred** in the window with **0 top inset** in both sizes, so the pill sits on the
+  exact same screen pixels in both. Resize only at two moments, with one `SetWindowPos` while nothing is moving:
+  just **before** the expand animation starts (grow to expanded size), and just **after** the collapse animation
+  ends (shrink to collapsed size). Never resize during an animation.
+- Fallback: if Phase 2 sees a one-frame flicker on the resize that can't be fixed, keep the fixed 452 × 600 window
+  and log the decision in DEVLOG (idle cost is still zero; only animation frames get more expensive).
+- Fully transparent pixels in a layered window are click-through, so the space around the pill doesn't block the
+  desktop. Keep the root `Grid` `Background="{x:Null}"`. Verify by clicking something directly below/next to the pill.
+
+**Morph without re-layout.** Animating `Width`/`Height` would re-measure the whole panel on every frame. Instead:
+- `IslandHost` (custom `FrameworkElement`/`ContentControl`) has a `double Morph` DependencyProperty (0 = pill, 1 = panel).
+- It owns **one** `RectangleGeometry`. The background `Path` uses it as `Data` (fill `Pill` → `Surface`) and the content
+  layer uses the same geometry as its `Clip`. On Morph change only the geometry's `Rect` and `RadiusX/RadiusY` are set:
+  width `NotchWidth → 420`, height `36 → panelHeight`, radius `18 → 24`, centred, top edge fixed. That is a
+  render-only change: **no measure/arrange per frame**.
+- Panel content is laid out **once** at its final size (420 × measured height, max 550) before the expand starts and is
+  revealed by the growing clip. Height changes while expanded (rows added/removed, list switch) animate the clip
+  (`normal`, 200 ms), not the layout of the rows.
+- Background colour lerps `Pill` → `Surface` over Morph 0 → 0.5 (frozen brushes swapped at the ends, a single
+  animated `SolidColorBrush` during the transition).
+- Content crossfade: pill content opacity = `1 − clamp(Morph / 0.3)`; panel content opacity = `clamp((Morph − 0.35) / 0.65)`
+  with a 6 px upward slide (`TranslateTransform`, render-only). Both layouts are never visible at once.
+- Expand: Morph 0 → 1, `morph` 260 ms, `FluentEase`. Collapse: 1 → 0, 180 ms, mirrored ease.
+- When collapsed, the panel subtree is `Visibility=Collapsed` (not just transparent), so layout, rendering and hit
+  testing skip it. The panel visual tree is **created on first expand** (not at startup) and then kept.
+
+**Shadow (cheap).** No `DropShadowEffect` on animating elements. One shadow `Border` behind the panel has the
+`DropShadowEffect` **plus `CacheMode=BitmapCache`**, so it is rasterised once and only composited afterwards.
+It is hidden (opacity 0, `Visibility=Collapsed`) during the morph, fades in (`fast`) after the expand completes, and is
+hidden instantly before collapsing. The collapsed pill has no shadow (a real island doesn't).
+
+**Pill details.**
+- Hover: background `Pill → PillHover`, chevron nudges 2 px down (`fast`).
+- **Progress ring:** the tick icon sits in a thin 2 px ring showing the % of tasks done for the pill's count scope. It is a
+  static arc redrawn only when the numbers change (no animation loop).
+- Peek on hover (§2): after 400 ms hover, the clip width grows to `min(NotchWidth + 140, 360)` (`normal`) and the text
+  crossfades to the top task's title (ellipsis) with its list-colour dot. Revert on leave. The 400 ms delay is a
+  one-shot `DispatcherTimer` started on `MouseEnter`, stopped on `MouseLeave`.
+- Count change: the number slides 6 px up while crossfading (`fast`), once per change.
+- Reminder pulse: an accent ring scales 1 → 1.12 and fades out, **2 cycles of 600 ms, then the animation is removed**.
+  In reduced motion: no ring, the overdue/accent dot appears instead.
+
+**Rules for every animation** (enforced in code review, §6.7): finite duration, `FillBehavior=Stop` with the final value
+set as the local value (so no animation clock stays alive), only `Opacity`, `RenderTransform`, `Clip` geometry or a brush
+colour are animated (never `Width`, `Height`, `Margin` or layout properties of anything with children), and
+`AnimationsEnabled=false` or reduced motion → durations 0 (or `fast` for the morph, see §6.7).
 
 ### 6.3 Collapsed pill content
 
-`[✓ blue circle]  3 tasks  [⌄]` (singular "1 task"). When outstanding = 0: `✓ All Done`.
-Count is the outstanding count. If any task is overdue, show a small red dot on the tick icon.
+`[✓ in progress ring]  3 tasks  [⌄]` (singular "1 task"), 36 px tall, text `Small`/`Text` semibold white.
+When outstanding = 0: `✓ All done` (ring full, accent). Count is the outstanding count. If any task is overdue,
+show a 6 px `Overdue` dot on the ring.
 
 ### 6.4 Expanded panel layout (top → bottom, 420 wide, 16 px padding)
 
@@ -433,16 +498,22 @@ Count is the outstanding count. If any task is overdue, show a small red dot on 
    Enter submits, Esc clears text (if empty → collapse). Empty/whitespace title = no-op with a subtle shake.
    After add: input stays focused for rapid entry. New tasks go to the selected list. When *All lists* is selected,
    a small list chip appears in the input (default `DefaultListId`, click to choose another list).
-4. **Task list** (`ItemsControl` in `ScrollViewer`, virtualization not needed below 1000 items):
-   row = checkbox · title (strikethrough + secondary colour when done) · due label (if any, red if overdue)
-   · priority chip · ✎ · 🗑. In *All lists* each row also shows a 6 px list-colour dot before the title and the list
-   name in small secondary text under it. Priority group separators are not shown, order alone conveys it.
-   Row hover background `#FFFFFF` @ 4%. Drag handle = the whole row (start drag after 6 px move), **only in the
-   Active filter of a single list** (not in All lists, where the order is computed).
-5. **Undo bar** (appears above footer for 5 s after delete/clear completed): "Task deleted · Undo".
-6. **Footer**: bar-chart glyph · "3 total • 1 completed • 33%" (for the selected list scope) · segmented filter
-   **Active | Completed | All** (replaces "View All" from the mockup). Last filter remembered.
-7. **Empty states**: Active empty → "🎉 All done in <list>. Add something new above." Completed empty → "Nothing completed yet."
+4. **Task list** (`ItemsControl` with `VirtualizingStackPanel` (`VirtualizationMode=Recycling`) in a `ScrollViewer`,
+   so only visible rows have visuals, whatever the task count):
+   row (12 radius, 4 px gap, no separators) = 20 px round checkbox (accent fill + white tick when done) · title
+   (strikethrough + `TextSecondary` when done) · due label with Clock glyph (`Overdue` colour if overdue) · priority chip
+   (dot + label) · ✎ · 🗑 (these two are shown on row hover or keyboard focus only). In *All lists* each row also shows
+   a 6 px list-colour dot before the title and the list name in `Small` `TextSecondary` under it. Priority group
+   separators are not shown, order alone conveys it. Row hover background `SurfaceRaised`. Drag handle = the whole
+   row (start drag after 6 px move), **only in the Active filter of a single list** (not in All lists, where the order is computed).
+   Scrollbar: thin overlay style (4 px, widens to 8 px on hover), no track.
+5. **Undo bar** (slides up above the footer for 5 s after delete/clear completed, `SurfaceRaised` pill): "Task deleted · Undo".
+6. **Footer**: a 2 px progress bar across the full width (accent, % done in scope; changes with a `normal` width tween
+   via `ScaleTransform`, not `Width`) · "3 total · 1 done · 33%" in `Small` `TextSecondary` · segmented filter
+   **Active | Completed | All** whose selected-pill indicator slides between segments (`normal`, `TranslateTransform`).
+   Last filter remembered.
+7. **Empty states**: 32 px Fluent glyph (Accept in a soft accent circle) + "All done in <list>" + `TextSecondary`
+   "Add something new above." Completed empty → "Nothing completed yet." No images, no emoji.
 
 Pill: count follows `PillCountScope`. Peek-on-hover shows the top task's list-colour dot before its title.
 
@@ -463,6 +534,63 @@ Lists page: reorderable list of lists (↑/↓ buttons) with name, colour swatch
 Data page buttons: Export JSON… · Import JSON… · Back up now… · Restore from backup… · Open data folder ·
 Clear completed tasks… (confirm). About: name, version (from assembly), build date, .NET runtime,
 "Developed by RieSources" (rie-sources.com, shown as text, link opens only on click), GitHub link (opens browser only when clicked), data folder path, "No data leaves this PC".
+Modern look: same tokens as the island, nav items as rounded pills with an accent indicator bar, cards (`SurfaceRaised`,
+radius 12) grouping related settings, toggle switches instead of checkboxes. On Windows 11 the Settings window (a normal,
+non-layered window) may use Mica via `DwmSetWindowAttribute(DWMWA_SYSTEMBACKDROP_TYPE, DWMSBT_MAINWINDOW)` with a
+transparent client background; on Windows 10 or if the call fails it falls back to the solid `Surface` colour.
+The window is created when opened and **released on close** (no cached instance), so it costs nothing while closed.
+
+### 6.7 Resource budget and efficiency rules (must-follow)
+
+Targets (measured in Phase 6 on this laptop, Release build, collapsed, after 60 s idle):
+
+| Metric | Target |
+|---|---|
+| CPU idle (collapsed, mouse elsewhere) | **0.0 %** averaged over 60 s (no wake-ups except the scheduled one-shot timers) |
+| GPU idle | **0 %** in Task Manager's GPU column (no frames rendered while nothing changes) |
+| Private memory idle | ≤ **50 MB** (record working set too; WPF's own floor is roughly 40–60 MB working set) |
+| Working set idle | ≤ **70 MB** |
+| CPU while morphing / hovering | short spikes only, back to 0 within 1 s after the animation ends |
+| Threads | no worker threads of our own besides the pipe server; no busy loops |
+| Cold start to visible pill | < 1.2 s (ReadyToRun build) |
+| Disk | no writes while idle (logs only on events; no periodic flush) |
+
+If a target cannot be reached because of WPF's baseline, **report the measured numbers honestly in DEVLOG** and what
+was tried. Do not use tricks that only hide memory (no `EmptyWorkingSet`/`SetProcessWorkingSetSize` calls).
+
+Rules:
+1. **No polling, no periodic timers.** Allowed timers are one-shot only: next reminder, peek delay (400 ms), tick
+   slide-out (2 s), undo bar (5 s), recovery follow-ups (+2 s/+6 s), next midnight (daily backup check and "due today"
+   labels; also re-run on resume and `TimeChanged`). The overdue label refresh is one timer set to the next due
+   moment among visible rows, and only while expanded.
+2. **Nothing renders while idle.** No infinite animations (`RepeatBehavior=Forever` is banned), no animated GIFs, no
+   spinners. Animation clocks end (`FillBehavior=Stop` + local value set). Cap animation frame rate at 60 fps
+   (`Timeline.DesiredFrameRateProperty.OverrideMetadata(typeof(Timeline), new FrameworkPropertyMetadata(60))`) so
+   120/144 Hz screens don't double the cost.
+3. **Small surfaces.** Collapsed window 376 × 64 DIP (§6.2). Panel subtree `Collapsed` when not shown. Panel and Settings
+   UI created lazily. Settings window released on close.
+4. **Cheap effects only.** Only the one cached shadow uses an `Effect`. No `BlurEffect`, no `BitmapEffect`, no
+   `OpacityMask` on large areas, no real-time acrylic. Freeze all brushes/geometries defined in resources
+   (`PresentationOptions:Freeze="True"`).
+5. **Layout stays cheap.** Animate render properties only (§6.2 rules). Virtualised task list. No bindings that
+   update every second. Converters are static instances.
+6. **Hide = stop.** When the island is hidden (full-screen app, paused, display off, locked) set `Visibility=Hidden`, so
+   WPF renders nothing; stop the peek timer and any running animation.
+7. **Efficiency mode while collapsed.** After 10 s collapsed and not hovered, call
+   `SetProcessInformation(ProcessPowerThrottling, EXECUTION_SPEED on)` (Windows 11 shows the green leaf / "Efficiency
+   mode" in Task Manager; on Windows 10 it is a silent hint). Turn it **off** immediately on `MouseEnter` of the pill,
+   the hotkey, tray click or a pipe `EXPAND`, so expanding stays smooth. Wrap in try/catch; failure is logged once and ignored.
+8. **Reduced motion** (automatic, no setting needed): if `AnimationsEnabled=false`, Windows "Animation effects" is off
+   (`SystemParameters.ClientAreaAnimation == false`), Battery saver is on (`GetSystemPowerStatus().SystemStatusFlag & 1`,
+   re-checked on `SystemEvents.PowerModeChanged`), or the session is remote (`SystemParameters.IsRemoteSession`):
+   morph uses 120 ms with no content slide, all other animations are instant, no reminder pulse ring, no peek width tween.
+9. **Runtime settings** in `TaskIsland.App.csproj`: `<ConcurrentGarbageCollection>false</ConcurrentGarbageCollection>`
+   (no background GC thread; the heap is tiny), `<TieredPGO>true</TieredPGO>`, Workstation GC (default). Release
+   publish uses ReadyToRun (§Phase 7). SQLite: `PRAGMA cache_size = -1024` (1 MB) per connection, connections
+   short-lived as today.
+10. **Measure, don't guess.** Phase 2 records a baseline (idle CPU, private bytes, working set) right after the island
+    works; Phases 3–5 re-measure at the end of each phase and log the numbers in DEVLOG, so a regression is caught
+    the phase it happens.
 
 ---
 
@@ -484,9 +612,10 @@ Remove `WS_EX_APPWINDOW`. Use `GetWindowLongPtr/SetWindowLongPtr(GWL_EXSTYLE)`.
 - Enumerate with `EnumDisplayMonitors` + `GetMonitorInfo` (`MONITORINFOEX`, `szDevice`, `rcMonitor`, primary flag).
   DPI via `GetDpiForMonitor(MDT_EFFECTIVE_DPI)`.
 - Target monitor = `MonitorDeviceName` match, else primary. Position in **physical pixels**:
-  `scale = dpi/96`, `wPx = 470*scale`, `x = rc.Left + (rc.Width - wPx)/2 + HorizontalOffset*scale`,
-  `y = rc.Top + TopMargin*scale - shadowMarginPx`. Clamp x so the 420-wide panel stays inside `rcMonitor`.
-  Apply with `SetWindowPos(HWND_TOPMOST, x, y, wPx, hPx, SWP_NOACTIVATE)`.
+  `scale = dpi/96`, window size in DIP = collapsed 376 × 64 or expanded 452 × 600 (§6.2), `wPx = wDip*scale`,
+  `centreX = rc.Left + rc.Width/2 + HorizontalOffset*scale`, `x = centreX - wPx/2`, `y = rc.Top + TopMargin*scale`.
+  Clamp `centreX` (not x) so the 420-wide panel stays inside `rcMonitor`; both sizes share the same centre and top, so
+  the pill does not move when the window switches size. Apply with `SetWindowPos(HWND_TOPMOST, x, y, wPx, hPx, SWP_NOACTIVATE)`.
 - Handle `WM_DPICHANGED` in an `HwndSource` hook: let WPF rescale, then re-run positioning (ignore the
   suggested rect, use our own).
 - Use `rcMonitor` (top of the actual screen), not `rcWork`. The island sits over the top edge.
@@ -614,26 +743,37 @@ Commit: `Initial TaskIsland project structure and SQLite data layer`.
 
 ### Phase 2 — Dynamic Island interface (Opus recommended)
 
-**Goal:** the pill and panel look like the reference and morph smoothly. Uses static sample tasks bound
-through the real ViewModel (data wiring comes in Phase 3).
+**Goal:** a modern pill and panel (§6.0–6.4) that morph smoothly **and cost nothing when idle** (§6.7). Uses static
+sample tasks bound through the real ViewModel (data wiring comes in Phase 3). The reference image sets the layout;
+§6.1 tokens set the look (the modern tokens win where they differ from the image).
 
 Steps:
-1. Themes: `Dark.xaml`/`Light.xaml` with all tokens from §6.1 as `SolidColorBrush`/`Color` resources (same keys).
-   `Controls.xaml` styles: round checkbox (blue fill + white tick, 140 ms scale-in), icon buttons (hover/press),
-   input box, priority chip, segmented filter, primary/secondary buttons, scrollbar (thin, auto-hide look).
-   Use `DynamicResource` everywhere so the theme can swap live.
-2. `IslandHost` morph control (§6.2) + `IslandWindow` (§6.2/§7.1 styles applied in `SourceInitialized`).
-3. Pill layout (§6.3), panel layout (§6.4) incl. the list switcher row, with sample rows covering all 3 priorities,
-   one done, one overdue, two lists.
-4. `IslandPositioner` minimal version: primary monitor top-centre with DPI scale (full logic in Phase 4).
+1. Themes: `Dark.xaml`/`Light.xaml` with all tokens from §6.1 as frozen `SolidColorBrush`/`Color` resources (same keys).
+   `Controls.xaml` styles: round checkbox (accent fill + white tick, `fast` scale-in), icon buttons (hover/press using
+   `SurfaceRaised`/`SurfacePressed`), pill input box, priority chip (dot + label), segmented filter with sliding
+   indicator, primary/secondary buttons, overlay scrollbar, 2 px accent focus ring.
+   Use `DynamicResource` for theme brushes so the theme can swap live. Add `FluentEase` and `MotionPolicy`
+   (duration tokens + reduced-motion detection, §6.7 rule 8) and the 60 fps frame-rate cap at startup.
+2. `IslandHost` clip-geometry morph (§6.2, no per-frame layout) + `IslandWindow` (§6.2/§7.1 styles applied in
+   `SourceInitialized`) with the collapsed/expanded window sizes and the resize-only-when-still rule.
+3. Pill layout (§6.3, with progress ring), panel layout (§6.4) incl. the list switcher row and virtualised task list,
+   with sample rows covering all 3 priorities, one done, one overdue, two lists. Panel tree created on first expand.
+4. Cached shadow (§6.2). `IslandPositioner` minimal version: primary monitor top-centre with DPI scale, both window
+   sizes sharing the same centre (full logic in Phase 4).
 5. Click pill → expand. ✕ / Esc / click outside (`Deactivated`) → collapse. Focus behaviour per §7.1.
-6. Hover effects and peek-on-hover (§6.2).
+6. Hover effects and peek-on-hover (§6.2). Efficiency mode on/off (§6.7 rule 7). `ConcurrentGarbageCollection=false`,
+   `TieredPGO` in the App csproj; `PRAGMA cache_size=-1024` in `Database` (keep all 218 tests green).
 7. Run the app and compare with `docs/design-reference.webp`. Take screenshots (computer-use) collapsed,
-   hover-peek and expanded, save them to `docs/screenshots/phase2-*.png` and iterate until close.
+   hover-peek and expanded in dark and light, save them to `docs/screenshots/phase2-*.png` and iterate until it looks clean.
+8. **Baseline measurement** (record in DEVLOG): idle CPU over 60 s (`(Get-Process TaskIsland).CPU` delta), private
+   bytes and working set after 60 s collapsed, GPU column in Task Manager (screenshot), and whether Task Manager shows
+   Efficiency mode while collapsed. Check against §6.7 targets.
 
-Acceptance: pill at top centre. Smooth 240/190 ms morph with no window flicker or jump. Desktop under the
-transparent area is clickable. Hovering the collapsed pill (incl. peek) never takes focus. Typing in Notepad
-continues uninterrupted while the mouse moves over the pill. Expanded panel accepts typing. Not shown in Alt-Tab or taskbar.
+Acceptance: pill at top centre. Smooth 260/180 ms morph with no window flicker or jump, including the window
+size switch. Desktop under/around the pill is clickable. Hovering the collapsed pill (incl. peek) never takes focus.
+Typing in Notepad continues uninterrupted while the mouse moves over the pill. Expanded panel accepts typing. Not shown
+in Alt-Tab or taskbar. Idle CPU 0.0 % over 60 s; no running animation clocks while idle; reduced motion works when
+Windows "Animation effects" is turned off.
 Commit: `Implement Dynamic Island collapsed and expanded interface`.
 
 ### Phase 3 — To-Do functionality
@@ -664,6 +804,7 @@ Steps:
 
 Acceptance: every item under "Task management", "Lists" + "Data: Save tasks locally / Preserve after app restart" in
 TESTING.md passes manually. Kill the process (`taskkill /f`) mid-use → relaunch → data intact.
+All row animations follow §6.2 animation rules (render properties only, finite). Re-measure idle CPU/memory (§6.7) and log in DEVLOG.
 Commit: `Implement task CRUD, priorities, sorting, filters and persistence`.
 
 ### Phase 4 — Windows integration (Opus recommended)
@@ -707,18 +848,22 @@ Steps:
 6. `AlwaysShowNotch=false` auto-hide sliver behaviour. `AutoCollapseSeconds`. Density.
 7. Lists page (§6.6), default list, pill count scope. Export "all lists / current list" option.
 8. About page (§6.6).
+9. Modern Settings look (§6.6): pill nav, setting cards, toggle switches, Mica on Windows 11 with solid fallback.
+   `AccentSource` setting (add the key to `AppSettings` with clamping/default tests). Window released on close.
 
 Acceptance: change every setting → effect visible immediately → restart app → setting kept.
+Settings window closed → memory drops back near the idle baseline (§6.7). Re-measure and log in DEVLOG.
 Export → clear → import → identical tasks. Backup → delete tasks → restore → tasks back.
 Commit: `Add settings window, themes, JSON import/export and backup/restore`.
 
 ### Phase 6 — Testing & optimisation
 
 1. Run the full TESTING.md checklist. Fix every critical/major defect found. Re-run affected items.
-2. Performance targets (measure, record in DEVLOG): idle CPU ≈ 0% (check over 60 s in Task Manager / `Get-Process`
-   CPU delta), working set < 80 MB idle collapsed, cold start to visible pill < 1.5 s, animations without
-   dropped frames on this laptop. If AllowsTransparency rendering is heavy, reduce shadow blur radius and avoid
-   `BitmapEffect`s other than one `DropShadowEffect` on the outer border.
+2. Performance targets: measure every row of the §6.7 table and record the numbers in DEVLOG next to the Phase 2
+   baseline. Also: 10 minutes collapsed idle → CPU time delta ≈ 0 and private bytes not growing (leak check); 50
+   expand/collapse cycles → memory returns to within 5 MB of the start; idle with 500 tasks in the DB (generate them in
+   a temp `TASKISLAND_ROOT`) still meets the targets. Walk §6.7 rules 1–8 as a code-review checklist (search for
+   `RepeatBehavior`, `DispatcherTimer`, `Effect`, `Width`/`Height` animations, unfrozen brushes) and fix violations.
 3. Confirm no network activity: `Get-NetTCPConnection -OwningProcess (Get-Process TaskIsland).Id` → empty.
 4. Code review pass: dispose patterns, event unsubscription, no `async void` leaks, nullable warnings.
 5. Write precise user-test steps for the items the agent can't do, and **ask the user to run them**. Record their results.
@@ -765,8 +910,10 @@ Commit: `Prepare Windows production installer and v1.0.0 release`.
 
 - Sleep, hibernate, reboot auto-start and physical monitor changes require the user to test (TESTING.md).
 - Installer is unsigned → SmartScreen warning. A code-signing certificate would remove it (paid, out of scope).
-- True acrylic blur isn't used. Blur on a layered window blurs the whole transparent rectangle, which looks wrong.
-  The glass look is imitated with a semi-opaque gradient + hairline border.
+- True acrylic blur isn't used on the island. Blur on a layered window blurs the whole transparent rectangle, looks
+  wrong and costs GPU all the time. The island uses a near-opaque surface + hairline border instead (Settings may use Mica).
+- WPF itself needs roughly 40–60 MB of memory even for an empty window. The targets in §6.7 are set close to that floor;
+  the real numbers are reported in DEVLOG.
 - Exclusive-mode full-screen games may draw over any topmost window. The island hides in those cases anyway.
 - Reminders show while TaskIsland is running (it auto-starts, so effectively always). Reminders missed while the
   PC was off are shown as one "overdue" summary on next start.

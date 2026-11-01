@@ -79,3 +79,18 @@ Nothing was tested on Windows 10 (this PC is Windows 11).
   data folder with `$env:TASKISLAND_ROOT = "$env:TEMP\TaskIslandDev"` before launching.
 - *Open issues:* see "Remaining defects" above.
 - *Exact next step:* start Phase 2 (Opus, High effort): `dotnet build` first to confirm green, then Themes + `IslandHost` morph control + `IslandWindow` per PLAN §6.2.
+
+### Plan update — modern UI and low resource use (2026-11-01, Opus 5.5)
+The user asked for a more modern design that uses as little CPU, GPU and RAM as possible. Docs only, no code changed.
+- PLAN §6.0 (new): design direction and principles (8 px grid, one accent, hairline depth, motion tokens, `FluentEase`).
+- PLAN §6.1: new neutral token set (black pill, graphite panel), priority chips as dot + label, tabular numerals,
+  optional Windows accent (`AccentSource`, new setting in §5, added in Phase 5).
+- PLAN §6.2: morph now animates **one clip geometry** instead of Width/Height (no layout per frame); window is
+  small when collapsed (376×64 DIP) and grows to 452×600 only while expanded; shadow is a cached bitmap shown only
+  when still; progress ring on the pill; strict animation rules (finite, render properties only).
+- PLAN §6.4: virtualised task list, hover/focus-only row actions, footer progress bar, sliding filter indicator.
+- PLAN §6.6: modern Settings (pill nav, cards, toggles, Mica on Windows 11), released on close.
+- PLAN §6.7 (new): resource budget (0 % idle CPU/GPU, ≤ 50 MB private, ≤ 70 MB working set, < 1.2 s start) and 10 rules
+  (no polling, no infinite animations, 60 fps cap, Efficiency mode while collapsed, automatic reduced motion, GC settings).
+- §7.2 positioning, Phases 2/3/5/6 steps and acceptance, §9 limitations updated. TESTING: UI13–UI15 and P1–P11.
+- *Handoff for Phase 2:* read PLAN §6.0–6.7 before coding; Phase 2 must record a performance baseline (step 8).

@@ -21,6 +21,9 @@ Only mark ✅ after actually testing. Record date + build/commit in the Notes co
 | UI10 | Peek on hover shows top task; toggle off works | A | ⏳ | |
 | UI11 | Light theme, dark theme, System theme follows Windows | A | ⏳ | |
 | UI12 | Animations off → instant transitions | A | ⏳ | |
+| UI13 | Modern look per PLAN §6.0–6.1 in dark + light: progress ring, hover-only row actions (also shown on keyboard focus), sliding filter indicator, focus ring visible | A | ⏳ | |
+| UI14 | Reduced motion turns on by itself when Windows "Animation effects" is off, and on Battery saver | A | ⏳ | |
+| UI15 | Pill doesn't move by a single pixel when the window switches between collapsed and expanded size | A | ⏳ | |
 
 ## Automated tests (not part of the manual checklist)
 
@@ -110,12 +113,22 @@ These cover the logic behind T1–T15, L2–L10, L13, D1–D3 and D5–D10, but 
 
 ## Performance
 
+Targets from PLAN §6.7. Record the measured number in Notes, every phase from Phase 2 on.
+
 | # | Test | Target | Result | Notes |
 |---|---|---|---|---|
-| P1 | Idle CPU (collapsed, 60 s) | ≈ 0 % | ⏳ | |
-| P2 | Working set idle | < 80 MB | ⏳ | |
-| P3 | Cold start to visible pill | < 1.5 s | ⏳ | |
+| P1 | Idle CPU (collapsed, 60 s) | 0.0 % | ⏳ | |
+| P2 | Private memory idle (collapsed, after 60 s) | ≤ 50 MB | ⏳ | |
+| P2b | Working set idle | ≤ 70 MB | ⏳ | |
+| P3 | Cold start to visible pill | < 1.2 s | ⏳ | |
 | P4 | Animations smooth on this laptop | no visible stutter | ⏳ | |
+| P5 | GPU idle (Task Manager GPU column) | 0 % | ⏳ | |
+| P6 | Efficiency mode shown in Task Manager while collapsed; off on hover/expand | leaf icon | ⏳ | |
+| P7 | 10 min idle → CPU time unchanged, private bytes not growing | no leak | ⏳ | |
+| P8 | 50 expand/collapse cycles → memory back within 5 MB | no leak | ⏳ | |
+| P9 | 500 tasks in DB → idle targets still met, list scrolls smoothly | P1/P2 hold | ⏳ | |
+| P10 | Hidden (full-screen app / paused) → 0 % CPU and GPU | 0 % | ⏳ | |
+| P11 | No disk writes while idle (Resource Monitor, 60 s) | none | ⏳ | |
 
 ## Deployment
 
