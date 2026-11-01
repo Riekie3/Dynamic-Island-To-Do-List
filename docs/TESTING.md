@@ -25,6 +25,21 @@ Only mark ✅ after actually testing. Record date + build/commit in the Notes co
 | UI14 | Reduced motion turns on by itself when Windows "Animation effects" is off, and on Battery saver | A | ⏳ | |
 | UI15 | Pill doesn't move by a single pixel when the window switches between collapsed and expanded size | A | ⏳ | |
 
+## Mascot face (PLAN §6.8)
+
+| # | Test | Who | Result | Notes |
+|---|---|---|---|---|
+| M1 | Idle shows the Mini notch with two dots; nothing moves while idle | A | ⏳ | |
+| M2 | All 12 expressions match `docs/design/mascot-reference.webp` (side-by-side screenshots saved) | A | ⏳ | |
+| M3 | Mini → Reaction: dots turn into the eyes smoothly; returns to Mini after 2.5 s (alerts 5 s) | A | ⏳ | |
+| M4 | Each trigger shows the right face: tick Happy, add Wink, last task Excited, High tick Love, hover Curious, click face Laughing, reminder Surprised, import Thinking, error Sad, typing Focused (panel), 60 min untouched Sleepy | A | ⏳ | |
+| M5 | Blink, smile pop, accessory pop, heart beat, shake etc. play once and stop | A | ⏳ | |
+| M6 | Random pops follow `IdleReactions` (Off / Rare / Normal / Lively), never Sad/Surprised, never twice in a row | A | ⏳ | |
+| M7 | No random pops while panel open, hidden, paused, full-screen, locked, display off, Battery saver, reduced motion | A | ⏳ | |
+| M8 | `MascotEnabled` off → classic count pill, no faces | A | ⏳ | |
+| M9 | Faces stay sharp at 100 / 150 / 200 % scaling | A+U | ⏳ | |
+| M10 | 30 min idle with `IdleReactions=Normal` → average CPU < 0.05 % | A | ⏳ | |
+
 ## Automated tests (not part of the manual checklist)
 
 Phase 1 (2026-11-01): `dotnet test TaskIsland.sln -c Release` → **218 passed, 0 failed**.

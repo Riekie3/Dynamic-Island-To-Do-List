@@ -102,3 +102,13 @@ The user asked for a more modern design that uses as little CPU, GPU and RAM as 
   packing, admin), visible persistence only, Controlled Folder Access handling, full file version info, code-signing
   decision. §0 rule 10, Phase 6 security grep + Defender scan, Phase 7 steps 4b (ask user about signing) and 4c
   (Defender scan, optional VirusTotal with user OK). TESTING S1–S9. The existing `app.manifest` is already `asInvoker`.
+
+### Plan update — mascot face notch (2026-11-02, Opus 5.5)
+- The user supplied a sheet of 12 face expressions + a mini notch (`docs/design/mascot-reference.webp`).
+- Drew the faces as a vector rig, `docs/design/mascot-faces.html` (geometry source of truth, checked against the reference in a browser).
+- New PLAN §6.8: four island states (Mini 120×32 → Reaction 232×56 → Info pill → Panel), face rig with independent
+  eyes/mouth/accessory parts, 9 micro-animations, the 12 expressions mapped to app triggers, random pops on a one-shot
+  timer (`IdleReactions` Off/Rare/Normal/Lively), `MascotEnabled` toggle (off = classic count pill). Vector XAML instead of
+  Lottie/sprites (no extra NuGet, sharp at any DPI, near-zero cost). §2, §3.1, §5, §6.2, §6.3, §6.7 and Phases 2/3 updated.
+  TESTING M1–M10.
+- *Handoff for Phase 2:* step 6b builds the mascot; compare all 12 faces side by side with the reference sheet.

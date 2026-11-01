@@ -87,6 +87,7 @@ Core spec (user brief) **plus** these v1 extras/decisions:
 | First run | Two starter lists, **Personal** (default) and **Office Work**. Both can be renamed or deleted. No sample tasks. |
 | Delete | Soft delete + **Undo** bar for 5 s, then permanent. |
 | Data location | `%LocalAppData%\TaskIsland\` with `Data\`, `Backups\`, `Logs\`. Settings live in the DB `Settings` table (no separate Settings folder needed). |
+| **Mascot face** (added 2026-11-02) | The notch has a face. Idle = a tiny notch with two dots. Events (and, now and then, at random) pop it open into a wider pill showing one of **12 expressions** that animate (blink, smile, sleep, react). Full spec §6.8, drawings `docs/design/`. |
 | Network | None. The app makes zero network calls. Update info in About is static text (version + GitHub URL). |
 
 ---
@@ -139,6 +140,9 @@ TaskIsland/
 │       ├── Themes/Dark.xaml, Light.xaml, Controls.xaml (styles/templates), Animations.xaml
 │       ├── Controls/IslandHost.cs         # morph control (§6.2), clip-geometry based
 │       ├── Controls/FluentEase.cs         # cubic-bezier(0.2,0,0,1) easing (§6.0)
+│       ├── Controls/FaceRig.xaml(.cs)     # mascot face: independent eyes/mouth/accessory parts (§6.8)
+│       ├── Mascot/Expression.cs, Expressions.cs  # the 12 expressions as data + frozen geometries
+│       ├── Services/ReactionDirector.cs   # which face shows when; random pops; priorities (§6.8)
 │       ├── Services/MotionPolicy.cs       # reduced-motion decision + duration tokens (§6.7)
 │       ├── Services/EfficiencyMode.cs     # EcoQoS on/off while collapsed (§6.7), P/Invoke in Windows project
 │       ├── Controls/PriorityChip.xaml(.cs)
@@ -350,6 +354,8 @@ Rules (unit-tested):
 | `TopMargin` | `8` | Appearance | 0–40 px |
 | `PanelOpacity` | `0.94` | Appearance | 0.70–1.00 |
 | `AnimationsEnabled` | `true` | Appearance | false → durations become 0 (reduced motion also turns on automatically, §6.7) |
+| `MascotEnabled` | `true` | Appearance | Face notch (§6.8). Off → the classic count pill (§6.3) is the collapsed state. New key, add in Phase 2 |
+| `IdleReactions` | `Normal` | Appearance | Random face pop-ups: `Off` / `Rare` (every 10–20 min) / `Normal` (4–8 min) / `Lively` (1–3 min). New key, Phase 2 |
 | `AccentSource` | `Default` | Appearance | `Default` (TaskIsland blue) / `Windows` (Windows accent colour). New key, add to `AppSettings` + tests in Phase 5 |
 | `Density` | `Comfortable` | Appearance | Comfortable (row 52 px) / Compact (row 38 px) |
 | `HideInFullScreen` | `true` | Behaviour | |
@@ -429,7 +435,8 @@ Priority always shows **text label + colour dot** (never colour alone).
 `ShowInTaskbar=False`, `Topmost=True`, `ResizeMode=NoResize`, `ShowActivated=False`.
 A layered window is needed for the anti-aliased rounded morph (DWM corners are fixed at 8 px and a window region has
 jagged edges). A layered window re-uploads its pixels every frame it animates, so **keep the window small when idle**:
-- **Collapsed size: 376 × 64 DIP** (room for the widest peek, 360). **Expanded size: 452 × 600 DIP** (420 panel +
+- **Collapsed size: 376 × 64 DIP** (room for the widest peek, 360, and for the mascot's Mini 120 × 32 and Reaction
+  232 × 56 states with their top-right accessory, §6.8; all collapsed states share this window, no resize between them). **Expanded size: 452 × 600 DIP** (420 panel +
   16 px each side for the shadow, 550 max panel height + shadow below).
 - The island is always drawn **top-centred** in the window with **0 top inset** in both sizes, so the pill sits on the
   exact same screen pixels in both. Resize only at two moments, with one `SetWindowPos` while nothing is moving:
@@ -480,7 +487,10 @@ colour are animated (never `Width`, `Height`, `Margin` or layout properties of a
 
 ### 6.3 Collapsed pill content
 
-`[✓ in progress ring]  3 tasks  [⌄]` (singular "1 task"), 36 px tall, text `Small`/`Text` semibold white.
+With `MascotEnabled` (default) the collapsed island is the **mini notch** (§6.8). Hovering it for 400 ms grows it into
+the **info pill** below (this replaces the old peek); with `MascotEnabled=false` the info pill is the permanent collapsed state.
+
+Info pill: `[✓ in progress ring]  3 tasks  [⌄]` (singular "1 task"), 36 px tall, text `Small`/`Text` semibold white.
 When outstanding = 0: `✓ All done` (ring full, accent). Count is the outstanding count. If any task is overdue,
 show a 6 px `Overdue` dot on the ring.
 
@@ -548,7 +558,7 @@ Targets (measured in Phase 6 on this laptop, Release build, collapsed, after 60 
 
 | Metric | Target |
 |---|---|
-| CPU idle (collapsed, mouse elsewhere) | **0.0 %** averaged over 60 s (no wake-ups except the scheduled one-shot timers) |
+| CPU idle (collapsed, mouse elsewhere) | **0.0 %** averaged over 60 s between mascot pops (no wake-ups except the scheduled one-shot timers); **< 0.05 %** averaged over 30 min with `IdleReactions=Normal` |
 | GPU idle | **0 %** in Task Manager's GPU column (no frames rendered while nothing changes) |
 | Private memory idle | ≤ **50 MB** (record working set too; WPF's own floor is roughly 40–60 MB working set) |
 | Working set idle | ≤ **70 MB** |
@@ -561,7 +571,8 @@ If a target cannot be reached because of WPF's baseline, **report the measured n
 was tried. Do not use tricks that only hide memory (no `EmptyWorkingSet`/`SetProcessWorkingSetSize` calls).
 
 Rules:
-1. **No polling, no periodic timers.** Allowed timers are one-shot only: next reminder, peek delay (400 ms), tick
+1. **No polling, no periodic timers.** Allowed timers are one-shot only: next random mascot pop (§6.8, re-armed after
+   each pop), the 60-min Sleepy timer (reset on interaction), reaction hold (2.5/5 s), next reminder, peek delay (400 ms), tick
    slide-out (2 s), undo bar (5 s), recovery follow-ups (+2 s/+6 s), next midnight (daily backup check and "due today"
    labels; also re-run on resume and `TimeChanged`). The overdue label refresh is one timer set to the next due
    moment among visible rows, and only while expanded.
@@ -593,6 +604,91 @@ Rules:
 10. **Measure, don't guess.** Phase 2 records a baseline (idle CPU, private bytes, working set) right after the island
     works; Phases 3–5 re-measure at the end of each phase and log the numbers in DEVLOG, so a regression is caught
     the phase it happens.
+
+### 6.8 Mascot face notch (added 2026-11-02)
+
+References: the user's sheet `docs/design/mascot-reference.webp` (12 expressions + mini notch) and the vector rig
+**`docs/design/mascot-faces.html`**, which is the **geometry source of truth**: open it in a browser, copy each path
+1:1 into WPF `Path.Data`/`Ellipse`/`Rectangle` (the SVG coordinate frame is 240 × 64 DIP, eye centres (86,32) and
+(154,32), mouth centre (120,42), accessories top-right x 200–238). Match the look as closely as possible; Phase 2
+screenshots must be compared side by side with the reference sheet.
+
+**States** (all four are rectangles the `IslandHost` clip animates between, §6.2 generalised to `AnimateTo(state)`):
+
+| State | Size (DIP) | Shows | When |
+|---|---|---|---|
+| **Mini** (collapsed, no activity) | 120 × 32 | two small glowing dots (r 3.2) | default resting state |
+| **Reaction** (expanded, reaction active) | 232 × 56 | face: eyes + mouth + accessory | an event or a random idle pop; holds 2.5 s (alerts 5 s), then back to Mini |
+| **Info** | NotchWidth × 36, peek up to 360 | progress ring, "3 tasks", top task on longer hover (§6.3) | hover ≥ 400 ms |
+| **Panel** | 420 × ≤ 550 | the To-Do panel (§6.4); a 28-px version of the face sits left of the title and reacts too | click / hotkey / tray |
+
+Mini → Reaction → Mini uses the morph motion (`morph` tokens, `FluentEase`); the dots **become the eyes** (the two
+dot elements move to the eye positions and morph into the expression's eye shapes), so it reads as one creature waking up.
+
+**Look** (from the reference): near-black body with a vertical gradient `#16182A → #05060B`, a faint top gloss (white 5 %),
+a 2 px neon outline gradient `#3550FF → #6B4DFF`, and a soft outer glow. Features `#EAF2FF` with a `#7FB6FF` glow;
+hearts `#8FD3FF`; accessories white with a `#3D5AFE` outline. **All glows are drawn as the same geometry repeated
+underneath with a wider, ~28 % opacity stroke** (exactly as the HTML rig does), never with `BlurEffect`/`DropShadowEffect`.
+This mascot look is used for the Mini/Reaction/Info states in both themes; the Panel keeps §6.1 tokens with the neon
+outline at 40 % opacity so it feels like the same object.
+
+**Face rig** (`Controls/FaceRig.xaml(.cs)`): a 240 × 64 `Canvas` with independent parts, each in its own `Grid` with
+its own `RenderTransform` (scale/translate/rotate) and `Opacity`:
+`LeftEye`, `RightEye`, `Mouth`, `Accessory`, plus their glow twins. An expression (`Mascot/Expression.cs`, a record:
+name, left-eye geometry, right-eye geometry, mouth geometry, accessory geometry, colours) is **data**, so all 12 share
+one rig. Geometries are frozen `StreamGeometry` resources parsed once at startup (cheap, tiny).
+Changing expression: outgoing part scales to 0.6 + fades (80 ms), incoming part scales 0.6 → 1 + fades in (120 ms),
+each part staggered 30 ms (eyes, then mouth, then accessory). No images, no sprite sheets.
+
+**Why not Lottie or sprites:** Lottie in WPF needs extra NuGet packages built on SkiaSharp (more memory, against §3.2
+and §6.7). Sprite sheets cost memory per frame and look blurry at 150–200 % scaling. Vector parts in XAML do the
+same job (independent eyes/mouth, smooth transitions) at near-zero cost and stay sharp at any DPI.
+
+**Micro-animations** (all finite, render-properties only, §6.2 rules):
+
+| Animation | How | When |
+|---|---|---|
+| Blink | both eyes `ScaleY` 1 → 0.1 → 1, 140 ms total | once 600 ms after a Neutral/Happy/Curious reaction appears; again 1.6 s later if still showing |
+| Smile pop | mouth `ScaleY` 0.6 → 1.1 → 1 (`normal`) | on Happy, Wink, Love, Excited |
+| Laugh bounce | eyes `TranslateY` 0 → −2 → 0, 2 times | Laughing, Excited |
+| Accessory pop | accessory scale 0 → 1.15 → 1 + rotate −10° → 0 (`normal`) | when an accessory appears |
+| Sparkle twinkle | sparkle scale 1 → 0.7 → 1, 2 times | Excited, Focused |
+| Sleepy drift | "zZ" `TranslateY` 0 → −4 + fade, 1 time | Sleepy |
+| Heart beat | hearts scale 1 → 1.15 → 1, 2 times | Love |
+| Shake | whole face `TranslateX` ±3, 3 times, 240 ms | Sad |
+| Look around | eyes `TranslateX` −3 → +3 → 0, 600 ms | Curious |
+
+Reduced motion (§6.7 rule 8): the expression appears instantly with no micro-animations and holds the same time.
+
+**Expressions and triggers** (`Services/ReactionDirector.cs`; one place that decides which face shows):
+
+| # | Reaction | Use case | Trigger in TaskIsland | Accessory |
+|---|---|---|---|---|
+| 1 | Neutral | Normal idle | random pop; panel face at rest | — |
+| 2 | Happy | Task completed | a task is ticked | — |
+| 3 | Laughing | Playful interaction | clicking the face (Reaction state) or double-clicking the mini notch; random pop | `//` lines |
+| 4 | Wink | Friendly notification | a task is added; app start greeting (not on `--startup` during the first 60 s) | — |
+| 5 | Surprised | Important alert | a due reminder fires; overdue tasks found at startup (holds 5 s) | `//` lines |
+| 6 | Curious | User interaction | mouse hovers the mini notch (before it becomes the Info pill); random pop | `?` |
+| 7 | Sleepy | Inactive state | the island is untouched for 60 min → the mini notch's dots turn into closed eyes (static, no loop); also on display-dim / resume-from-sleep greeting | `zZ` |
+| 8 | Thinking | Processing | import, export, backup, restore in progress (shown until done) | thought bubbles |
+| 9 | Love | Positive feedback | a High-priority task is ticked; 5 tasks ticked within 30 min | — |
+| 10 | Excited | Achievement | the last outstanding task in the scope is ticked ("All done") | sparkles |
+| 11 | Focused | Working mode | panel face while typing in quick-add or editing a task | sparkle |
+| 12 | Sad | Error or unsuccessful | a save fails, import is rejected, hotkey can't be registered, DB problem | sweat drop |
+
+Rules:
+- Priority: Sad and Surprised beat everything; then Thinking; then task events; random pops are lowest and are dropped
+  (not queued) if anything else is showing. Only one reaction at a time; a new event replaces the current face
+  through the normal expression transition.
+- **Random pops** (the user's "randomly show in a small notch"): the director picks from Neutral, Happy, Laughing,
+  Wink, Curious, Love, Thinking (never Sad/Surprised, never the same twice in a row) at a random moment inside the
+  `IdleReactions` window. It is **one one-shot `DispatcherTimer`**, re-armed with a new random interval after each
+  pop. No pops while: the panel is open, the island is hidden or paused, full-screen is active, the session is locked,
+  the display is off, Battery saver is on, reduced motion is on, or the user is in the first 60 s after `--startup`.
+- Events still react while the panel is open, but on the 28-px panel face instead of the notch.
+- Accessibility: every reaction also sets the island's `AutomationProperties.Name` (e.g. "TaskIsland: task completed")
+  so screen readers get the meaning; the face itself is decorative.
 
 ---
 
@@ -818,8 +914,17 @@ Steps:
 5. Click pill → expand. ✕ / Esc / click outside (`Deactivated`) → collapse. Focus behaviour per §7.1.
 6. Hover effects and peek-on-hover (§6.2). Efficiency mode on/off (§6.7 rule 7). `ConcurrentGarbageCollection=false`,
    `TieredPGO` in the App csproj; `PRAGMA cache_size=-1024` in `Database` (keep all 218 tests green).
-7. Run the app and compare with `docs/design-reference.webp`. Take screenshots (computer-use) collapsed,
-   hover-peek and expanded in dark and light, save them to `docs/screenshots/phase2-*.png` and iterate until it looks clean.
+6b. **Mascot (§6.8):** `FaceRig` with all 12 expressions + Mini notch, geometry copied 1:1 from
+   `docs/design/mascot-faces.html`; Mini ↔ Reaction ↔ Info ↔ Panel state machine in `IslandHost`; all micro-animations;
+   `ReactionDirector` with priorities and random pops (one-shot timer) and the Sleepy timer; `MascotEnabled` and
+   `IdleReactions` keys added to `AppSettings` with default/clamping unit tests. Phase 2 wires only the triggers that
+   exist yet (hover → Curious, click face → Laughing, random pops, start greeting); task/import/error triggers are wired
+   in Phases 3–5. Add a hidden debug shortcut **Ctrl+Alt+Shift+F** (only in Debug builds) that cycles through all 12
+   expressions so they can be screenshotted.
+7. Run the app and compare with `docs/design-reference.webp` (panel) and `docs/design/mascot-reference.webp` (faces).
+   Take screenshots (computer-use) of the Mini notch, every one of the 12 reactions, the Info pill and the expanded
+   panel in dark and light, save them to `docs/screenshots/phase2-*.png`, put the 12 faces side by side with the
+   reference sheet, and iterate until they match as closely as possible.
 8. **Baseline measurement** (record in DEVLOG): idle CPU over 60 s (`(Get-Process TaskIsland).CPU` delta), private
    bytes and working set after 60 s collapsed, GPU column in Task Manager (screenshot), and whether Task Manager shows
    Efficiency mode while collapsed. Check against §6.7 targets.
@@ -828,7 +933,8 @@ Acceptance: pill at top centre. Smooth 260/180 ms morph with no window flicker o
 size switch. Desktop under/around the pill is clickable. Hovering the collapsed pill (incl. peek) never takes focus.
 Typing in Notepad continues uninterrupted while the mouse moves over the pill. Expanded panel accepts typing. Not shown
 in Alt-Tab or taskbar. Idle CPU 0.0 % over 60 s; no running animation clocks while idle; reduced motion works when
-Windows "Animation effects" is turned off.
+Windows "Animation effects" is turned off. All 12 faces visibly match the reference sheet; the dots turn into eyes
+when the Mini notch opens into a reaction; random pops stop while hidden, full-screen, locked or on Battery saver.
 Commit: `Implement Dynamic Island collapsed and expanded interface`.
 
 ### Phase 3 — To-Do functionality
@@ -853,6 +959,9 @@ Steps:
 7. Drag to reorder within the same priority group in Active view. Show an insertion line. Dropping
    outside the group is not allowed (cursor `No`). Persist via `ReorderAsync`.
 8. Filters, empty states, counters, panel height re-animation when list changes.
+8b. Mascot triggers from §6.8 for task events: tick → Happy, High tick or 5 in 30 min → Love, last task done → Excited,
+   add → Wink, typing/editing → Focused (panel face), save failure → Sad. Reminder → Surprised is wired in Phase 4,
+   import/export/backup → Thinking and failures → Sad in Phase 5.
 9. Lists: switcher row, `ListEditPopup`, chip context menu, delete-list dialog (move vs delete, auto-backup first),
    keyboard shortcuts (§6.4), quick-add list chip in *All lists*, List field in inline edit.
 10. Remove sample data. First run creates **no** sample tasks (clean start), only the 2 starter lists. Show the empty state.

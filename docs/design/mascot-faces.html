@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>TaskIsland mascot faces</title>
+<!--
+  Source of truth for the mascot face rig (PLAN §6.8).
+  Every face lives in a 240 x 64 frame: pill rect x=4 y=4 w=232 h=56 rx=28, eye centres (86,32) and (154,32),
+  mouth centre (120,42). Accessories sit in the top-right corner (x 200-238, y 0-26).
+  Class "s" = stroked line (round caps), class "f" = filled shape. Glow = the same geometry drawn again
+  underneath with a wider, translucent stroke (no blur filter), exactly how the WPF version must do it.
+  Phase 2 converts each path below into WPF Path data 1:1.
+-->
+<style>
+  :root { --bg:#ffffff; --ink:#111318; --muted:#5a606b; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg:#0e0f13; --ink:#f3f4f6; --muted:#9aa1ad; } }
+  :root[data-theme="dark"] { --bg:#0e0f13; --ink:#f3f4f6; --muted:#9aa1ad; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:14px/1.4 "Segoe UI Variable Text","Segoe UI",system-ui,sans-serif; }
+  main { max-width:1100px; margin:0 auto; padding:24px 16px 48px; }
+  h1 { font-size:20px; margin:0 0 4px; }
+  p { color:var(--muted); margin:0 0 24px; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:28px 24px; }
+  figure { margin:0; text-align:center; }
+  figure svg { width:100%; max-width:320px; height:auto; overflow:visible; }
+  figcaption { font-size:13px; color:var(--muted); margin-top:4px; }
+  figcaption b { color:var(--ink); font-weight:600; }
+  .mini { grid-column:1/-1; }
+  .mini svg { max-width:160px; }
+  /* feature styling, inherited into <use> */
+  .s { fill:none; stroke-linecap:round; stroke-linejoin:round; stroke-width:var(--sw); }
+  .f { stroke-linejoin:round; stroke-width:var(--fw); }
+  .face { color:#EAF2FF; fill:currentColor; stroke:currentColor; --sw:5px; --fw:0px; }
+  .glow { color:#7FB6FF; fill:currentColor; stroke:currentColor; --sw:10px; --fw:5px; opacity:.28; }
+  .heart { color:#8FD3FF; }
+  .acc { color:#EAF2FF; fill:currentColor; stroke:currentColor; --sw:3.5px; --fw:0px; }
+  .accline { color:#3D5AFE; fill:currentColor; stroke:currentColor; --sw:8px; --fw:4px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>TaskIsland mascot faces</h1>
+  <p>Vector rig for the 12 reactions and the idle mini notch. Eyes, mouth and accessory are separate parts so they can animate independently.</p>
+
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+      <linearGradient id="pillFill" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#16182A"/><stop offset="1" stop-color="#05060B"/>
+      </linearGradient>
+      <linearGradient id="pillStroke" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#3550FF"/><stop offset="1" stop-color="#6B4DFF"/>
+      </linearGradient>
+      <!-- pill shell: outer glow ring, body, top gloss, neon outline -->
+      <g id="pill">
+        <rect x="4" y="4" width="232" height="56" rx="28" fill="none" stroke="#4A5BFF" stroke-width="7" opacity=".22"/>
+        <rect x="4" y="4" width="232" height="56" rx="28" fill="url(#pillFill)"/>
+        <rect x="14" y="8" width="212" height="20" rx="10" fill="#FFFFFF" opacity=".05"/>
+        <rect x="4" y="4" width="232" height="56" rx="28" fill="none" stroke="url(#pillStroke)" stroke-width="2"/>
+      </g>
+
+      <!-- 1 Neutral -->
+      <g id="e-neutral"><rect class="f" x="81" y="21" width="10" height="22" rx="5"/><rect class="f" x="149" y="21" width="10" height="22" rx="5"/></g>
+      <g id="m-none"></g>
+      <!-- 2 Happy -->
+      <g id="e-happy"><path class="s" d="M75,34 Q86,22 97,34"/><path class="s" d="M143,34 Q154,22 165,34"/></g>
+      <g id="m-open"><path class="f" d="M111,38 h18 a9,9 0 0 1 -18,0 z"/></g>
+      <!-- 3 Laughing / 10 Excited -->
+      <g id="e-laugh"><path class="s" d="M79,23 L94,32 L79,41"/><path class="s" d="M161,23 L146,32 L161,41"/></g>
+      <!-- 4 Wink -->
+      <g id="e-wink"><rect class="f" x="81" y="21" width="10" height="22" rx="5"/><path class="s" d="M162,24 L148,32 L162,40"/></g>
+      <g id="m-smile"><path class="s" d="M113,40 Q120,46 127,40"/></g>
+      <!-- 5 Surprised -->
+      <g id="e-surprised"><circle class="f" cx="86" cy="30" r="9"/><circle class="f" cx="154" cy="30" r="9"/></g>
+      <g id="m-o"><circle class="s" cx="120" cy="44" r="4.5"/></g>
+      <!-- 6 Curious: almond eyes with a dark notch -->
+      <g id="e-curious">
+        <ellipse class="f" cx="86" cy="33" rx="11" ry="7.5" transform="rotate(-28 86 33)"/>
+        <ellipse class="f" cx="154" cy="33" rx="11" ry="7.5" transform="rotate(-28 154 33)"/>
+      </g>
+      <g id="e-curious-notch" fill="#0B0C16"><circle cx="93" cy="29" r="4.2"/><circle cx="161" cy="29" r="4.2"/></g>
+      <!-- 7 Sleepy -->
+      <g id="e-sleepy"><path class="s" d="M75,30 Q86,41 97,30"/><path class="s" d="M143,30 Q154,41 165,30"/></g>
+      <!-- 8 Thinking: small eyes looking up-right, hand-on-chin curl -->
+      <g id="e-think"><rect class="f" x="95" y="22" width="9" height="15" rx="4.5"/><rect class="f" x="149" y="17" width="9" height="15" rx="4.5"/></g>
+      <g id="m-think"><path class="s" d="M132,38 Q122,33 117,40 Q113,48 121,49 Q128,49 127,43"/></g>
+      <!-- 9 Love -->
+      <g id="e-love" class="heart">
+        <path class="f" transform="translate(86 31) scale(1.45)" d="M0,5 C-9,-2 -7,-10 0,-5.5 C7,-10 9,-2 0,5 z"/>
+        <path class="f" transform="translate(154 31) scale(1.45)" d="M0,5 C-9,-2 -7,-10 0,-5.5 C7,-10 9,-2 0,5 z"/>
+      </g>
+      <!-- 11 Focused: cut-top eyes + slanted brows -->
+      <g id="e-focus">
+        <path class="f" d="M80,27 L93,31 v7 a6.5,6.5 0 0 1 -13,0 z"/><path class="s" d="M77,22 L94,28"/>
+        <path class="f" d="M160,27 L147,31 v7 a6.5,6.5 0 0 0 13,0 z"/><path class="s" d="M163,22 L146,28"/>
+      </g>
+      <!-- 12 Sad -->
+      <g id="e-sad"><path class="f" d="M74,40 Q79,27 97,27 Q93,37 74,40 z"/><path class="f" d="M166,40 Q161,27 143,27 Q147,37 166,40 z"/></g>
+      <g id="m-frown"><path class="s" d="M112,46 Q120,38 128,46"/></g>
+
+      <!-- accessories (top-right corner, inside the frame) -->
+      <g id="a-lines"><path class="s" d="M212,22 L221,7"/><path class="s" d="M222,24 L233,11"/></g>
+      <g id="a-question"><path class="s" d="M216,9 q0,-6 7,-6 q7,0 7,6 q0,4 -6,7 v2.5"/><circle class="f" cx="224" cy="23.5" r="2.4"/></g>
+      <g id="a-zz"><path class="s" d="M205,14 h7 l-7,8 h7"/><path class="s" d="M217,4 h12 l-12,13 h12"/></g>
+      <g id="a-bubbles"><circle class="s" cx="210" cy="21" r="2"/><circle class="s" cx="218" cy="14" r="3.5"/><circle class="s" cx="230" cy="7" r="5.5"/></g>
+      <g id="a-sparkles">
+        <path class="f" transform="translate(219 11)" d="M0,-10 Q1.6,-1.6 10,0 Q1.6,1.6 0,10 Q-1.6,1.6 -10,0 Q-1.6,-1.6 0,-10 z"/>
+        <path class="f" transform="translate(233 24)" d="M0,-5 Q.8,-.8 5,0 Q.8,.8 0,5 Q-.8,.8 -5,0 Q-.8,-.8 0,-5 z"/>
+      </g>
+      <g id="a-sparkle"><path class="f" transform="translate(224 12)" d="M0,-9 Q1.4,-1.4 9,0 Q1.4,1.4 0,9 Q-1.4,1.4 -9,0 Q-1.4,-1.4 0,-9 z"/></g>
+      <g id="a-drop"><path class="f" transform="translate(206 26)" d="M0,-8 Q5.5,-1 5.5,2.5 a5.5,5.5 0 0 1 -11,0 Q-5.5,-1 0,-8 z"/></g>
+      <g id="a-none"></g>
+    </defs>
+  </svg>
+
+  <div class="grid" id="grid"></div>
+</main>
+<script>
+  const FACES = [
+    ["Neutral",   "Normal idle",            "e-neutral",   "m-none",  "a-none"],
+    ["Happy",     "Task completed",         "e-happy",     "m-open",  "a-none"],
+    ["Laughing",  "Playful interaction",    "e-laugh",     "m-open",  "a-lines"],
+    ["Wink",      "Friendly notification",  "e-wink",      "m-smile", "a-none"],
+    ["Surprised", "Important alert",        "e-surprised", "m-o",     "a-lines"],
+    ["Curious",   "User interaction",       "e-curious",   "m-none",  "a-question"],
+    ["Sleepy",    "Inactive state",         "e-sleepy",    "m-none",  "a-zz"],
+    ["Thinking",  "Processing",             "e-think",     "m-think", "a-bubbles"],
+    ["Love",      "Positive feedback",      "e-love",      "m-smile", "a-none"],
+    ["Excited",   "Achievement",            "e-laugh",     "m-open",  "a-sparkles"],
+    ["Focused",   "Working mode",           "e-focus",     "m-none",  "a-sparkle"],
+    ["Sad",       "Error or unsuccessful",  "e-sad",       "m-frown", "a-drop"]
+  ];
+  const NS = "http://www.w3.org/2000/svg";
+  const use = (id, cls) => `<use href="#${id}" class="${cls}"/>`;
+  const grid = document.getElementById("grid");
+  FACES.forEach(([name, useCase, eyes, mouth, acc], i) => {
+    const notch = eyes === "e-curious" ? `<use href="#e-curious-notch"/>` : "";
+    const fig = document.createElement("figure");
+    fig.innerHTML =
+      `<svg viewBox="0 -2 244 68" role="img" aria-label="${name} face">
+         <use href="#pill"/>
+         ${use(eyes, "glow")}${use(mouth, "glow")}${use(eyes, "face")}${notch}${use(mouth, "face")}
+         ${use(acc, "accline")}${use(acc, "acc")}
+       </svg>
+       <figcaption><b>${i + 1}. ${name}</b> · ${useCase}</figcaption>`;
+    grid.appendChild(fig);
+  });
+  const mini = document.createElement("figure");
+  mini.className = "mini";
+  mini.innerHTML =
+    `<svg viewBox="0 0 124 36" role="img" aria-label="Idle mini notch">
+       <rect x="2" y="2" width="120" height="32" rx="16" fill="none" stroke="#4A5BFF" stroke-width="5" opacity=".22"/>
+       <rect x="2" y="2" width="120" height="32" rx="16" fill="url(#pillFill)"/>
+       <rect x="2" y="2" width="120" height="32" rx="16" fill="none" stroke="url(#pillStroke)" stroke-width="1.6"/>
+       <circle cx="52" cy="18" r="5.5" fill="#7FB6FF" opacity=".28"/><circle cx="72" cy="18" r="5.5" fill="#7FB6FF" opacity=".28"/>
+       <circle cx="52" cy="18" r="3.2" fill="#EAF2FF"/><circle cx="72" cy="18" r="3.2" fill="#EAF2FF"/>
+     </svg>
+     <figcaption><b>Mini notch</b> · collapsed, no activity (120 × 32)</figcaption>`;
+  grid.appendChild(mini);
+</script>
+</body>
+</html>
