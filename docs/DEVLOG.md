@@ -1,5 +1,7 @@
 # TaskIsland — Development Log
 
+Live tracker (copy-ready prompts per phase): https://claude.ai/artifact/RAqH7ZmUthw76PcD6sfUK1 (source: docs/tracker.html)
+
 Newest entry at the bottom. Each phase appends one entry using the template below.
 
 ## Phase status

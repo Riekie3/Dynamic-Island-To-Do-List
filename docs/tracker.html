@@ -1,0 +1,255 @@
+<title>TaskIsland Build Tracker</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one narrow column. Summary and "next up" prompt first, phase cards below. */
+:root {
+  --bg: #f4f6fa; --surface: #ffffff; --surface-2: #eceff5; --line: #d9dee8;
+  --fg: #141a26; --muted: #5b6678; --accent: #1668d9; --accent-fg: #ffffff;
+  --done: #167a46; --done-bg: #dcf4e6; --doing: #9a6200; --doing-bg: #ffefcc;
+  --opus: #7a3fd1; --opus-bg: #eee3fb; --sonnet: #0f7a8a; --sonnet-bg: #d9f2f5;
+  --you: #b3361f; --you-bg: #fde6e0; --code-bg: #0e1420; --code-fg: #dbe4f5;
+  --display: "Bricolage Grotesque", "Segoe UI", sans-serif;
+  --body: "IBM Plex Sans", "Segoe UI", sans-serif;
+  --mono: "IBM Plex Mono", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0b101a; --surface: #131a28; --surface-2: #1b2436; --line: #26324a;
+  --fg: #e8edf7; --muted: #94a1b8; --accent: #4d9bff; --accent-fg: #06101f;
+  --done: #4fd68a; --done-bg: #12301f; --doing: #ffc24d; --doing-bg: #3a2c0a;
+  --opus: #b891f5; --opus-bg: #2a1d45; --sonnet: #55d0e0; --sonnet-bg: #0e2e35;
+  --you: #ff8a73; --you-bg: #3d1a14; --code-bg: #070b13; --code-fg: #cfd9ee; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #0b101a; --surface: #131a28; --surface-2: #1b2436; --line: #26324a;
+  --fg: #e8edf7; --muted: #94a1b8; --accent: #4d9bff; --accent-fg: #06101f;
+  --done: #4fd68a; --done-bg: #12301f; --doing: #ffc24d; --doing-bg: #3a2c0a;
+  --opus: #b891f5; --opus-bg: #2a1d45; --sonnet: #55d0e0; --sonnet-bg: #0e2e35;
+  --you: #ff8a73; --you-bg: #3d1a14; --code-bg: #070b13; --code-fg: #cfd9ee; color-scheme: dark }
+
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font: 15px/1.5 var(--body);
+  padding-block: 28px 64px; padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.wrap { max-width: 780px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+h1, h2, h3 { font-family: var(--display); text-wrap: balance; margin: 0; letter-spacing: -0.01em; }
+h1 { font-size: 30px; line-height: 1.15; }
+h2 { font-size: 13px; font-family: var(--body); text-transform: uppercase; letter-spacing: .09em; color: var(--muted); font-weight: 600; }
+.sub { color: var(--muted); margin: 6px 0 0; max-width: 60ch; }
+a { color: var(--accent); }
+button { font: inherit; cursor: pointer; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.summary { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 18px; display: flex; flex-direction: column; gap: 12px; }
+.bar { height: 10px; background: var(--surface-2); border-radius: 99px; overflow: hidden; display: flex; }
+.bar i { display: block; height: 100%; transition: width .3s; }
+.bar .d { background: var(--done); } .bar .g { background: var(--doing); }
+.stats { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 14px; color: var(--muted); }
+.stats b { color: var(--fg); font-variant-numeric: tabular-nums; }
+.sync { font-size: 12px; color: var(--muted); }
+
+.next { background: var(--surface); border: 1.5px solid var(--accent); border-radius: 14px; padding: 18px; display: flex; flex-direction: column; gap: 12px; }
+.next .eyebrow { font-size: 12px; font-weight: 600; letter-spacing: .09em; text-transform: uppercase; color: var(--accent); }
+.next h3 { font-size: 22px; }
+.row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+
+.chip { display: inline-flex; align-items: center; gap: 6px; padding: 2px 10px; border-radius: 99px; font-size: 12.5px; font-weight: 600; white-space: nowrap; }
+.chip.opus { background: var(--opus-bg); color: var(--opus); }
+.chip.sonnet { background: var(--sonnet-bg); color: var(--sonnet); }
+.chip.you { background: var(--you-bg); color: var(--you); }
+.chip.st-todo { background: var(--surface-2); color: var(--muted); }
+.chip.st-doing { background: var(--doing-bg); color: var(--doing); }
+.chip.st-done { background: var(--done-bg); color: var(--done); }
+
+pre.prompt { margin: 0; background: var(--code-bg); color: var(--code-fg); border-radius: 10px; padding: 14px; font: 13px/1.55 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; max-height: 260px; overflow: auto; }
+.btn { border: 1px solid var(--line); background: var(--surface-2); color: var(--fg); padding: 7px 14px; border-radius: 8px; font-weight: 600; font-size: 14px; }
+.btn:hover { border-color: var(--accent); }
+.btn.primary { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+.btn.ok { background: var(--done-bg); color: var(--done); border-color: var(--done); }
+
+.phases { display: flex; flex-direction: column; gap: 10px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; }
+.card > summary { list-style: none; cursor: pointer; padding: 14px 16px; display: grid; grid-template-columns: 34px 1fr auto; gap: 12px; align-items: center; }
+.card > summary::-webkit-details-marker { display: none; }
+.num { width: 34px; height: 34px; border-radius: 50%; background: var(--surface-2); display: grid; place-items: center; font: 600 14px var(--display); font-variant-numeric: tabular-nums; }
+.card[data-st="done"] .num { background: var(--done); color: var(--surface); }
+.card[data-st="doing"] .num { background: var(--doing-bg); color: var(--doing); box-shadow: 0 0 0 2px var(--doing); }
+.card .ttl { font: 600 16px var(--display); }
+.card .what { color: var(--muted); font-size: 13.5px; }
+.chips { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.body { padding: 4px 16px 16px; display: flex; flex-direction: column; gap: 14px; border-top: 1px solid var(--line); }
+.body ul { margin: 6px 0 0; padding-left: 20px; display: flex; flex-direction: column; gap: 3px; }
+.lbl { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin-top: 12px; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 9px; overflow: hidden; }
+.seg button { border: 0; background: var(--surface); color: var(--muted); padding: 7px 14px; font-size: 13.5px; font-weight: 600; border-right: 1px solid var(--line); }
+.seg button:last-child { border-right: 0; }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-fg); }
+input.note { width: 100%; background: var(--surface-2); color: var(--fg); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; font: inherit; }
+.why { font-size: 13.5px; color: var(--muted); }
+.foot { font-size: 13px; color: var(--muted); }
+.foot code { font-family: var(--mono); font-size: 12.5px; background: var(--surface-2); padding: 1px 5px; border-radius: 5px; }
+@media (max-width: 520px) { .card > summary { grid-template-columns: 34px 1fr; } .chips { grid-column: 2; justify-content: flex-start; } h1 { font-size: 26px; } }
+@media (prefers-reduced-motion: reduce) { .bar i { transition: none; } }
+</style>
+
+<main class="wrap">
+  <header>
+    <h1>TaskIsland Build Tracker</h1>
+    <p class="sub">Windows 11 Dynamic Island to-do app. Mark each phase as you go, copy the prompt, paste it into a fresh Claude Code session in <code>D:\Rie\Claude\TaskIsland</code>.</p>
+  </header>
+
+  <section class="summary" aria-label="Progress">
+    <div class="bar" role="img" aria-label="Progress"><i class="d" id="barDone"></i><i class="g" id="barDoing"></i></div>
+    <div class="stats" id="stats"></div>
+    <div class="sync" id="sync">Loading saved progress…</div>
+  </section>
+
+  <section class="next" id="next" aria-live="polite"></section>
+
+  <div>
+    <h2 style="margin-bottom:10px">All phases</h2>
+    <div class="phases" id="phases"></div>
+  </div>
+
+  <p class="foot">Plan: <code>docs/PLAN.md</code> · Checklist: <code>docs/TESTING.md</code> · Log: <code>docs/DEVLOG.md</code> · Repo: <a href="https://github.com/Riekie3/Dynamic-Island-To-Do-List" target="_blank" rel="noopener">Riekie3/Dynamic-Island-To-Do-List</a>. Each session reads the dev log first, so a cut-off session can be restarted with the same prompt.</p>
+</main>
+
+<script>
+(function () {
+  var KICK = function (n, name) {
+    return "Project: TaskIsland in D:\\Rie\\Claude\\TaskIsland (repo Riekie3/Dynamic-Island-To-Do-List).\n" +
+      "Read docs/PLAN.md fully, then docs/DEVLOG.md to see progress.\n" +
+      "Execute Phase " + n + " (" + name + ") exactly as specified in PLAN.md and follow the section 0 rules: build, test, update DEVLOG.md and TESTING.md, commit, push, then stop and report.\n" +
+      "Do not start the next phase. Do not skip verification steps. Do not claim untested items as passed.";
+  };
+  var P = [
+    { id: "p0", n: "0", title: "Planning", model: "done", what: "Plan, checklist, dev log, tools installed", deliver: "Detailed plan pushed to GitHub. .NET 10 SDK and Inno Setup installed.", steps: ["PLAN.md, TESTING.md, DEVLOG.md written", "Grouped lists added to the plan", "Repo initialised and pushed"], prompt: null, why: "Finished 2026-11-01." },
+    { id: "p1", n: "1", title: "Setup and database", model: "sonnet", what: "Projects, task and list database, backup code, 40+ tests", deliver: "Solution builds, all automated tests pass, data layer works.", steps: ["Create solution and 4 projects plus 2 test projects", "SQLite schema with lists and tasks, migrations", "Repositories, settings store, backup and restore", "40+ unit tests green"], prompt: KICK(1, "Setup and database"), why: "Standard, well-defined code." },
+    { id: "p2", n: "2", title: "Island interface", model: "opus", what: "The pill, the expanding panel, animation, list buttons", deliver: "Interactive island that matches the mockup.", steps: ["Transparent floating window, top centre", "Morph animation, collapsed to expanded", "Panel layout with list switcher row", "Hover peek, theme tokens, screenshots saved"], prompt: KICK(2, "Island interface"), why: "Hardest visual part: transparent window and smooth stretch animation. Try the app yourself for a few minutes afterwards." },
+    { id: "p3", n: "3", title: "To-do functions", model: "sonnet", what: "Add, edit, delete, tick, priority, filters, lists, reorder", deliver: "Fully working task management saved in the database.", steps: ["Add, edit, delete with Undo", "Tick with 2 second slide-out", "Priorities, sorting, filters, counters", "Create and manage lists, drag to reorder"], prompt: KICK(3, "To-do functions"), why: "Normal app logic, clearly specified." },
+    { id: "p4", n: "4", title: "Windows integration", model: "opus", what: "Tray, startup, sleep/wake, monitors, full-screen, hotkey", deliver: "A utility that runs reliably in the background.", steps: ["Single instance, tray icon and menu", "Start with Windows (--startup)", "Sleep, wake, lock, display change recovery", "Monitors and scaling, full-screen hide", "Ctrl+Alt+T, due-date reminders, logging"], prompt: KICK(4, "Windows integration"), why: "Low-level Windows code is where hidden bugs live. Try it yourself afterwards." },
+    { id: "p5", n: "5", title: "Settings and data", model: "sonnet", what: "Settings window, themes, JSON import/export, backup", deliver: "Every setting works live and survives restart.", steps: ["Settings window with 6 pages", "Light, dark and system theme", "JSON export and import (merge or replace)", "Backup and restore screens"], prompt: KICK(5, "Settings and data"), why: "Mostly forms and wiring." },
+    { id: "p6", n: "6", title: "Testing and fixing", model: "sonnet", what: "Run the checklist, fix bugs, check speed and memory", deliver: "Checklist run, critical bugs fixed, step-by-step user tests written.", steps: ["Run every test marked A in TESTING.md", "Fix critical and major bugs", "Measure CPU, memory, start time, no network use", "Write exact steps for the tests only you can do"], prompt: KICK(6, "Testing and optimisation"), why: "Running tests is routine. Switch to Opus if a bug is in window, sleep or monitor code." },
+    { id: "p6b", n: "6b", title: "Your tests", model: "you", what: "Restart, sleep, hibernate, screen off, lock, monitor, scaling", deliver: "Your results recorded in TESTING.md.", steps: ["W6 restart and log in, app starts by itself", "W7 sleep and wake, W8 hibernate and resume", "W9 screen off, W10 lock and unlock", "W11 plug and unplug a monitor, W12 resolution, W13 scaling", "D4 tasks still there after restart"], prompt: "Project: TaskIsland in D:\\Rie\\Claude\\TaskIsland.\nRead docs/TESTING.md and docs/DEVLOG.md. I finished the user-only tests. Results:\n- W6 restart auto-start: PASS / FAIL (details)\n- W7 sleep and wake: PASS / FAIL (details)\n- W8 hibernate: PASS / FAIL (details)\n- W9 screen off: PASS / FAIL (details)\n- W10 lock and unlock: PASS / FAIL (details)\n- W11 monitor plug/unplug: PASS / FAIL (details)\n- W13 scaling: PASS / FAIL (details)\n- D4 data after restart: PASS / FAIL (details)\nRecord these in TESTING.md and DEVLOG.md, fix every failure (check the logs in %LocalAppData%\\TaskIsland\\Logs), commit and push, then report.", why: "Only you can sleep the laptop or plug in a monitor. Paste the prompt after editing PASS/FAIL." },
+    { id: "p7", n: "7", title: "Release", model: "sonnet", what: "Icon, build, installer, uninstall, GitHub release v1.0.0", deliver: "TaskIsland-Setup-1.0.0-x64.exe on GitHub.", steps: ["App icon and version 1.0.0", "Self-contained publish, smoke test", "Inno Setup installer, install, upgrade, uninstall tests", "Release notes, README, tag, GitHub release (asks you first)"], prompt: KICK(7, "Production release"), why: "Packaging steps are spelled out in the plan." }
+  ];
+  var LABEL = { todo: "Not started", doing: "In progress", done: "Done" };
+  var state = {}; // id -> {status, note}
+  var db = null, dbOk = false;
+
+  function load() { try { return JSON.parse(localStorage.getItem("ti-tracker") || "{}"); } catch (e) { return {}; } }
+  function keep() { try { localStorage.setItem("ti-tracker", JSON.stringify(state)); } catch (e) {} }
+  function st(id) { return (state[id] && state[id].status) || "todo"; }
+  function note(id) { return (state[id] && state[id].note) || ""; }
+
+  function save(id, patch) {
+    state[id] = Object.assign({ status: st(id), note: note(id) }, state[id] || {}, patch);
+    keep(); render();
+    if (dbOk) {
+      db.doc("phases/" + id).set({ status: state[id].status, note: state[id].note || "", updatedAt: new Date().toISOString() })
+        .catch(function () { setSync("Could not save to the shared store. Kept in this browser only."); });
+    }
+  }
+  function setSync(t) { document.getElementById("sync").textContent = t; }
+
+  function copy(text, btn) {
+    function ok() { var o = btn.textContent; btn.textContent = "Copied"; btn.classList.add("ok"); setTimeout(function () { btn.textContent = o; btn.classList.remove("ok"); }, 1600); }
+    function fallback() {
+      var pre = btn.closest("[data-prompt]").querySelector("pre"); var r = document.createRange(); r.selectNodeContents(pre);
+      var s = getSelection(); s.removeAllRanges(); s.addRange(r); btn.textContent = "Selected. Press Ctrl+C";
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(ok, fallback); else fallback();
+  }
+
+  function el(tag, cls, txt) { var e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; }
+  function modelChip(m) {
+    if (m === "opus") return el("span", "chip opus", "Opus 5.5");
+    if (m === "sonnet") return el("span", "chip sonnet", "Sonnet 5.5");
+    if (m === "you") return el("span", "chip you", "You test");
+    return el("span", "chip st-done", "Done");
+  }
+  function statusSeg(p) {
+    var seg = el("div", "seg"); seg.setAttribute("role", "group"); seg.setAttribute("aria-label", "Status of phase " + p.n);
+    ["todo", "doing", "done"].forEach(function (k) {
+      var b = el("button", null, LABEL[k]); b.type = "button"; b.setAttribute("aria-pressed", st(p.id) === k ? "true" : "false");
+      b.onclick = function (ev) { ev.stopPropagation(); save(p.id, { status: k }); };
+      seg.appendChild(b);
+    });
+    return seg;
+  }
+  function promptBlock(p, label) {
+    var w = el("div"); w.setAttribute("data-prompt", "1"); w.style.cssText = "display:flex;flex-direction:column;gap:10px";
+    var pre = el("pre", "prompt", p.prompt); w.appendChild(pre);
+    var r = el("div", "row"); var b = el("button", "btn primary", label || "Copy prompt"); b.type = "button";
+    b.onclick = function () { copy(p.prompt, b); }; r.appendChild(b); w.appendChild(r);
+    return w;
+  }
+
+  function render() {
+    var done = 0, doing = 0, total = P.length;
+    P.forEach(function (p) { var s = st(p.id); if (p.id === "p0") s = "done"; if (s === "done") done++; else if (s === "doing") doing++; });
+    document.getElementById("barDone").style.width = (done / total * 100) + "%";
+    document.getElementById("barDoing").style.width = (doing / total * 100) + "%";
+    var stats = document.getElementById("stats"); stats.textContent = "";
+    [[done, " of " + total + " done"], [doing, " in progress"], [total - done - doing, " not started"]].forEach(function (x) {
+      var s = el("span"); var b = el("b", null, String(x[0])); s.appendChild(b); s.appendChild(document.createTextNode(x[1])); stats.appendChild(s);
+    });
+
+    var nextP = P.filter(function (p) { return p.id !== "p0" && st(p.id) !== "done"; })[0];
+    var nx = document.getElementById("next"); nx.textContent = "";
+    if (!nextP) {
+      nx.appendChild(el("div", "eyebrow", "All phases done"));
+      nx.appendChild(el("h3", null, "TaskIsland v1.0.0 is complete"));
+      nx.appendChild(el("p", "why", "Nothing left to run. Check the GitHub release and keep a backup of your tasks."));
+    } else {
+      nx.appendChild(el("div", "eyebrow", st(nextP.id) === "doing" ? "Continue here" : "Next up"));
+      var h = el("div", "row"); h.appendChild(el("h3", null, "Phase " + nextP.n + ": " + nextP.title)); h.appendChild(modelChip(nextP.model)); nx.appendChild(h);
+      nx.appendChild(el("p", "why", (nextP.model === "you" ? "Do the tests yourself, then paste your results. " : "Switch Claude Code to the model shown, start a fresh session, paste this prompt. ") + nextP.why));
+      nx.appendChild(promptBlock(nextP, "Copy prompt for Phase " + nextP.n));
+      nx.appendChild(statusSeg(nextP));
+    }
+
+    var box = document.getElementById("phases");
+    var openIds = {}; box.querySelectorAll("details[open]").forEach(function (d) { openIds[d.dataset.id] = 1; });
+    box.textContent = "";
+    P.forEach(function (p) {
+      var s = p.id === "p0" ? "done" : st(p.id);
+      var d = el("details", "card"); d.dataset.id = p.id; d.dataset.st = s; if (openIds[p.id]) d.open = true;
+      var sm = el("summary"); sm.appendChild(el("div", "num", s === "done" ? "✓" : p.n));
+      var mid = el("div"); mid.appendChild(el("div", "ttl", p.title)); mid.appendChild(el("div", "what", p.what)); sm.appendChild(mid);
+      var ch = el("div", "chips"); ch.appendChild(modelChip(p.model)); ch.appendChild(el("span", "chip st-" + s, LABEL[s])); sm.appendChild(ch);
+      d.appendChild(sm);
+      var b = el("div", "body");
+      b.appendChild(el("div", "lbl", "Result when done")); b.appendChild(el("div", null, p.deliver));
+      b.appendChild(el("div", "lbl", "Main steps")); var ul = el("ul"); p.steps.forEach(function (x) { ul.appendChild(el("li", null, x)); }); b.appendChild(ul);
+      b.appendChild(el("div", "why", "Why this model: " + p.why));
+      if (p.prompt) {
+        b.appendChild(el("div", "lbl", p.id === "p6b" ? "Prompt to record your results" : "Prompt to paste")); b.appendChild(promptBlock(p));
+        b.appendChild(el("div", "lbl", "Status")); b.appendChild(statusSeg(p));
+        b.appendChild(el("div", "lbl", "Note (where you stopped, anything to remember)"));
+        var inp = el("input", "note"); inp.type = "text"; inp.id = "note-" + p.id; inp.maxLength = 300; inp.value = note(p.id);
+        inp.placeholder = "e.g. Stopped at step 3, build errors in Data tests";
+        inp.onchange = function () { save(p.id, { note: inp.value }); };
+        b.appendChild(inp);
+      }
+      d.appendChild(b); box.appendChild(d);
+    });
+  }
+
+  state = load(); render();
+  setSync("Saved in this browser.");
+
+  if (window.claude && claude.use) {
+    claude.use("db").then(function (d) {
+      if (!d) { setSync("Saved in this browser only (sign in to share progress with Claude)."); return; }
+      db = d; dbOk = true;
+      var timer = setTimeout(function () { setSync("Shared store is slow to answer. Showing what is saved in this browser."); }, 10000);
+      db.collection("phases").onSnapshot(function (snap) {
+        if (!snap.metadata.fromCache) clearTimeout(timer);
+        snap.docs.forEach(function (doc) { var v = doc.data(); if (v) state[doc.id] = { status: v.status || "todo", note: v.note || "" }; });
+        keep(); render();
+        setSync(snap.metadata.fromCache ? "Loading shared progress…" : "Progress is saved and shared. Claude can update it too.");
+      }, function () { clearTimeout(timer); dbOk = false; setSync("Shared store unavailable. Saved in this browser only."); });
+    }, function () { setSync("Saved in this browser only."); });
+  }
+})();
+</script>
