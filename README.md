@@ -23,3 +23,7 @@ C# · .NET 10 · WPF (MVVM) · SQLite · Windows 11 x64
 dotnet build TaskIsland.sln
 dotnet test
 ```
+
+---
+
+Developed by **RieSources** · rie-sources.com

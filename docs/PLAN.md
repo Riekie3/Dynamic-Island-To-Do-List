@@ -53,6 +53,13 @@ and report. Do not skip verification steps.
 
 ---
 
+## Credit: RieSources
+
+All credit goes to **RieSources** (rie-sources.com), not the GitHub username. Use it in:
+`Directory.Build.props` (Company, Authors, Copyright), exe file properties (CompanyName), About page
+("Developed by RieSources"), installer (`AppPublisher=RieSources`, `AppPublisherURL=https://rie-sources.com`,
+`AppCopyright`), README footer, LICENSE copyright line, release notes, and the installer's finish/welcome text.
+
 ## 2. Agreed product decisions (2026-11-01)
 
 Core spec (user brief) **plus** these v1 extras/decisions:
@@ -446,7 +453,7 @@ Lists page: reorderable list of lists (↑/↓ buttons) with name, colour swatch
 "New list", Default list dropdown, Pill counts radio (All lists / Selected list).
 Data page buttons: Export JSON… · Import JSON… · Back up now… · Restore from backup… · Open data folder ·
 Clear completed tasks… (confirm). About: name, version (from assembly), build date, .NET runtime,
-developer "Riekie3", GitHub link (opens browser only when clicked), data folder path, "No data leaves this PC".
+"Developed by RieSources" (rie-sources.com, shown as text, link opens only on click), GitHub link (opens browser only when clicked), data folder path, "No data leaves this PC".
 
 ---
 
@@ -568,8 +575,8 @@ using the template there, update TESTING.md, push, and report to the user.
 
 Steps:
 1. `git pull`. Create `global.json` (sdk 10.0.403, `rollForward: latestFeature`) and `Directory.Build.props`
-   (`Version 0.1.0`, `Nullable enable`, `ImplicitUsings enable`, `LangVersion latest`, `Company Riekie3`,
-   `Product TaskIsland`, `Copyright © 2026 Riekie3`).
+   (`Version 0.1.0`, `Nullable enable`, `ImplicitUsings enable`, `LangVersion latest`, `Company RieSources`,
+   `Product TaskIsland`, `Authors RieSources`, `Copyright © 2026 RieSources`).
 2. `dotnet new sln -n TaskIsland`. Create projects per §3.1 (`classlib` for Core/Data/Windows, `wpf` for App,
    `xunit` for tests), add to sln, set TFMs, add references and packages (§3.2).
 3. Core: `Priority` enum (High=0, Medium=1, Low=2), `TaskItem` (all columns from §4.1), `TodoList`, `TaskFilter`,
@@ -720,7 +727,7 @@ Commit: `Fix defects and optimise performance` (may be several commits).
    ```
    (WPF does not support trimming. Do not enable `PublishTrimmed`.) Smoke-test `publish\win-x64\TaskIsland.exe`.
 4. `installer/TaskIsland.iss` (Inno Setup 6):
-   - `AppId` fixed GUID (generate once, never change), `AppName TaskIsland`, `AppVersion` from define,
+   - `AppId` fixed GUID (generate once, never change), `AppName TaskIsland`, `AppPublisher=RieSources`, `AppPublisherURL=https://rie-sources.com`, `AppCopyright=Copyright (C) 2026 RieSources`, `AppVersion` from define,
      `PrivilegesRequired=lowest`, `DefaultDirName={localappdata}\Programs\TaskIsland`, `ArchitecturesAllowed=x64compatible`,
      `ArchitecturesInstallIn64BitMode=x64compatible`, `AppMutex=Local\TaskIsland-7F3A9C2E-SingleInstance`,
      `CloseApplications=yes`, `SetupIconFile`, `UninstallDisplayIcon`, `WizardStyle=modern`, `OutputBaseFilename=TaskIsland-Setup-1.0.0-x64`.
