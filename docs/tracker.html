@@ -119,7 +119,8 @@ input.note { width: 100%; background: var(--surface-2); color: var(--fg); border
     return "Project: TaskIsland in D:\\Rie\\Claude\\TaskIsland (repo Riekie3/Dynamic-Island-To-Do-List).\n" +
       "Read docs/PLAN.md fully, then docs/DEVLOG.md to see progress.\n" +
       "Execute Phase " + n + " (" + name + ") exactly as specified in PLAN.md and follow the section 0 rules: build, test, update DEVLOG.md and TESTING.md, commit, push, then stop and report.\n" +
-      "Do not start the next phase. Do not skip verification steps. Do not claim untested items as passed.";
+      "Do not start the next phase. Do not skip verification steps. Do not claim untested items as passed.\n" +
+      "When finished, write the Handoff block in DEVLOG.md and end with: Phase " + n + " complete. Run /compact now (or start a fresh session) before the next phase.";
   };
   var P = [
     { id: "p0", n: "0", title: "Planning", model: "done", what: "Plan, checklist, dev log, tools installed", deliver: "Detailed plan pushed to GitHub. .NET 10 SDK and Inno Setup installed.", steps: ["PLAN.md, TESTING.md, DEVLOG.md written", "Grouped lists added to the plan", "Repo initialised and pushed"], prompt: null, why: "Finished 2026-11-01." },

@@ -26,6 +26,7 @@ Newest entry at the bottom. Each phase appends one entry using the template belo
 **Tests performed:** … (unit test count, manual checks, TESTING.md IDs ticked)
 **Remaining defects / not tested:** …
 **Commit:** <hash> <message> · **Pushed:** yes/no
+**Handoff (for the next phase, survives /compact):** what exists now · what Phase N+1 must know · open issues · exact next step
 ```
 
 ---

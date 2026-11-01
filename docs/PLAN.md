@@ -24,7 +24,13 @@
    continuous pushes, not one big batch at the end).
 6. Every visible button must work. No placeholder handlers, no fake persistence.
 7. Keep dependencies to the list in §3. Ask the user before adding any other NuGet package.
-8. Commit messages end with the `Co-Authored-By` attribution line your harness specifies.
+8. **Compact after every phase.** When a phase is finished (build and tests green, DEVLOG and TESTING updated,
+   committed, pushed), write a "Handoff" block at the end of that DEVLOG entry (what exists, what the next phase must
+   know, open issues, exact next command). Then end your final report with this line:
+   `Phase N complete. Run /compact now (or start a fresh session) before Phase N+1.`
+   Do **not** begin the next phase in the same context. (Slash commands like /compact can only be run by the user;
+   the agent cannot trigger it. The Handoff block means nothing is lost when context is compacted or cleared.)
+9. Commit messages end with the `Co-Authored-By` attribution line your harness specifies.
 
 **Suggested model per phase:** Opus for Phase 2 (window interop + animation) and Phase 4
 (Windows integration). Sonnet is fine for Phases 1, 3, 5, 6 and 7.
@@ -34,8 +40,8 @@
 ```
 Project: TaskIsland in D:\Rie\Claude\TaskIsland (repo Riekie3/Dynamic-Island-To-Do-List).
 Read docs/PLAN.md fully, then docs/DEVLOG.md to see progress. Execute the next
-incomplete phase exactly as specified in PLAN.md, follow section 0 rules, then stop
-and report. Do not skip verification steps.
+incomplete phase exactly as specified in PLAN.md, follow section 0 rules (including the
+Handoff block and the "Run /compact now" line), then stop and report. Do not skip verification steps.
 ```
 
 ---
