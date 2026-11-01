@@ -1,0 +1,119 @@
+# TaskIsland — Test Checklist
+
+Legend: ✅ passed · ❌ failed (see DEVLOG) · ⏳ not tested yet · 👤 must be tested by the user
+**Who** column: `A` = the AI agent can test it, `U` = needs the user (physical action / reboot / sleep).
+
+Only mark ✅ after actually testing. Record date + build/commit in the Notes column.
+
+## User interface
+
+| # | Test | Who | Result | Notes |
+|---|---|---|---|---|
+| UI1 | Collapsed pill appears top-centre of the selected monitor | A | ⏳ | |
+| UI2 | Click pill → expands smoothly (no flicker / window jump) | A | ⏳ | |
+| UI3 | ✕, Esc, click outside → collapses smoothly | A | ⏳ | |
+| UI4 | Expanded panel stays inside screen bounds (also with HorizontalOffset at ±400) | A | ⏳ | |
+| UI5 | Visual match vs `docs/design-reference.webp` (screenshots in docs/screenshots) | A | ⏳ | |
+| UI6 | Transparent area around pill is click-through (desktop icon below is clickable) | A | ⏳ | |
+| UI7 | Hover / peek never steals focus from the app you are typing in | A | ⏳ | |
+| UI8 | Not in Alt-Tab, not on the taskbar | A | ⏳ | |
+| UI9 | "All Done" shown when 0 outstanding; "1 task" singular | A | ⏳ | |
+| UI10 | Peek on hover shows top task; toggle off works | A | ⏳ | |
+| UI11 | Light theme, dark theme, System theme follows Windows | A | ⏳ | |
+| UI12 | Animations off → instant transitions | A | ⏳ | |
+
+## Task management
+
+| # | Test | Who | Result | Notes |
+|---|---|---|---|---|
+| T1 | Add task via Enter and via → button; default priority Medium | A | ⏳ | |
+| T2 | Empty / whitespace title is rejected | A | ⏳ | |
+| T3 | Choose High / Medium / Low before adding | A | ⏳ | |
+| T4 | Edit title, priority, notes, due date+time, list → Save persists | A | ⏳ | |
+| T5 | Edit → Cancel discards changes | A | ⏳ | |
+| T6 | Delete → Undo restores; after 5 s it's permanent | A | ⏳ | |
+| T7 | Tick → blue tick + strikethrough → slides out of Active after 2 s | A | ⏳ | |
+| T8 | Untick within 2 s cancels slide-out; untick in Completed view works | A | ⏳ | |
+| T9 | Sorting High → Medium → Low; stable order within group | A | ⏳ | |
+| T10 | Drag reorder within a priority group persists after restart | A | ⏳ | |
+| T11 | Drag into another priority group is blocked | A | ⏳ | |
+| T12 | Filters Active / Completed / All; filter remembered | A | ⏳ | |
+| T13 | Counters (pill, header, footer, %) update instantly | A | ⏳ | |
+| T14 | Clear completed → confirm → Undo works | A | ⏳ | |
+| T15 | Due reminder fires once at due time (balloon + pulse); overdue shown red | A | ⏳ | |
+
+## Lists (groups)
+
+| # | Test | Who | Result | Notes |
+|---|---|---|---|---|
+| L1 | First run shows starter lists *Personal* + *Office Work*, no tasks | A | ⏳ | |
+| L2 | Create list (name + colour) → appears in switcher, persists after restart | A | ⏳ | |
+| L3 | Duplicate name (any case) rejected; 21st list rejected | A | ⏳ | |
+| L4 | Rename, recolour, move left/right (chip menu and Settings → Lists) | A | ⏳ | |
+| L5 | Switch list → only its tasks shown; selection remembered after restart | A | ⏳ | |
+| L6 | *All lists* shows every task with list dot + name, High tasks first | A | ⏳ | |
+| L7 | Quick add in a list adds there; in *All lists* uses the chosen/default list | A | ⏳ | |
+| L8 | Edit → change List moves the task | A | ⏳ | |
+| L9 | Delete list → "move tasks" keeps tasks in target list; "delete tasks" removes them; backup made first | A | ⏳ | |
+| L10 | Last remaining list cannot be deleted | A | ⏳ | |
+| L11 | Chip counts + pill count correct (PillCountScope All / Selected) | A | ⏳ | |
+| L12 | Ctrl+0…9 and Ctrl+Tab switch lists | A | ⏳ | |
+| L13 | Export/import keeps lists and which task belongs to which list | A | ⏳ | |
+
+## Windows integration
+
+| # | Test | Who | Result | Notes |
+|---|---|---|---|---|
+| W1 | Runs in background; ✕ / Alt+F4 never exit the app | A | ⏳ | |
+| W2 | Tray: every menu item works (Open, Expand/Collapse, Show/Hide, Pause/Resume, Settings, Exit) | A | ⏳ | |
+| W3 | Exit leaves no ghost tray icon and no process | A | ⏳ | |
+| W4 | Second launch → no 2nd process, first one expands | A | ⏳ | |
+| W5 | HKCU Run value created on first run; removed when toggled off | A | ⏳ | |
+| W6 | **Reboot → log in → TaskIsland appears collapsed automatically** | U | 👤 | |
+| W7 | **Sleep (lid close / Start → Sleep) → wake → notch in place, tray icon present, data intact** | U | 👤 | |
+| W8 | **Hibernate → resume → same as W7** | U | 👤 | |
+| W9 | Screen off (wait for display timeout) → wake → notch in place | U | 👤 | |
+| W10 | Lock (Win+L) → unlock → notch in place | A+U | ⏳ | |
+| W11 | **Plug in external monitor / unplug it → notch moves to correct screen** | U | 👤 | |
+| W12 | Change resolution → notch re-centres | A+U | ⏳ | |
+| W13 | Scaling 100 / 125 / 150 / 200 % → correct size & position | A+U | ⏳ | |
+| W14 | Choose a different monitor in Settings → moves immediately | U | 👤 | needs 2 screens |
+| W15 | Full-screen video / F11 / PowerPoint slideshow → hides, then returns | A | ⏳ | |
+| W16 | Ctrl+Alt+T toggles; rebinding works; conflict warning shown | A | ⏳ | |
+| W17 | Restart explorer.exe → tray icon returns | A | ⏳ | |
+| W18 | No network connections (`Get-NetTCPConnection -OwningProcess …` empty) | A | ⏳ | |
+
+## Data
+
+| # | Test | Who | Result | Notes |
+|---|---|---|---|---|
+| D1 | Tasks saved to `%LocalAppData%\TaskIsland\Data\taskisland.db` | A | ⏳ | |
+| D2 | Tasks preserved after app restart | A | ⏳ | |
+| D3 | Tasks preserved after `taskkill /f` (crash simulation) | A | ⏳ | |
+| D4 | **Tasks preserved after Windows restart** | U | 👤 | |
+| D5 | Export JSON → Import (Merge) skips duplicates | A | ⏳ | |
+| D6 | Import (Replace) makes backup first, then replaces | A | ⏳ | |
+| D7 | Invalid JSON files rejected with clear message, nothing imported | A | ⏳ | |
+| D8 | Backup now → restore → data matches; pre-restore copy created | A | ⏳ | |
+| D9 | Daily auto-backup created, max 7 kept | A | ⏳ | |
+| D10 | All settings persist after restart | A | ⏳ | |
+
+## Performance
+
+| # | Test | Target | Result | Notes |
+|---|---|---|---|---|
+| P1 | Idle CPU (collapsed, 60 s) | ≈ 0 % | ⏳ | |
+| P2 | Working set idle | < 80 MB | ⏳ | |
+| P3 | Cold start to visible pill | < 1.5 s | ⏳ | |
+| P4 | Animations smooth on this laptop | no visible stutter | ⏳ | |
+
+## Deployment
+
+| # | Test | Who | Result | Notes |
+|---|---|---|---|---|
+| R1 | `dotnet build` + `dotnet test` green | A | ⏳ | |
+| R2 | Self-contained publish runs on its own | A | ⏳ | |
+| R3 | Installer installs without admin | A | ⏳ | |
+| R4 | Upgrade install keeps tasks | A | ⏳ | |
+| R5 | Uninstall removes app, Start menu entry and Run value; asks about data (default keep) | A | ⏳ | |
+| R6 | **Install on a 2nd Windows 11 PC (optional)** | U | 👤 | |
