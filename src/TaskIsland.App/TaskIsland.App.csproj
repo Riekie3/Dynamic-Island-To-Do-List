@@ -1,0 +1,23 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <AssemblyName>TaskIsland</AssemblyName>
+    <RootNamespace>TaskIsland.App</RootNamespace>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.14" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\TaskIsland.Core\TaskIsland.Core.csproj" />
+    <ProjectReference Include="..\TaskIsland.Data\TaskIsland.Data.csproj" />
+    <ProjectReference Include="..\TaskIsland.Windows\TaskIsland.Windows.csproj" />
+  </ItemGroup>
+
+</Project>

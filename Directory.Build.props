@@ -1,0 +1,13 @@
+<Project>
+  <PropertyGroup>
+    <Version>0.1.0</Version>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <Company>RieSources</Company>
+    <Authors>RieSources</Authors>
+    <Product>TaskIsland</Product>
+    <Copyright>Copyright © 2026 RieSources</Copyright>
+  </PropertyGroup>
+</Project>

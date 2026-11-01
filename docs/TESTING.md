@@ -22,6 +22,16 @@ Only mark ✅ after actually testing. Record date + build/commit in the Notes co
 | UI11 | Light theme, dark theme, System theme follows Windows | A | ⏳ | |
 | UI12 | Animations off → instant transitions | A | ⏳ | |
 
+## Automated tests (not part of the manual checklist)
+
+Phase 1 (2026-11-01): `dotnet test TaskIsland.sln -c Release` → **218 passed, 0 failed**.
+- `TaskIsland.Core.Tests` (101): sorting, filters, stats and percent rounding, reminder logic, settings defaults/clamping,
+  JSON export/import round-trip and every validation failure.
+- `TaskIsland.Data.Tests` (117, real temp SQLite files): migrations, task CRUD, soft delete/restore/purge, reorder,
+  priority/list moves, lists rules (duplicates, max 20, last list, delete+move), settings, backup/restore/prune/daily
+  backup, import Merge/Replace, persistence after reopening, commit-before-crash check.
+These cover the logic behind T1–T15, L2–L10, L13, D1–D3 and D5–D10, but those rows stay ⏳ until verified in the UI.
+
 ## Task management
 
 | # | Test | Who | Result | Notes |
@@ -46,7 +56,7 @@ Only mark ✅ after actually testing. Record date + build/commit in the Notes co
 
 | # | Test | Who | Result | Notes |
 |---|---|---|---|---|
-| L1 | First run shows starter lists *Personal* + *Office Work*, no tasks | A | ⏳ | |
+| L1 | First run shows starter lists *Personal* + *Office Work*, no tasks | A | ⏳ | Phase 1: data layer + skeleton window verified (launched exe: "2 lists (Personal, Office Work), 0 tasks"). Still to check in the real island UI (Phase 2/3). |
 | L2 | Create list (name + colour) → appears in switcher, persists after restart | A | ⏳ | |
 | L3 | Duplicate name (any case) rejected; 21st list rejected | A | ⏳ | |
 | L4 | Rename, recolour, move left/right (chip menu and Settings → Lists) | A | ⏳ | |
@@ -111,7 +121,7 @@ Only mark ✅ after actually testing. Record date + build/commit in the Notes co
 
 | # | Test | Who | Result | Notes |
 |---|---|---|---|---|
-| R1 | `dotnet build` + `dotnet test` green | A | ⏳ | |
+| R1 | `dotnet build` + `dotnet test` green | A | ✅ | Phase 1, 2026-11-01: Release build 0 warnings / 0 errors, 218 tests pass (101 Core + 117 Data). Re-run after every phase. |
 | R2 | Self-contained publish runs on its own | A | ⏳ | |
 | R3 | Installer installs without admin | A | ⏳ | |
 | R4 | Upgrade install keeps tasks | A | ⏳ | |

@@ -11,13 +11,15 @@ survives sleep / wake. Organise tasks into lists such as Office Work, Personal o
 
 ## Status
 
-🚧 Planning complete, development not started. See [docs/PLAN.md](docs/PLAN.md) (build guide), [docs/TESTING.md](docs/TESTING.md) and [docs/DEVLOG.md](docs/DEVLOG.md).
+🚧 In development: Phase 1 (project structure and database layer) is done. See [docs/PLAN.md](docs/PLAN.md) (build guide), [docs/TESTING.md](docs/TESTING.md) and [docs/DEVLOG.md](docs/DEVLOG.md).
 
 ## Tech
 
 C# · .NET 10 · WPF (MVVM) · SQLite · Windows 11 x64
 
 ## Build (developers)
+
+Needs the .NET 10 SDK. `nuget.config` points at nuget.org only.
 
 ```
 dotnet build TaskIsland.sln

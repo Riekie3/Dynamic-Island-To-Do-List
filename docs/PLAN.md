@@ -247,9 +247,10 @@ Task UpdateAsync(TaskItem item);                       // sets UpdatedAt
 Task SetCompletedAsync(long id, bool completed);       // sets/clears CompletedAt, UpdatedAt
 Task SoftDeleteAsync(long id);  Task RestoreAsync(long id);  Task PurgeDeletedAsync();
 Task ReorderAsync(long listId, Priority group, IReadOnlyList<long> orderedIds);   // one transaction
-Task<int> ClearCompletedAsync();                       // soft-delete all completed (undo-able)
+Task<int> ClearCompletedAsync(long? listId = null);    // soft-delete completed tasks (all lists or one), undo-able
 Task MarkReminderShownAsync(long id);
-Task ReplaceAllAsync(IEnumerable<TaskItem> items);     // used by JSON import "Replace", one transaction
+Task<TaskItem> InsertAsync(TaskItem item);             // keeps timestamps/completion, assigns Id + SortOrder (used by import)
+Task ReplaceAllAsync(TransferData data);               // JSON import "Replace": lists + tasks, one transaction
 ```
 
 New task `SortOrder` = `MAX(SortOrder)+1` within its (list, priority), so it appears at the bottom of its group.
@@ -590,7 +591,7 @@ Steps:
 3. Core: `Priority` enum (High=0, Medium=1, Low=2), `TaskItem` (all columns from §4.1), `TodoList`, `TaskFilter`,
    `AppSettings` with defaults (§5), interfaces, `TaskSorter`, `TaskStats`, `IClock`, `ReminderScheduler`, `JsonTransfer`.
 4. Data: `AppPaths` (creates `Data`, `Backups`, `Logs`; constructor overload taking a root for tests), `Database`
-   (connection string `Data Source=…;Cache=Shared;Pooling=True`, WAL on open, `busy_timeout=3000`), `Migrations`,
+   (connection string `Data Source=…;Pooling=True` (no shared cache, SQLite discourages it and WAL does the job), WAL set once at initialise, `foreign_keys=ON` and `busy_timeout=3000` on every connection), `Migrations`,
    `SqliteTaskRepository`, `SqliteTodoListRepository`, `SqliteSettingsStore`, `BackupService`.
 5. Tests, at least:
    - Core: sort order across all three priorities and ties. Each filter. Stats incl. 0 tasks and percent rounding.
