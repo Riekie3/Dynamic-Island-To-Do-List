@@ -1,0 +1,23 @@
+# Build output
+bin/
+obj/
+publish/
+installer/Output/
+artifacts/
+
+# IDE
+.vs/
+.vscode/
+*.user
+*.suo
+.idea/
+
+# Test results
+TestResults/
+coverage*/
+
+# Local data / logs
+*.db
+*.db-wal
+*.db-shm
+*.log
