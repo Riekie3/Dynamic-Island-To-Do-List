@@ -16,6 +16,18 @@ Design reference: [design-reference.webp](design-reference.webp)
 | Visual Studio | Not installed — not needed, `dotnet` CLI is enough |
 | Installer tool | None — **Inno Setup 6** proposed (`winget install JRSoftware.InnoSetup`) |
 
+### Decisions (agreed 2026-11-01)
+
+- Tools: install .NET 10 SDK + Inno Setup 6 via winget.
+- v1 extras on top of the spec:
+  - **Due-date reminders**: Windows toast when a dated task is due; overdue shown red; pill pulses briefly.
+  - **Drag to reorder** within the same priority (writes `SortOrder`).
+  - **Pill peek on hover**: hovering the collapsed pill shows the top High-priority task title.
+- Ticked tasks stay visible ~2 s (tick + strikethrough), then **slide out of the Active view**;
+  still in Completed / All.
+- Daily auto-backup (keep 7) kept as a Settings toggle.
+- UI language: **English only**.
+
 ## 2. Architecture
 
 ```
