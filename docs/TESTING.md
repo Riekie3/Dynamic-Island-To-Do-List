@@ -130,6 +130,20 @@ Targets from PLAN §6.7. Record the measured number in Notes, every phase from P
 | P10 | Hidden (full-screen app / paused) → 0 % CPU and GPU | 0 % | ⏳ | |
 | P11 | No disk writes while idle (Resource Monitor, 60 s) | none | ⏳ | |
 
+## Security software (PLAN §7.11)
+
+| # | Test | Who | Result | Notes |
+|---|---|---|---|---|
+| S1 | Code search finds no banned APIs (hooks, process access, shells, network, `Assembly.Load(byte[])`) | A | ⏳ | |
+| S2 | Defender custom scan of `publish\win-x64` and the installer → no threats (signatures updated first) | A | ⏳ | |
+| S3 | 10 min of use with Defender on → nothing in Windows Security → Protection history | A | ⏳ | |
+| S4 | Install, run, uninstall → no UAC prompt, no firewall prompt | A | ⏳ | |
+| S5 | Startup entry visible and switchable in Task Manager → Startup apps; turned off there → TaskIsland doesn't re-add it | A | ⏳ | |
+| S6 | Controlled Folder Access on → app runs normally; export to Documents shows the friendly message; Downloads works | A | ⏳ | |
+| S7 | All exe/dll files show Company "RieSources", product, version and description in file Properties | A | ⏳ | |
+| S8 | Signed build only: `Get-AuthenticodeSignature` = Valid on exe, dlls, installer, uninstaller | A | ⏳ | n/a if unsigned |
+| S9 | VirusTotal scan (only with the user's OK) → 0 detections or false positives reported | A+U | ⏳ | optional |
+
 ## Deployment
 
 | # | Test | Who | Result | Notes |

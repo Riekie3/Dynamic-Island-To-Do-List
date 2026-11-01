@@ -31,6 +31,8 @@
    Do **not** begin the next phase in the same context. (Slash commands like /compact can only be run by the user;
    the agent cannot trigger it. The Handoff block means nothing is lost when context is compacted or cleared.)
 9. Commit messages end with the `Co-Authored-By` attribution line your harness specifies.
+10. **Every phase follows §7.11 (don't trigger security software) and §6.7 (resource budget).** If a step seems to need
+    something §7.11 bans (a hook, a shell, a network call, admin rights), stop and ask the user instead.
 
 **Suggested effort per phase:** Phase 1 Medium · 2 High · 3 Medium · 4 High · 5 Medium · 6 High · 6b Medium · 7 Medium.
 
@@ -673,7 +675,8 @@ the value (see §9).
 ### 7.7 Single instance (`SingleInstance`)
 
 Named mutex `Local\TaskIsland-7F3A9C2E-SingleInstance` (also used as Inno `AppMutex`). If already held:
-connect to named pipe `TaskIsland-7F3A9C2E-<user SID>`, send `EXPAND`, exit with code 0. The first
+connect to named pipe `TaskIsland-7F3A9C2E-<user SID>` (server and client use `PipeOptions.CurrentUserOnly`, §7.11),
+send `EXPAND`, exit with code 0. The server accepts only the exact `EXPAND` message (max 16 bytes) and ignores anything else. The first
 instance runs a pipe server loop (async, background) and marshals `EXPAND` to the dispatcher.
 
 ### 7.8 Hotkeys (`HotkeyService`)
@@ -699,6 +702,58 @@ Hook `DispatcherUnhandledException` (log, show a small non-fatal error toast, ma
 `AppDomain.CurrentDomain.UnhandledException`, `TaskScheduler.UnobservedTaskException`.
 DB failure on startup (locked/corrupt) → message box with "Open data folder" / "Restore from backup" / "Exit".
 Never silently drop data.
+
+### 7.11 Don't trigger security software (added 2026-11-01, must-follow)
+
+Goal: Microsoft Defender, third-party antivirus, EDR tools, Windows Firewall and Controlled Folder Access never flag,
+block or prompt about TaskIsland. Antivirus works on **behaviour heuristics** and **file reputation**, so the app must
+behave like a plain, well-labelled desktop app and avoid every pattern malware uses.
+
+**Banned in code** (search for these in code review, Phase 6):
+1. **No keyboard or mouse hooks.** Never `SetWindowsHookEx` (`WH_KEYBOARD_LL`, `WH_MOUSE_LL` or any other); hooks
+   look like keyloggers. The global shortcut uses `RegisterHotKey` only. Hover detection uses WPF mouse events on our
+   own window only. `SetWinEventHook` is allowed only `WINEVENT_OUTOFCONTEXT` for foreground/location events (§7.4), no
+   in-context DLL injection.
+2. **No touching other processes:** no `OpenProcess` with write/VM rights, no `ReadProcessMemory`/`WriteProcessMemory`,
+   no `CreateRemoteThread`, no DLL injection, no reading other windows' text. Full-screen detection only reads the
+   foreground window's rect and class name.
+3. **No spawning shells or scripts:** never start `cmd`, `powershell`, `wscript`, `mshta`, `rundll32`, `reg.exe`,
+   `schtasks`. The only `Process.Start` calls are: opening the data folder in Explorer (`explorer.exe "<folder>"`) and
+   opening the two About links in the default browser (`UseShellExecute=true`), both **only on a user click**.
+4. **No network at all** (§2): no sockets, HTTP, update checks or telemetry, so no firewall prompt ever appears.
+   Single instance uses a local **named pipe** created with `PipeOptions.CurrentUserOnly` (only the same user can connect).
+5. **Persistence only in the normal, visible way:** one `HKCU\…\Run` value named `TaskIsland` pointing at the
+   installed exe (§7.6), which is visible in Task Manager → Startup apps and removable there. No scheduled tasks,
+   services, `RunOnce`, `Winlogon`, `Image File Execution Options`, WMI subscriptions, startup-folder copies or
+   hidden registry tricks. If the user turns startup off (in TaskIsland or in Task Manager), respect it and never
+   re-add it silently: only re-write the value when the setting is on **and** the value exists but points at an old path.
+6. **Files only in our own folders:** writes go to `%LocalAppData%\TaskIsland\` and to files the user picks in a
+   save dialog. Never write to Program Files, Windows, System32, other apps' folders, or the Startup folder.
+   No self-copying, no self-deleting, no changing file attributes to hidden/system.
+7. **No admin, no UAC prompt.** Manifest `requestedExecutionLevel level="asInvoker"`. Installer per-user (`lowest`).
+8. **No obfuscation or packing:** no UPX/packers, no obfuscators, no encrypted strings or payloads, no single-file
+   self-extraction (folder publish, §Phase 7), no code loaded at runtime from bytes, no `Assembly.Load(byte[])`.
+9. **No security or system setting changes:** never touch Defender, firewall, UAC, proxy, hosts file, certificates or
+   policies. `SetProcessInformation` (Efficiency mode) only affects our own process.
+10. **Honest window behaviour:** the island is visible (topmost, but not hidden from the user); the tray icon is always
+    present while running, so the user can always see and exit the app.
+
+**Controlled Folder Access** (Defender ransomware protection) blocks unknown apps from writing to Documents, Desktop,
+Pictures and similar. TaskIsland's own data is in `%LocalAppData%` (not protected), so it is never blocked. For JSON
+export and manual backup, the save dialog starts in **Downloads**. If a write still fails with
+`UnauthorizedAccessException`/`IOException`, show: "Windows blocked saving here (Controlled folder access may be on).
+Choose another folder, such as Downloads." Never retry in a loop, never suggest turning protection off.
+
+**File identity (helps reputation and heuristics):** every exe/dll we build carries full version info
+(`Company RieSources`, `Product TaskIsland`, `FileDescription`, `FileVersion`, `InformationalVersion`, `Copyright`),
+an application icon and the manifest (§7.2 + `asInvoker` + Windows 10/11 `supportedOS`). Release builds are
+deterministic (`<Deterministic>true</Deterministic>`, `ContinuousIntegrationBuild` on publish).
+
+**Code signing** (decides SmartScreen and Smart App Control): an unsigned installer shows the SmartScreen "Windows protected
+your PC" warning until it gains download reputation, and on PCs with **Smart App Control** turned on (Windows 11 clean
+installs) unsigned apps can be **blocked** outright. Only a trusted code-signing signature fixes both. This is a user decision
+(it costs money): see Phase 7 step 4b. Without signing, everything else in this section still prevents antivirus detections,
+but the SmartScreen warning will appear on first download.
 
 ---
 
@@ -866,6 +921,11 @@ Commit: `Add settings window, themes, JSON import/export and backup/restore`.
    `RepeatBehavior`, `DispatcherTimer`, `Effect`, `Width`/`Height` animations, unfrozen brushes) and fix violations.
 3. Confirm no network activity: `Get-NetTCPConnection -OwningProcess (Get-Process TaskIsland).Id` → empty.
 4. Code review pass: dispose patterns, event unsubscription, no `async void` leaks, nullable warnings.
+   **Security-software pass (§7.11):** grep the whole `src/` for `SetWindowsHookEx`, `OpenProcess`, `ReadProcessMemory`,
+   `WriteProcessMemory`, `CreateRemoteThread`, `Assembly.Load(`, `powershell`, `cmd.exe`, `schtasks`, `reg.exe`,
+   `HttpClient`, `Socket`, `WebRequest`; every hit must be removed or justified in DEVLOG. List every `Process.Start`
+   and every registry write and confirm each matches §7.11. Scan the Release build folder with Defender
+   (command in Phase 7 step 4c) and record the result.
 5. Write precise user-test steps for the items the agent can't do, and **ask the user to run them**. Record their results.
 Commit: `Fix defects and optimise performance` (may be several commits).
 
@@ -893,15 +953,34 @@ Commit: `Fix defects and optimise performance` (may be several commits).
    - Uninstall: `[UninstallRun]` none needed (AppMutex prompts to close). In `CurUninstallStepChanged` ask
      "Also delete your tasks and backups?" default **No**. Only on Yes delete `{localappdata}\TaskIsland`.
    - Upgrade = install over the top, same AppId. User data is untouched (it lives outside `{app}`).
+   - Security-software friendly (§7.11): use the latest Inno Setup 6 release (`winget upgrade JRSoftware.InnoSetup`
+     first), default LZMA2 compression, no third-party Inno plugins/DLLs, no `Exec` of cmd/PowerShell in `[Code]`,
+     `VersionInfoCompany=RieSources`, `VersionInfoDescription=TaskIsland Setup`, `VersionInfoVersion` = app version.
    Build: `& "$env:LOCALAPPDATA\Programs\Inno Setup 6\ISCC.exe" /DAppVersion=1.0.0 installer\TaskIsland.iss`.
+4b. **Code signing: ask the user** (it costs money, so it is their decision; record the answer in DEVLOG):
+   - *Sign* (recommended for no SmartScreen warning and no Smart App Control block): Microsoft **Azure Trusted Signing**
+     (about US$10/month, needs an Azure account and identity validation, done by the user) or a purchased OV/EV
+     certificate. Then sign every `TaskIsland*.exe`/`*.dll` we build, the installer and the uninstaller (Inno `SignTool=`
+     directive) with an RFC 3161 timestamp, and verify with `Get-AuthenticodeSignature` → `Valid`.
+   - *Unsigned* (default if the user says no or doesn't answer): release as-is; README explains the SmartScreen
+     "More info → Run anyway" step and that Smart App Control may block it.
+4c. **Antivirus scan before release** (all must be clean, else do not release; fix the cause, do not just rename files):
+   - Update Defender signatures, then scan:
+     `& "$env:ProgramFiles\Windows Defender\MpCmdRun.exe" -SignatureUpdate` and
+     `& "$env:ProgramFiles\Windows Defender\MpCmdRun.exe" -Scan -ScanType 3 -File "<path>" -DisableRemediation`
+     for `publish\win-x64` and the installer `.exe`. Record the output in DEVLOG.
+   - Run the installed app for 10 minutes with Defender on: no alerts in Windows Security → Protection history.
+   - VirusTotal (70+ engines) is **optional and needs the user's OK first**, because uploading makes the file
+     public on VirusTotal. If a vendor flags it (false positive), report it and give the user that vendor's
+     false-positive submission link; for Defender: https://www.microsoft.com/wdsi/filesubmission (user submits).
 5. Test: install → runs → startup value present → upgrade-install same version keeps tasks → uninstall (No) keeps data,
-   removes Run value, removes Start menu entry → reinstall finds tasks.
+   removes Run value, removes Start menu entry → reinstall finds tasks. No UAC prompt at any point; no firewall prompt.
 6. `docs/RELEASE_NOTES.md`, README (features, screenshots, install, SmartScreen note: installer is unsigned →
    "More info → Run anyway", uninstall, data location, build-from-source).
 7. Tag and release. **The user approved this in advance (2026-11-01):** "when the project is finished, push a release
    for Windows 64-bit installer in GitHub". So no extra go-ahead is needed, **provided** all of these are true first:
    Phases 1–6 are done in DEVLOG, `dotnet build` + `dotnet test` are green, the installer passed step 5
-   (install, upgrade, uninstall), and no critical/major defect is open. If any of these fails, do **not** release:
+   (install, upgrade, uninstall), the antivirus scans in step 4c are clean, and no critical/major defect is open. If any of these fails, do **not** release:
    report what is missing and stop. Phase 6b (the user's own tests: sleep, hibernate, reboot, monitors, scaling) is
    **not** required before the release; the user tests those during live use after release (decided 2026-11-01).
    Say so in the release notes ("Sleep/hibernate/multi-monitor behaviour is being verified in real use"). The release must contain the x64 installer `TaskIsland-Setup-1.0.0-x64.exe`
@@ -916,7 +995,10 @@ Commit: `Prepare Windows production installer and v1.0.0 release`.
 ## 9. Known limitations (tell the user, don't hide)
 
 - Sleep, hibernate, reboot auto-start and physical monitor changes require the user to test (TESTING.md).
-- Installer is unsigned → SmartScreen warning. A code-signing certificate would remove it (paid, out of scope).
+- If the installer is unsigned (user's choice, Phase 7 step 4b): SmartScreen warns on first download, and on PCs with
+  Smart App Control on, Windows may block it. Signing (paid) removes both. Antivirus detections are prevented by §7.11
+  either way, but no developer can promise that every one of the many antivirus products will never false-flag a new
+  file; if one does, it is reported to that vendor as a false positive.
 - True acrylic blur isn't used on the island. Blur on a layered window blurs the whole transparent rectangle, looks
   wrong and costs GPU all the time. The island uses a near-opaque surface + hairline border instead (Settings may use Mica).
 - WPF itself needs roughly 40–60 MB of memory even for an empty window. The targets in §6.7 are set close to that floor;

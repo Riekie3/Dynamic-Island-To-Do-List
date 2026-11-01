@@ -94,3 +94,11 @@ The user asked for a more modern design that uses as little CPU, GPU and RAM as 
   (no polling, no infinite animations, 60 fps cap, Efficiency mode while collapsed, automatic reduced motion, GC settings).
 - §7.2 positioning, Phases 2/3/5/6 steps and acceptance, §9 limitations updated. TESTING: UI13–UI15 and P1–P11.
 - *Handoff for Phase 2:* read PLAN §6.0–6.7 before coding; Phase 2 must record a performance baseline (step 8).
+
+### Plan update — release and security software (2026-11-01, Opus 5.5)
+- User pre-approved publishing the GitHub release v1.0.0 with the x64 installer when Phase 7's checks pass.
+  Phase 6b (user's sleep/monitor tests) is not a release gate; the user tests in live use after release.
+- New PLAN §7.11 "Don't trigger security software": banned APIs/behaviours (no hooks, process access, shells, network,
+  packing, admin), visible persistence only, Controlled Folder Access handling, full file version info, code-signing
+  decision. §0 rule 10, Phase 6 security grep + Defender scan, Phase 7 steps 4b (ask user about signing) and 4c
+  (Defender scan, optional VirusTotal with user OK). TESTING S1–S9. The existing `app.manifest` is already `asInvoker`.
