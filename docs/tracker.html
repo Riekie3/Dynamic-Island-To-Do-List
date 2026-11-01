@@ -56,6 +56,7 @@ button { font: inherit; cursor: pointer; }
 .chip.opus { background: var(--opus-bg); color: var(--opus); }
 .chip.sonnet { background: var(--sonnet-bg); color: var(--sonnet); }
 .chip.you { background: var(--you-bg); color: var(--you); }
+.chip.effort { background: var(--surface-2); color: var(--fg); border: 1px solid var(--line); }
 .chip.st-todo { background: var(--surface-2); color: var(--muted); }
 .chip.st-doing { background: var(--doing-bg); color: var(--doing); }
 .chip.st-done { background: var(--done-bg); color: var(--done); }
@@ -133,6 +134,11 @@ input.note { width: 100%; background: var(--surface-2); color: var(--fg); border
     { id: "p6b", n: "6b", title: "Your tests", model: "you", what: "Restart, sleep, hibernate, screen off, lock, monitor, scaling", deliver: "Your results recorded in TESTING.md.", steps: ["W6 restart and log in, app starts by itself", "W7 sleep and wake, W8 hibernate and resume", "W9 screen off, W10 lock and unlock", "W11 plug and unplug a monitor, W12 resolution, W13 scaling", "D4 tasks still there after restart"], prompt: "Project: TaskIsland in D:\\Rie\\Claude\\TaskIsland.\nRead docs/TESTING.md and docs/DEVLOG.md. I finished the user-only tests. Results:\n- W6 restart auto-start: PASS / FAIL (details)\n- W7 sleep and wake: PASS / FAIL (details)\n- W8 hibernate: PASS / FAIL (details)\n- W9 screen off: PASS / FAIL (details)\n- W10 lock and unlock: PASS / FAIL (details)\n- W11 monitor plug/unplug: PASS / FAIL (details)\n- W13 scaling: PASS / FAIL (details)\n- D4 data after restart: PASS / FAIL (details)\nRecord these in TESTING.md and DEVLOG.md, fix every failure (check the logs in %LocalAppData%\\TaskIsland\\Logs), commit and push, then report.", why: "Only you can sleep the laptop or plug in a monitor. Paste the prompt after editing PASS/FAIL." },
     { id: "p7", n: "7", title: "Release", model: "sonnet", what: "Icon, build, installer, uninstall, GitHub release v1.0.0", deliver: "TaskIsland-Setup-1.0.0-x64.exe on GitHub.", steps: ["App icon and version 1.0.0", "Self-contained publish, smoke test", "Inno Setup installer, install, upgrade, uninstall tests", "Release notes, README, tag, GitHub release (asks you first)"], prompt: KICK(7, "Production release"), why: "Packaging steps are spelled out in the plan." }
   ];
+  var EFFORT = { p1: ["Medium", "Straightforward code"], p2: ["High", "Tricky window and animation work"], p3: ["Medium", "Clear logic, many small parts"], p4: ["High", "Low-level Windows code, hidden bugs"], p5: ["Medium", "Mostly forms and wiring"], p6: ["High", "Finding and fixing real bugs"], p6b: ["Medium", "Recording results and fixing failures"], p7: ["Medium", "Follows the written steps"] };
+  function effortChip(p) {
+    var e = EFFORT[p.id]; if (!e) return null;
+    var c = el("span", "chip effort", "Effort: " + e[0]); c.title = e[1]; return c;
+  }
   var LABEL = { todo: "Not started", doing: "In progress", done: "Done" };
   var state = {}; // id -> {status, note}
   var db = null, dbOk = false;
@@ -203,7 +209,7 @@ input.note { width: 100%; background: var(--surface-2); color: var(--fg); border
       nx.appendChild(el("p", "why", "Nothing left to run. Check the GitHub release and keep a backup of your tasks."));
     } else {
       nx.appendChild(el("div", "eyebrow", st(nextP.id) === "doing" ? "Continue here" : "Next up"));
-      var h = el("div", "row"); h.appendChild(el("h3", null, "Phase " + nextP.n + ": " + nextP.title)); h.appendChild(modelChip(nextP.model)); nx.appendChild(h);
+      var h = el("div", "row"); h.appendChild(el("h3", null, "Phase " + nextP.n + ": " + nextP.title)); h.appendChild(modelChip(nextP.model)); var ec = effortChip(nextP); if (ec) h.appendChild(ec); nx.appendChild(h);
       nx.appendChild(el("p", "why", (nextP.model === "you" ? "Do the tests yourself, then paste your results. " : "Switch Claude Code to the model shown, start a fresh session, paste this prompt. ") + nextP.why));
       nx.appendChild(promptBlock(nextP, "Copy prompt for Phase " + nextP.n));
       nx.appendChild(statusSeg(nextP));
@@ -217,12 +223,13 @@ input.note { width: 100%; background: var(--surface-2); color: var(--fg); border
       var d = el("details", "card"); d.dataset.id = p.id; d.dataset.st = s; if (openIds[p.id]) d.open = true;
       var sm = el("summary"); sm.appendChild(el("div", "num", s === "done" ? "✓" : p.n));
       var mid = el("div"); mid.appendChild(el("div", "ttl", p.title)); mid.appendChild(el("div", "what", p.what)); sm.appendChild(mid);
-      var ch = el("div", "chips"); ch.appendChild(modelChip(p.model)); ch.appendChild(el("span", "chip st-" + s, LABEL[s])); sm.appendChild(ch);
+      var ch = el("div", "chips"); ch.appendChild(modelChip(p.model)); var ef = effortChip(p); if (ef) ch.appendChild(ef); ch.appendChild(el("span", "chip st-" + s, LABEL[s])); sm.appendChild(ch);
       d.appendChild(sm);
       var b = el("div", "body");
       b.appendChild(el("div", "lbl", "Result when done")); b.appendChild(el("div", null, p.deliver));
       b.appendChild(el("div", "lbl", "Main steps")); var ul = el("ul"); p.steps.forEach(function (x) { ul.appendChild(el("li", null, x)); }); b.appendChild(ul);
       b.appendChild(el("div", "why", "Why this model: " + p.why));
+      if (EFFORT[p.id]) b.appendChild(el("div", "why", "Effort " + EFFORT[p.id][0] + ": " + EFFORT[p.id][1] + ". Set it in the model picker before pasting the prompt."));
       if (p.prompt) {
         b.appendChild(el("div", "lbl", p.id === "p6b" ? "Prompt to record your results" : "Prompt to paste")); b.appendChild(promptBlock(p));
         b.appendChild(el("div", "lbl", "Status")); b.appendChild(statusSeg(p));

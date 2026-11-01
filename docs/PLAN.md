@@ -32,6 +32,8 @@
    the agent cannot trigger it. The Handoff block means nothing is lost when context is compacted or cleared.)
 9. Commit messages end with the `Co-Authored-By` attribution line your harness specifies.
 
+**Suggested effort per phase:** Phase 1 Medium · 2 High · 3 Medium · 4 High · 5 Medium · 6 High · 6b Medium · 7 Medium.
+
 **Suggested model per phase:** Opus for Phase 2 (window interop + animation) and Phase 4
 (Windows integration). Sonnet is fine for Phases 1, 3, 5, 6 and 7.
 
