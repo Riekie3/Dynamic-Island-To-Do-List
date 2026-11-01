@@ -900,9 +900,11 @@ Commit: `Fix defects and optimise performance` (may be several commits).
    "More info → Run anyway", uninstall, data location, build-from-source).
 7. Tag and release. **The user approved this in advance (2026-11-01):** "when the project is finished, push a release
    for Windows 64-bit installer in GitHub". So no extra go-ahead is needed, **provided** all of these are true first:
-   Phases 1–6 and 6b are done in DEVLOG, `dotnet build` + `dotnet test` are green, the installer passed step 5
+   Phases 1–6 are done in DEVLOG, `dotnet build` + `dotnet test` are green, the installer passed step 5
    (install, upgrade, uninstall), and no critical/major defect is open. If any of these fails, do **not** release:
-   report what is missing and stop. The release must contain the x64 installer `TaskIsland-Setup-1.0.0-x64.exe`
+   report what is missing and stop. Phase 6b (the user's own tests: sleep, hibernate, reboot, monitors, scaling) is
+   **not** required before the release; the user tests those during live use after release (decided 2026-11-01).
+   Say so in the release notes ("Sleep/hibernate/multi-monitor behaviour is being verified in real use"). The release must contain the x64 installer `TaskIsland-Setup-1.0.0-x64.exe`
    (plus the portable zip):
    `git tag v1.0.0 && git push origin v1.0.0` then
    `gh release create v1.0.0 installer/Output/TaskIsland-Setup-1.0.0-x64.exe --title "TaskIsland 1.0.0" --notes-file docs/RELEASE_NOTES.md`.
