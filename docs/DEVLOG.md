@@ -112,3 +112,13 @@ The user asked for a more modern design that uses as little CPU, GPU and RAM as 
   Lottie/sprites (no extra NuGet, sharp at any DPI, near-zero cost). §2, §3.1, §5, §6.2, §6.3, §6.7 and Phases 2/3 updated.
   TESTING M1–M10.
 - *Handoff for Phase 2:* step 6b builds the mascot; compare all 12 faces side by side with the reference sheet.
+
+### Plan update — updated design preview (2026-11-03, Opus 5.5)
+- Added `docs/design-reference-1.webp` (source `docs/design/preview-1.html`): the current visual target (modern panel, list
+  chips, mascot states). README now shows it. PLAN header and Phase 2 step 7 point to it.
+
+**▶ Current next step (supersedes the Phase 1 handoff's last line):** start Phase 2 (Opus, High effort). Read PLAN §0,
+§2, §5, **§6.0–6.8**, §7.1–7.2 and **§7.11** first; visual targets are `docs/design-reference-1.webp` and
+`docs/design/mascot-faces.html`. Run `dotnet build` + `dotnet test` (expect 218 green) before changing anything.
+Phase 2 is large (island UI + mascot); if the context gets long, commit what works, write a Handoff block naming the
+remaining Phase 2 steps, and continue in a fresh session.
