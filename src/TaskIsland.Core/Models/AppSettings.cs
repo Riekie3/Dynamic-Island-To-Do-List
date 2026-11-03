@@ -59,7 +59,7 @@ public sealed class AppSettings
     public ThemeMode Theme { get; set; } = ThemeMode.Dark;
     public int NotchWidth { get; set; } = 200;
     public int HorizontalOffset { get; set; } = 0;
-    public int TopMargin { get; set; } = 8;
+    public int TopMargin { get; set; } = 0;
     public double PanelOpacity { get; set; } = 0.94;
     public bool AnimationsEnabled { get; set; } = true;
     /// <summary>Face notch (section 6.8). Off = the classic count pill.</summary>

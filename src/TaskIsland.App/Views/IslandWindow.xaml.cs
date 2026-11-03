@@ -51,6 +51,7 @@ public partial class IslandWindow : Window
 
         Host.Face = _face;
         Host.PanelOpacity = settings.PanelOpacity;
+        Host.Flush = settings.TopMargin == 0;
         Host.SetMascotLook(settings.MascotEnabled);
         Host.MouseEnter += OnHostMouseEnter;
         Host.MouseLeave += OnHostMouseLeave;

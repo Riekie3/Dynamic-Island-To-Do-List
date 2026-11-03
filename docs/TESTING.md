@@ -9,7 +9,7 @@ Only mark ✅ after actually testing. Record date + build/commit in the Notes co
 
 | # | Test | Who | Result | Notes |
 |---|---|---|---|---|
-| UI1 | Collapsed pill appears top-centre of the selected monitor | A | ✅ | 2026-11-03 Phase 2: primary monitor, centre x 960 of 1920, top = TopMargin (8 DIP at 125 %). |
+| UI1 | Collapsed pill appears top-centre of the selected monitor | A | ✅ | 2026-11-03 Phase 2: primary monitor, centre x 960 of 1920, top = TopMargin (8 DIP at 125 %). Default changed to 0 (flush) later on 2026-11-03: window top y = 0 checked live. |
 | UI2 | Click pill → expands smoothly (no flicker / window jump) | A | ⏳ | 2026-11-03 Phase 2: click expands, window left/top unchanged (no jump). First expand still skips ~100 ms of frames (DEVLOG open issue); later expands not frame-checked. |
 | UI3 | ✕, Esc, click outside → collapses smoothly | A | ✅ | 2026-11-03 Phase 2: Esc (empty box), ✕ and click outside each collapse; Esc with text clears the text first. Scripted mouse/keyboard test. |
 | UI4 | Expanded panel stays inside screen bounds (also with HorizontalOffset at ±400) | A | ⏳ | 2026-11-03 Phase 2: centre clamp is in IslandPositioner; ±400 not tested yet. |

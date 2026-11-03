@@ -250,3 +250,15 @@ it. The panel is not scaled. Window size, position and `TopMargin` are unchanged
 checked live: window 565 × 80 px at (678, 10), unchanged. Hover/click not re-run with the mouse (no input code changed; the hit
 area is the painted shape, which scales with it).
 **Open:** position is still a floating pill 8 DIP below the top edge, unlike Nusa's flush notch; the user decides whether to change it.
+
+### Change — flush notch (2026-11-03, Opus 5.5)
+**Asked:** make the island flush with the top edge, like Nusa.
+**Done:** `TopMargin` default 8 → **0**. `IslandHost.Flush` (on when `TopMargin` is 0) draws a notch: flat top, rounded bottom
+corners (compact states radius 0.3 × height, panel 24, the panel shadow matches). The shared geometry is extended upward by its
+radius, so the top corners and the top outline fall outside the window; nothing else in the morph changed. `IslandRect` now returns
+the visible rectangle. A `TopMargin` above 0 still gives the floating pill. PLAN §6.8 and the settings table updated.
+**Tests:** Release + Debug 0 warnings / 0 errors; 249 passed (default test updated to 0). `--snap` renders of all compact states,
+12 faces and the panel (dark, light, Active) checked and replace the `docs/screenshots/phase2-*` images except the reference
+comparison. Release start: window at y = 0 (565 × 80 px at x 678). Hover/click not re-run with the mouse.
+**Fix:** the faces picture pushed in 7b45ce3 showed the sleeping notch in place of the Sleepy face (the snapshot script wrote
+`sleepy.png` and `Sleepy.png`, the same file on Windows); renamed in the script and re-rendered.

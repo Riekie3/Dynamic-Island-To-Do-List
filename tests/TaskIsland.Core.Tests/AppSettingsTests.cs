@@ -20,7 +20,7 @@ public class AppSettingsTests
         Assert.Equal(ThemeMode.Dark, s.Theme);
         Assert.Equal(200, s.NotchWidth);
         Assert.Equal(0, s.HorizontalOffset);
-        Assert.Equal(8, s.TopMargin);
+        Assert.Equal(0, s.TopMargin);
         Assert.Equal(0.94, s.PanelOpacity);
         Assert.True(s.AnimationsEnabled);
         Assert.True(s.MascotEnabled);

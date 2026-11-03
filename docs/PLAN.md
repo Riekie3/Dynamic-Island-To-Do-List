@@ -353,7 +353,7 @@ Rules (unit-tested):
 | `Theme` | `Dark` | Appearance | Dark / Light / System (follow Windows app theme via registry `AppsUseLightTheme` + `UserPreferenceChanged`) |
 | `NotchWidth` | `200` | Appearance | slider 160–280 |
 | `HorizontalOffset` | `0` | Appearance | slider −400…+400 px from centre ("Notch position") |
-| `TopMargin` | `8` | Appearance | 0–40 px |
+| `TopMargin` | `0` | Appearance | 0–40 px; 0 = flush notch (flat top, rounded bottom corners), more = floating pill |
 | `PanelOpacity` | `0.94` | Appearance | 0.70–1.00 |
 | `AnimationsEnabled` | `true` | Appearance | false → durations become 0 (reduced motion also turns on automatically, §6.7) |
 | `MascotEnabled` | `true` | Appearance | Face notch (§6.8). Off → the classic count pill (§6.3) is the collapsed state. New key, add in Phase 2 |
@@ -631,6 +631,11 @@ screenshots must be compared side by side with the reference sheet.
 232 × 56, 200 × 36 px). The user asked for a smaller notch; for reference, the Nusa notch app measured 180 × 37 px at 125 %. Code
 still passes the design sizes above and the face/info content keeps its 1:1 reference geometry under the scale. The panel is not
 scaled.
+
+**Flush notch (2026-11-03 change):** with `TopMargin` 0 (the new default) the island touches the top of the screen like a
+notch: flat top, rounded bottom corners (compact states radius 0.3 × height, panel 24). `IslandHost.Flush` extends the shared
+geometry upward by its radius so the top corners and top outline fall outside the window. A `TopMargin` above 0 gives the old
+floating pill.
 
 Hover (Phase 2): Mini → Curious for 400 ms → Info pill → peek after another 600 ms. Clicking the hover face or the Info pill opens
 the panel; clicking a face that popped up by itself shows Laughing and a second click opens the panel.

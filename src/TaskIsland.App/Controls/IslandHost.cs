@@ -28,6 +28,9 @@ public sealed class IslandHost : Grid
 
     private static readonly ScaleTransform CompactTransform = Frozen(new ScaleTransform(CompactScale, CompactScale));
 
+    /// <summary>Bottom corner radius of the compact states when flush, as a share of the height (a notch, not a pill).</summary>
+    private const double FlushRadius = 0.3;
+
     public static readonly DependencyProperty MorphProperty = DependencyProperty.Register(
         nameof(Morph), typeof(double), typeof(IslandHost),
         new PropertyMetadata(0.0, (d, e) => ((IslandHost)d).OnMorph((double)e.NewValue)));
@@ -41,7 +44,7 @@ public sealed class IslandHost : Grid
     private FrameworkElement? _face, _info, _panel;
     private Look _from, _to, _now;
     private Size _requested = new(120, 32);
-    private bool _fromPanel, _toPanel, _resetting, _mascotLook = true;
+    private bool _fromPanel, _toPanel, _resetting, _mascotLook = true, _flush;
     private int _generation;
     private double _panelOpacity = 0.94;
 
@@ -88,8 +91,23 @@ public sealed class IslandHost : Grid
 
     public IslandState State { get; private set; } = IslandState.Mini;
     public bool IsAnimating { get; private set; }
-    /// <summary>Current island rectangle in host coordinates.</summary>
-    public Rect IslandRect => _geo.Rect;
+    /// <summary>Current visible island rectangle in host coordinates.</summary>
+    public Rect IslandRect => new((HostWidth - _now.W) / 2, 0, _now.W, _now.H);
+
+    /// <summary>
+    /// Flush with the top of the screen (TopMargin 0): flat top, rounded bottom corners. The shared geometry is simply
+    /// extended upward by its radius, so the top corners and the top outline fall outside the window.
+    /// </summary>
+    public bool Flush
+    {
+        get => _flush;
+        set
+        {
+            _flush = value;
+            _shadow.CornerRadius = value ? new CornerRadius(0, 0, 24, 24) : new CornerRadius(24);
+            if (!IsAnimating) Snap();
+        }
+    }
 
     /// <summary>Face rig for Mini/Reaction. Not clipped, so accessories may sit over the outline.</summary>
     public FrameworkElement? Face
@@ -253,7 +271,8 @@ public sealed class IslandHost : Grid
     {
         _now = l;
         double x = (HostWidth - l.W) / 2;
-        _geo.Rect = new Rect(x, 0, l.W, l.H);
+        double up = _flush ? l.R : 0;
+        _geo.Rect = new Rect(x, -up, l.W, l.H + up);
         _geo.RadiusX = _geo.RadiusY = l.R;
         // The gloss is only visible in the compact states, so it uses their scale.
         const double k = CompactScale;
@@ -282,11 +301,12 @@ public sealed class IslandHost : Grid
             w *= CompactScale;
             h *= CompactScale;
         }
+        double r = _flush ? h * FlushRadius : h / 2;
         return state switch
         {
-            IslandState.Mini => new Look(w, h, h / 2, 1, 0, m, m, m, 1, 0, 0),
-            IslandState.Reaction => new Look(w, h, h / 2, 1, 0, m, m, m, 1, 0, 0),
-            IslandState.Info => new Look(w, h, h / 2, 1, 0, m, m, m, 0, 1, 0),
+            IslandState.Mini => new Look(w, h, r, 1, 0, m, m, m, 1, 0, 0),
+            IslandState.Reaction => new Look(w, h, r, 1, 0, m, m, m, 1, 0, 0),
+            IslandState.Info => new Look(w, h, r, 1, 0, m, m, m, 0, 1, 0),
             _ => new Look(w, h, 24, 0, _panelOpacity, 0, _mascotLook ? 0.4 : 1, 0, 0, 0, 1),
         };
     }
