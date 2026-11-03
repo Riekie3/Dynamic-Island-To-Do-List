@@ -297,3 +297,14 @@ WPF's layered-window rendering while any animation runs (about 3 ms CPU per fram
 count. A cheaper path would need a different window technique (region-shaped opaque window or DirectComposition), not tried.
 **Open:** the user decides whether TaskIsland should ignore Windows "Animation effects" off (otherwise the companion and all
 face animations stay off on this PC), and whether the measured cost is acceptable (Calm default) or Off should be the default.
+
+### Change — animate even with Windows "Animation effects" off (2026-11-04, Opus 5.5)
+**Asked:** "Yes, ignore it" (TaskIsland should animate although Windows "Animation effects" is off on this PC).
+**Done:** new setting `FollowWindowsAnimations` (default **false**) → `MotionPolicy.FollowWindowsAnimations`. By default the
+Windows option no longer turns on reduced motion; Battery saver, Remote Desktop and `AnimationsEnabled=false` still do.
+PLAN §5 table, §6.0 and §6.7 rule 8 updated. Settings UI for it comes with Phase 5.
+**Tests:** Release + Debug 0 warnings / 0 errors; 285 passed (default + round trip cover the new key). Release build with
+default settings on this PC (Animation effects off): notch pixels show blinks at 3.8 s and 20.3 s and glances left/right, so
+the companion and face animations now play without any Debug override.
+**Note:** all full-motion paths had never run on this PC before; one crash (`TaskRow` tick) was found and fixed on 2026-11-03,
+and a 6-cycle expand/collapse ran clean. Other panel animations (filter slide, row actions, progress) were not clicked through.

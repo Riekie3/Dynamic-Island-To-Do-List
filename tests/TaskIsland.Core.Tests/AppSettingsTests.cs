@@ -26,6 +26,7 @@ public class AppSettingsTests
         Assert.True(s.MascotEnabled);
         Assert.Equal(IdleReactions.Normal, s.IdleReactions);
         Assert.Equal(CompanionLevel.Calm, s.Companion);
+        Assert.False(s.FollowWindowsAnimations);
         Assert.Equal(DensityMode.Comfortable, s.Density);
         Assert.True(s.HideInFullScreen);
         Assert.Equal("", s.MonitorDeviceName);
@@ -50,7 +51,7 @@ public class AppSettingsTests
         {
             LaunchAtStartup = false, StartCollapsed = false, CollapseOnClickOutside = false, CollapseOnEscape = false,
             AlwaysShowNotch = false, Theme = ThemeMode.System, NotchWidth = 240, HorizontalOffset = -120, TopMargin = 20,
-            PanelOpacity = 0.8, AnimationsEnabled = false, MascotEnabled = false,
+            PanelOpacity = 0.8, AnimationsEnabled = false, FollowWindowsAnimations = true, MascotEnabled = false,
             IdleReactions = IdleReactions.Lively, Companion = CompanionLevel.Lively, Density = DensityMode.Compact, HideInFullScreen = false,
             MonitorDeviceName = @"\\.\DISPLAY2", AutoCollapseSeconds = 30, RestoreAfterWake = false, PeekOnHover = false,
             RemindersEnabled = false, ToggleHotkey = "Ctrl+Shift+Y", CompletedFadeOut = false, DailyBackupEnabled = false,

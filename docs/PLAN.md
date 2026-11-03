@@ -356,6 +356,7 @@ Rules (unit-tested):
 | `TopMargin` | `0` | Appearance | 0–40 px; 0 = flush notch (flat top, rounded bottom corners), more = floating pill |
 | `PanelOpacity` | `0.94` | Appearance | 0.70–1.00 |
 | `AnimationsEnabled` | `true` | Appearance | false → durations become 0 (reduced motion also turns on automatically, §6.7) |
+| `FollowWindowsAnimations` | `false` | Appearance | true → Windows "Animation effects" off also means reduced motion here. Default off (user's choice, 2026-11-04) |
 | `MascotEnabled` | `true` | Appearance | Face notch (§6.8). Off → the classic count pill (§6.3) is the collapsed state. New key, add in Phase 2 |
 | `IdleReactions` | `Normal` | Appearance | Random face pop-ups: `Off` / `Rare` (every 10–20 min) / `Normal` (4–8 min) / `Lively` (1–3 min). New key, Phase 2 |
 | `Companion` | `Calm` | Appearance | Idle life of the face (§6.8 Companion): `Off` / `Calm` / `Lively`. New key, 2026-11-03 |
@@ -399,8 +400,8 @@ Design principles:
 - **Motion tokens**, used everywhere (no ad-hoc durations): `fast` 120 ms (hover, press), `normal` 200 ms (rows, chips),
   `morph` 260 ms expand / 180 ms collapse. One shared easing: `FluentEase` (a small `IEasingFunction` implementing
   cubic-bezier(0.2, 0, 0, 1), "emphasised decelerate"); collapse uses its mirror (accelerate). No bouncy overshoot.
-- **Respect the user's system:** follow Windows "Animation effects" off, Battery saver and Remote Desktop by switching to
-  **reduced motion** automatically (§6.7). Visible 2 px accent focus ring for keyboard users. Text contrast ≥ 4.5:1.
+- **Respect the user's system:** follow Battery saver and Remote Desktop by switching to **reduced motion** automatically,
+  and Windows "Animation effects" off only when `FollowWindowsAnimations` is on (§6.7; default off since 2026-11-04). Visible 2 px accent focus ring for keyboard users. Text contrast ≥ 4.5:1.
 
 ### 6.1 Visual tokens
 
@@ -598,8 +599,9 @@ Rules:
    `SetProcessInformation(ProcessPowerThrottling, EXECUTION_SPEED on)` (Windows 11 shows the green leaf / "Efficiency
    mode" in Task Manager; on Windows 10 it is a silent hint). Turn it **off** immediately on `MouseEnter` of the pill,
    the hotkey, tray click or a pipe `EXPAND`, so expanding stays smooth. Wrap in try/catch; failure is logged once and ignored.
-8. **Reduced motion** (automatic, no setting needed): if `AnimationsEnabled=false`, Windows "Animation effects" is off
-   (`SystemParameters.ClientAreaAnimation == false`), Battery saver is on (`GetSystemPowerStatus().SystemStatusFlag & 1`,
+8. **Reduced motion** (automatic): if `AnimationsEnabled=false`, Windows "Animation effects" is off and
+   `FollowWindowsAnimations=true` (`SystemParameters.ClientAreaAnimation == false`; the setting defaults to false since
+   2026-11-04, so by default this Windows option is ignored), Battery saver is on (`GetSystemPowerStatus().SystemStatusFlag & 1`,
    re-checked on `SystemEvents.PowerModeChanged`), or the session is remote (`SystemParameters.IsRemoteSession`):
    morph uses 120 ms with no content slide, all other animations are instant, no reminder pulse ring, no peek width tween.
 9. **Runtime settings** in `TaskIsland.App.csproj`: `<ConcurrentGarbageCollection>false</ConcurrentGarbageCollection>`

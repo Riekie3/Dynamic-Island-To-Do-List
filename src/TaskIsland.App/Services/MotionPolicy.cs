@@ -7,8 +7,8 @@ namespace TaskIsland.App.Services;
 
 /// <summary>
 /// Duration tokens and the reduced-motion decision (PLAN.md sections 6.0 and 6.7 rule 8). Reduced motion turns on by
-/// itself when Windows "Animation effects" is off, Battery saver is on or the session is remote; it is re-checked on
-/// events only, never polled. <c>AnimationsEnabled=false</c> makes every duration zero.
+/// itself when Battery saver is on or the session is remote, and when Windows "Animation effects" is off if
+/// <see cref="FollowWindowsAnimations"/> is set; it is re-checked on events only, never polled. <c>AnimationsEnabled=false</c> makes every duration zero.
 /// </summary>
 public sealed class MotionPolicy
 {

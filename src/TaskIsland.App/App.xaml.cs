@@ -121,7 +121,7 @@ public partial class App : Application
         services.AddSingleton<ImportService>();
         services.AddSingleton(_ => new MotionPolicy(settings.AnimationsEnabled, options.ForceReducedMotion)
         {
-            FollowWindowsAnimations = !options.FullMotion,
+            FollowWindowsAnimations = settings.FollowWindowsAnimations && !options.FullMotion,
         });
         services.AddSingleton<EfficiencyMode>();
         services.AddSingleton<IslandPositioner>();

@@ -30,6 +30,7 @@ public sealed class AppSettings
         public const string TopMargin = nameof(TopMargin);
         public const string PanelOpacity = nameof(PanelOpacity);
         public const string AnimationsEnabled = nameof(AnimationsEnabled);
+        public const string FollowWindowsAnimations = nameof(FollowWindowsAnimations);
         public const string MascotEnabled = nameof(MascotEnabled);
         public const string IdleReactions = nameof(IdleReactions);
         public const string Companion = nameof(Companion);
@@ -65,6 +66,8 @@ public sealed class AppSettings
     public int TopMargin { get; set; } = 0;
     public double PanelOpacity { get; set; } = 0.94;
     public bool AnimationsEnabled { get; set; } = true;
+    /// <summary>Windows "Animation effects" off also means reduced motion here. Off by default (user's choice, 2026-11-04).</summary>
+    public bool FollowWindowsAnimations { get; set; } = false;
     /// <summary>Face notch (section 6.8). Off = the classic count pill.</summary>
     public bool MascotEnabled { get; set; } = true;
     public IdleReactions IdleReactions { get; set; } = IdleReactions.Normal;
@@ -123,6 +126,7 @@ public sealed class AppSettings
         s.TopMargin = I(Keys.TopMargin, s.TopMargin, 0, 40);
         s.PanelOpacity = D(Keys.PanelOpacity, s.PanelOpacity, 0.70, 1.00);
         s.AnimationsEnabled = B(Keys.AnimationsEnabled, s.AnimationsEnabled);
+        s.FollowWindowsAnimations = B(Keys.FollowWindowsAnimations, s.FollowWindowsAnimations);
         s.MascotEnabled = B(Keys.MascotEnabled, s.MascotEnabled);
         s.IdleReactions = E(Keys.IdleReactions, s.IdleReactions);
         s.Companion = E(Keys.Companion, s.Companion);
@@ -163,6 +167,7 @@ public sealed class AppSettings
             [Keys.TopMargin] = TopMargin.ToString(CultureInfo.InvariantCulture),
             [Keys.PanelOpacity] = N(PanelOpacity),
             [Keys.AnimationsEnabled] = B(AnimationsEnabled),
+            [Keys.FollowWindowsAnimations] = B(FollowWindowsAnimations),
             [Keys.MascotEnabled] = B(MascotEnabled),
             [Keys.IdleReactions] = IdleReactions.ToString(),
             [Keys.Companion] = Companion.ToString(),
