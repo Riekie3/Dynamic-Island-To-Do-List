@@ -7,7 +7,7 @@ Click it and it stretches down into a full To-Do list — add, edit, tick and pr
 then it folds back into the pill. Runs quietly from the system tray, starts with Windows and
 survives sleep / wake. Organise tasks into lists such as Office Work, Personal or per-project. All data stays on your PC (SQLite in `%LocalAppData%\TaskIsland`).
 
-![Design reference](docs/design-reference.webp)
+![TaskIsland design preview](docs/design-reference-1.webp)
 
 ## Status
 
