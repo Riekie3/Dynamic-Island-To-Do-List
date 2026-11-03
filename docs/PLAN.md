@@ -8,6 +8,8 @@
 - Repo: https://github.com/Riekie3/Dynamic-Island-To-Do-List (public, branch `main`)
 - Local folder: `D:\Rie\Claude\TaskIsland`
 - Design reference: [design-reference.webp](design-reference.webp) (open and study it before Phase 2)
+- **Updated look (2026-11-03):** [design-reference-1.webp](design-reference-1.webp) shows the current target (modern panel,
+  list chips, mascot states). Source: `design/preview-1.html`. Where the two images differ, follow design-reference-1.
 - Test checklist: [TESTING.md](TESTING.md) · Dev log: [DEVLOG.md](DEVLOG.md)
 
 ---
@@ -921,7 +923,7 @@ Steps:
    exist yet (hover → Curious, click face → Laughing, random pops, start greeting); task/import/error triggers are wired
    in Phases 3–5. Add a hidden debug shortcut **Ctrl+Alt+Shift+F** (only in Debug builds) that cycles through all 12
    expressions so they can be screenshotted.
-7. Run the app and compare with `docs/design-reference.webp` (panel) and `docs/design/mascot-reference.webp` (faces).
+7. Run the app and compare with `docs/design-reference-1.webp` (overall target; `docs/design-reference.webp` for layout) and `docs/design/mascot-reference.webp` (faces).
    Take screenshots (computer-use) of the Mini notch, every one of the 12 reactions, the Info pill and the expanded
    panel in dark and light, save them to `docs/screenshots/phase2-*.png`, put the 12 faces side by side with the
    reference sheet, and iterate until they match as closely as possible.
