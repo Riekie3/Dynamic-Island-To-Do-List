@@ -21,6 +21,8 @@ public partial class TaskRow : UserControl
             || done.RenderTransform is not ScaleTransform scale) return;
         var d = MotionPolicy.Current?.Fast ?? TimeSpan.Zero;
         if (d <= TimeSpan.Zero) return;
+        // A transform declared in a control template is frozen and cannot be animated; give this row its own.
+        if (scale.IsFrozen) done.RenderTransform = scale = new ScaleTransform();
         Anim.Keys(scale, ScaleTransform.ScaleXProperty, FluentEase.Decelerate, null, (0, 0.6), (d.TotalMilliseconds, 1));
         Anim.Keys(scale, ScaleTransform.ScaleYProperty, FluentEase.Decelerate, null, (0, 0.6), (d.TotalMilliseconds, 1));
     }

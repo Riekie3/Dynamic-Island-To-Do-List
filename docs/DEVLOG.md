@@ -262,3 +262,38 @@ the visible rectangle. A `TopMargin` above 0 still gives the floating pill. PLAN
 comparison. Release start: window at y = 0 (565 × 80 px at x 678). Hover/click not re-run with the mouse.
 **Fix:** the faces picture pushed in 7b45ce3 showed the sleeping notch in place of the Sleepy face (the snapshot script wrote
 `sleepy.png` and `Sleepy.png`, the same file on Windows); renamed in the script and re-rendered.
+
+### Change — live companion (2026-11-03, Opus 5.5)
+**Asked:** "why is the face not animated … like a live companion"; then "Yes, add it".
+**Why it looked dead:** the plan only allowed one or two short micro-animations per face and kept the resting dots still
+(0.0 % idle rule). On this PC there was a second reason: **Windows "Animation effects" is off**
+(`SystemParameters.ClientAreaAnimation = false`), and `MotionPolicy` treats that as reduced motion, so no face micro-animation
+and no random pop has ever played here, only the instant shape changes.
+**Done:**
+- *Core:* `CompanionLevel { Off, Calm, Lively }` setting `Companion` (default Calm); `Mascot/CompanionRules` (delay windows,
+  movements per face, weighted pick without repeats); `ReactionRules.HoldTime(reaction, companion)` (Calm 4 s, Lively 6 s).
+  +36 tests (`CompanionRulesTests`, settings parse/round trip).
+- *App:* `FaceRig.PlayLife` (blink, double blink, glance, breathe, squeeze, mouth twitch, accessory wiggle; finite key
+  frames; skipped while the reaction's own micros run); `ReactionDirector` one-shot `_life` timer + `LifeTick` event, paused
+  like random pops except for the open panel and the start-up quiet minute; `IslandWindow.OnLifeTick` plays it only on a
+  still Mini/Reaction face or the panel face. `MotionPolicy.FollowWindowsAnimations` (true; Debug `--full-motion` turns it
+  off for testing). Debug `--companion Off|Calm|Lively`.
+- *Fixes found on the way:* ticking a task crashed the app when animations run (`TaskRow` animated a frozen template
+  `ScaleTransform`; now it gets its own) — never seen before because animations were off here. Debug `--pop-seconds` was
+  applied after the first pop timer had started (now before `Start()`).
+**Tests:** Release + Debug 0 warnings / 0 errors; **285 passed** (168 Core, 117 Data). Debug log + pixel watch of the notch:
+moves play at the logged times. Full-motion `--demo cycle:6` (expand/collapse) ran without a crash.
+**Cost (Release, 60 s at rest, no mouse near, i7-10875H 16 threads, full motion forced):**
+
+| Companion | CPU time / 60 s | % of one core | ≈ Task Manager |
+|---|---|---|---|
+| Off | 0 ms (2 runs) | 0.0 % | 0 % |
+| Calm | 1.09 / 1.56 s | 1.8–2.6 % | ≈ 0.13 % |
+| Lively | 2.08 / 1.84 s | 3.1–3.5 % | ≈ 0.2 % |
+
+Far above the "< 0.1 %" I estimated before building it. Experiments (all reverted): with the timer running but nothing drawn
+0.1 %; a 30 or 20 fps cap (per animation or global) did not lower it; software rendering about the same. So the cost is
+WPF's layered-window rendering while any animation runs (about 3 ms CPU per frame for this 565 × 80 px window), not the frame
+count. A cheaper path would need a different window technique (region-shaped opaque window or DirectComposition), not tried.
+**Open:** the user decides whether TaskIsland should ignore Windows "Animation effects" off (otherwise the companion and all
+face animations stay off on this PC), and whether the measured cost is acceptable (Calm default) or Off should be the default.

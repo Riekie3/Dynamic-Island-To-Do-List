@@ -69,6 +69,19 @@ public static class ReactionRules
     public static TimeSpan HoldTime(Reaction reaction) =>
         reaction is Reaction.Surprised or Reaction.Sad ? TimeSpan.FromSeconds(5) : TimeSpan.FromSeconds(2.5);
 
+    /// <summary>With the companion on, faces stay longer so their idle movements can be seen: Calm 4 s, Lively 6 s.</summary>
+    public static TimeSpan HoldTime(Reaction reaction, CompanionLevel companion)
+    {
+        var hold = HoldTime(reaction);
+        var min = companion switch
+        {
+            CompanionLevel.Calm => TimeSpan.FromSeconds(4),
+            CompanionLevel.Lively => TimeSpan.FromSeconds(6),
+            _ => TimeSpan.Zero,
+        };
+        return hold > min ? hold : min;
+    }
+
     /// <summary>Untouched this long, the Mini notch falls asleep.</summary>
     public static readonly TimeSpan SleepyAfter = TimeSpan.FromMinutes(60);
 

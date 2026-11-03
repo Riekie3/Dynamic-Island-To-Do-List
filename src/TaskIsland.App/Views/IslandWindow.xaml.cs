@@ -63,6 +63,7 @@ public partial class IslandWindow : Window
         director.ReactionStarted += OnReactionStarted;
         director.ReactionEnded += OnReactionEnded;
         director.SleepyChanged += OnSleepyChanged;
+        director.LifeTick += OnLifeTick;
         vm.PropertyChanged += OnVmChanged;
 
         SourceInitialized += OnSourceInitialized;
@@ -175,6 +176,19 @@ public partial class IslandWindow : Window
     private void OnSleepyChanged(bool sleepy)
     {
         if (!_expanded && Host.State == IslandState.Mini && !Host.IsAnimating) _face.ShowMini(sleepy, animate: true);
+    }
+
+    /// <summary>Companion idle movement: only on a face that is on screen and still (never on the Info pill).</summary>
+    private void OnLifeTick(LifeMove move, bool onPanel)
+    {
+        if (onPanel)
+        {
+            if (_expanded) _panel?.Face.PlayLife(move);
+            return;
+        }
+        if (_expanded || Host.IsAnimating || Host.State is not (IslandState.Mini or IslandState.Reaction)) return;
+        bool played = _face.PlayLife(move);
+        DebugLog($"life {move} state={Host.State} played={played}");
     }
 
     // ---- hover, peek, click ----

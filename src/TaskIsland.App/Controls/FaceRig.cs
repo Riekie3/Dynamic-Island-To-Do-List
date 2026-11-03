@@ -35,6 +35,7 @@ public sealed class FaceRig : Canvas
     private readonly TranslateTransform _shake = new();
     private Reaction? _shown;
     private bool _mini;
+    private long _busyUntil;
 
     public FaceRig() : this(withShell: false) { }
 
@@ -85,7 +86,15 @@ public sealed class FaceRig : Canvas
             Anim.To(eye.PoseScale, ScaleTransform.ScaleXProperty, 1, dur, FluentEase.Decelerate);
             Anim.To(eye.PoseScale, ScaleTransform.ScaleYProperty, 1, dur, FluentEase.Decelerate);
         }
-        if (anim) PlayMicros(reaction, Math.Max(dur.TotalMilliseconds, 200) + extra);
+        if (anim)
+        {
+            double start = Math.Max(dur.TotalMilliseconds, 200) + extra;
+            PlayMicros(reaction, start);
+            // The reaction's own micros: the second blink ends ~2.1 s after start, the zZ drift 1.4 s, the rest by ~0.9 s.
+            long micros = reaction is Reaction.Neutral or Reaction.Happy or Reaction.Curious ? 2200
+                : reaction == Reaction.Sleepy ? 1500 : 1000;
+            _busyUntil = Environment.TickCount64 + (long)start + micros;
+        }
     }
 
     /// <summary>Mini notch: two dots (or closed eyes when sleepy) inside the small pill, no mouth or accessory.</summary>
@@ -110,6 +119,70 @@ public sealed class FaceRig : Canvas
             Anim.To(eye.PoseScale, ScaleTransform.ScaleXProperty, scale, dur, FluentEase.Accelerate);
             Anim.To(eye.PoseScale, ScaleTransform.ScaleYProperty, scale, dur, FluentEase.Accelerate);
         }
+        _busyUntil = Environment.TickCount64 + (long)dur.TotalMilliseconds + 300;
+    }
+
+    // ---- companion idle life (section 6.8); one short finite movement per call ----
+
+    /// <summary>
+    /// Plays one idle movement. Returns false (and does nothing) while a reaction's own micro-animations or a pose
+    /// change are still running, or with reduced motion.
+    /// </summary>
+    public bool PlayLife(LifeMove move)
+    {
+        long now = Environment.TickCount64;
+        if (Reduced || now < _busyUntil) return false;
+        var soft = FluentEase.Decelerate;
+        var eyes = new[] { _left, _right };
+        double length;
+        switch (move)
+        {
+            case LifeMove.Blink:
+            case LifeMove.DoubleBlink:
+                var keys = new List<(double, double)> { (0, 1), (70, 0.1), (140, 1) };
+                if (move == LifeMove.DoubleBlink) keys.AddRange([(260, 1), (330, 0.1), (400, 1)]);
+                foreach (var eye in eyes) Anim.Keys(eye.MicroScale, ScaleTransform.ScaleYProperty, null, null, keys.ToArray());
+                length = keys[^1].Item1;
+                break;
+            case LifeMove.GlanceLeft:
+            case LifeMove.GlanceRight:
+                double dx = move == LifeMove.GlanceLeft ? -3 : 3;
+                foreach (var eye in eyes)
+                    Anim.Keys(eye.MicroMove, TranslateTransform.XProperty, soft, null, (0, 0), (180, dx), (880, dx), (1100, 0));
+                length = 1100;
+                break;
+            case LifeMove.Breathe:
+                foreach (var p in new[] { _left, _right, _mouth, _acc })
+                {
+                    double y = p.MicroMove.Y; // the Sleepy zZ keeps its drifted position
+                    Anim.Keys(p.MicroMove, TranslateTransform.YProperty, soft, null, (0, y), (500, y + 1.2), (1000, y));
+                }
+                length = 1000;
+                break;
+            case LifeMove.Squish:
+                foreach (var eye in eyes)
+                {
+                    Anim.Keys(eye.MicroScale, ScaleTransform.ScaleYProperty, soft, null, (0, 1), (120, 0.8), (300, 1));
+                    Anim.Keys(eye.MicroScale, ScaleTransform.ScaleXProperty, soft, null, (0, 1), (120, 1.08), (300, 1));
+                }
+                Anim.Keys(_mouth.MicroScale, ScaleTransform.ScaleYProperty, soft, null, (0, 1), (120, 1.1), (300, 1));
+                length = 300;
+                break;
+            case LifeMove.MouthTwitch:
+                Anim.Keys(_mouth.MicroScale, ScaleTransform.ScaleXProperty, soft, null, (0, 1), (110, 1.12), (260, 1));
+                Anim.Keys(_mouth.MicroScale, ScaleTransform.ScaleYProperty, soft, null, (0, 1), (110, 0.88), (260, 1));
+                Anim.Keys(_mouth.MicroMove, TranslateTransform.XProperty, soft, null, (0, 0), (110, 1.5), (260, 0));
+                length = 260;
+                break;
+            case LifeMove.AccessoryWiggle:
+                Anim.Keys(_acc.MicroRotate, RotateTransform.AngleProperty, soft, null, (0, 0), (140, -8), (320, 6), (500, 0));
+                length = 500;
+                break;
+            default:
+                return false;
+        }
+        _busyUntil = now + (long)length + 50;
+        return true;
     }
 
     // ---- micro-animations (section 6.8 table); each plays once and ends ----

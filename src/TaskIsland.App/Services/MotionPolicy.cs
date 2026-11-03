@@ -15,6 +15,7 @@ public sealed class MotionPolicy
     private bool _animationsEnabled;
     private bool _forceReduced;
     private bool _batterySaver;
+    private bool _followWindows = true;
 
     public MotionPolicy(bool animationsEnabled, bool forceReduced = false)
     {
@@ -39,9 +40,16 @@ public sealed class MotionPolicy
 
     public bool BatterySaver => _batterySaver;
 
+    /// <summary>Whether Windows "Animation effects" off means reduced motion here. Battery saver and remote sessions always do.</summary>
+    public bool FollowWindowsAnimations
+    {
+        get => _followWindows;
+        set { if (_followWindows != value) { _followWindows = value; Changed?.Invoke(this, EventArgs.Empty); } }
+    }
+
     /// <summary>Reduced motion: no micro-animations, no random pops, short morph.</summary>
     public bool IsReduced => !_animationsEnabled || _forceReduced || _batterySaver
-        || !SystemParameters.ClientAreaAnimation || SystemParameters.IsRemoteSession;
+        || (_followWindows && !SystemParameters.ClientAreaAnimation) || SystemParameters.IsRemoteSession;
 
     public TimeSpan Fast => IsReduced ? TimeSpan.Zero : TimeSpan.FromMilliseconds(120);
     public TimeSpan Normal => IsReduced ? TimeSpan.Zero : TimeSpan.FromMilliseconds(200);

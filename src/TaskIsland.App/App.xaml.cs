@@ -41,10 +41,13 @@ public partial class App : Application
             _services = Build(paths, db, settings, options);
             var window = _services.GetRequiredService<IslandWindow>();
             window.Show();
-            _services.GetRequiredService<ReactionDirector>().Start();
 #if DEBUG
+            // Before Start(), which arms the first pop timer.
             if (options.PopSeconds is { } pop)
                 _services.GetRequiredService<ReactionDirector>().PopIntervalOverride = TimeSpan.FromSeconds(pop);
+#endif
+            _services.GetRequiredService<ReactionDirector>().Start();
+#if DEBUG
             if (options.Demo is { } demo) window.RunDemo(demo);
             if (options.Snap is { } snap) window.SnapAndExit(snap, TimeSpan.FromSeconds(2.2));
 #endif
@@ -116,7 +119,10 @@ public partial class App : Application
         services.AddSingleton<ISettingsStore, SqliteSettingsStore>();
         services.AddSingleton<BackupService>();
         services.AddSingleton<ImportService>();
-        services.AddSingleton(_ => new MotionPolicy(settings.AnimationsEnabled, options.ForceReducedMotion));
+        services.AddSingleton(_ => new MotionPolicy(settings.AnimationsEnabled, options.ForceReducedMotion)
+        {
+            FollowWindowsAnimations = !options.FullMotion,
+        });
         services.AddSingleton<EfficiencyMode>();
         services.AddSingleton<IslandPositioner>();
         services.AddSingleton(sp => new ReactionDirector(settings, sp.GetRequiredService<MotionPolicy>(), options.Startup));
@@ -131,12 +137,15 @@ public sealed class LaunchOptions
 {
     public bool Startup { get; private set; }
     public bool ForceReducedMotion { get; private set; }
+    /// <summary>Debug: ignore Windows "Animation effects" off (to test animations on a PC that has them off).</summary>
+    public bool FullMotion { get; private set; }
     public string? Demo { get; private set; }
     public string? Theme { get; private set; }
     public bool NoMascot { get; private set; }
     public int? PopSeconds { get; private set; }
     public string? Filter { get; private set; }
     public string? Snap { get; private set; }
+    public string? Companion { get; private set; }
 
     public static LaunchOptions Parse(string[] args)
     {
@@ -150,11 +159,13 @@ public sealed class LaunchOptions
             if (a.Equals("--startup", StringComparison.OrdinalIgnoreCase)) o.Startup = true;
 #if DEBUG
             else if (a == "--reduced-motion") o.ForceReducedMotion = true;
+            else if (a == "--full-motion") o.FullMotion = true;
             else if (a == "--demo") o.Demo = Next();
             else if (a == "--theme") o.Theme = Next();
             else if (a == "--no-mascot") o.NoMascot = true;
             else if (a == "--filter") o.Filter = Next();
             else if (a == "--snap") o.Snap = Next();
+            else if (a == "--companion") o.Companion = Next();
             else if (a == "--pop-seconds" && int.TryParse(Next(), out var s)) o.PopSeconds = s;
 #endif
         }
@@ -167,6 +178,7 @@ public sealed class LaunchOptions
         if (Enum.TryParse<AppTheme>(Theme, true, out var t)) s.Theme = t;
         if (NoMascot) s.MascotEnabled = false;
         if (Enum.TryParse<TaskFilter>(Filter, true, out var f)) s.CurrentFilter = f;
+        if (Enum.TryParse<CompanionLevel>(Companion, true, out var c)) s.Companion = c;
     }
 #endif
 }

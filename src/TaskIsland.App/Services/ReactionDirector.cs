@@ -23,7 +23,8 @@ public enum Suppression
 /// <summary>
 /// The one place that decides which face shows (PLAN.md section 6.8). Rules come from <see cref="ReactionRules"/>;
 /// this class owns the one-shot timers: reaction hold, next random pop (re-armed after each pop), the 60-minute
-/// Sleepy timer and the quiet minute after a <c>--startup</c> launch. No timer repeats.
+/// Sleepy timer, the quiet minute after a <c>--startup</c> launch and the companion's next idle movement
+/// (<see cref="CompanionRules"/>). No timer repeats; each one-shot is re-armed after it fires.
 /// </summary>
 public sealed class ReactionDirector
 {
@@ -31,9 +32,10 @@ public sealed class ReactionDirector
     private readonly MotionPolicy _motion;
     private readonly bool _startupLaunch;
     private readonly Random _random;
-    private readonly DispatcherTimer _hold, _pop, _sleepy, _quiet;
+    private readonly DispatcherTimer _hold, _pop, _sleepy, _quiet, _life;
     private Suppression _suppressed;
     private Reaction? _lastRandom;
+    private LifeMove? _lastLife;
     private bool _currentOnPanel;
 
     public ReactionDirector(AppSettings settings, MotionPolicy motion, bool startupLaunch, Random? random = null)
@@ -46,7 +48,8 @@ public sealed class ReactionDirector
         _pop = OneShot((_, _) => OnPopTimer());
         _sleepy = OneShot((_, _) => SetSleepy(true));
         _quiet = OneShot((_, _) => SetSuppressed(Suppression.StartupQuiet, false));
-        _motion.Changed += (_, _) => UpdatePopTimer();
+        _life = OneShot((_, _) => OnLifeTimer());
+        _motion.Changed += (_, _) => { UpdatePopTimer(); UpdateLifeTimer(); };
         SystemEvents.SessionSwitch += OnSessionSwitch;
     }
 
@@ -55,6 +58,8 @@ public sealed class ReactionDirector
     /// <summary>(was on the panel face).</summary>
     public event Action<bool>? ReactionEnded;
     public event Action<bool>? SleepyChanged;
+    /// <summary>(movement, for the panel face instead of the notch). Companion idle life.</summary>
+    public event Action<LifeMove, bool>? LifeTick;
 
     public Reaction? Current { get; private set; }
     public bool CurrentIsRandom { get; private set; }
@@ -64,6 +69,7 @@ public sealed class ReactionDirector
     public Suppression Suppressed => _suppressed;
     public bool Enabled => _settings.MascotEnabled;
     public bool PopTimerRunning => _pop.IsEnabled;
+    public bool LifeTimerRunning => _life.IsEnabled;
 
 #if DEBUG
     /// <summary>Debug screenshots: keep the face until the next one.</summary>
@@ -87,10 +93,11 @@ public sealed class ReactionDirector
             Request(Reaction.Wink);
         }
         UpdatePopTimer();
+        UpdateLifeTimer();
     }
 
     /// <summary>An event wants a face. Returns false when a higher-priority face is showing or the mascot is off.</summary>
-    public bool Request(Reaction reaction) => Show(reaction, random: false, hover: false, ReactionRules.HoldTime(reaction));
+    public bool Request(Reaction reaction) => Show(reaction, random: false, hover: false, Hold(reaction));
 
     /// <summary>Mouse over the Mini notch: Curious for 400 ms, then the window turns it into the Info pill.</summary>
     public bool RequestHover() => Show(Reaction.Curious, random: false, hover: true, TimeSpan.FromMilliseconds(400));
@@ -104,13 +111,14 @@ public sealed class ReactionDirector
         Current = null;
         CurrentIsRandom = CurrentIsHover = false;
         ReactionEnded?.Invoke(onPanel);
+        UpdateLifeTimer(restart: true);
     }
 
     public void SetSuppressed(Suppression reason, bool on)
     {
         var before = _suppressed;
         _suppressed = on ? _suppressed | reason : _suppressed & ~reason;
-        if (before != _suppressed) UpdatePopTimer();
+        if (before != _suppressed) { UpdatePopTimer(); UpdateLifeTimer(); }
     }
 
     /// <summary>The user touched the island: wake up and restart the 60-minute Sleepy timer.</summary>
@@ -126,6 +134,7 @@ public sealed class ReactionDirector
         _pop.Stop();
         if (!Enabled) End();
         UpdatePopTimer();
+        UpdateLifeTimer(restart: true);
     }
 
 #if DEBUG
@@ -134,7 +143,7 @@ public sealed class ReactionDirector
     {
         _hold.Stop();
         Current = null;
-        Show(reaction, random: false, hover: false, ReactionRules.HoldTime(reaction));
+        Show(reaction, random: false, hover: false, Hold(reaction));
     }
 #endif
 
@@ -156,6 +165,7 @@ public sealed class ReactionDirector
         _hold.Start();
 #endif
         ReactionStarted?.Invoke(reaction, onPanel);
+        UpdateLifeTimer(restart: true);
         return true;
     }
 
@@ -181,9 +191,44 @@ public sealed class ReactionDirector
         if (PopsAllowed && Current is null)
         {
             var pick = ReactionRules.PickRandom(_random, _lastRandom);
-            if (Show(pick, random: true, hover: false, ReactionRules.HoldTime(pick))) _lastRandom = pick;
+            if (Show(pick, random: true, hover: false, Hold(pick))) _lastRandom = pick;
         }
         UpdatePopTimer();
+    }
+
+    private TimeSpan Hold(Reaction reaction) => ReactionRules.HoldTime(reaction, _settings.Companion);
+
+    // ---- companion idle life ----
+
+    /// <summary>Like random pops, but the open panel and the quiet start-up minute do not stop it.</summary>
+    private bool LifeAllowed =>
+        Enabled && _settings.Companion != CompanionLevel.Off && !_motion.IsReduced
+        && (_suppressed & ~(Suppression.PanelOpen | Suppression.StartupQuiet)) == Suppression.None;
+
+    private bool PanelOpen => (_suppressed & Suppression.PanelOpen) != 0;
+
+    /// <summary>Arms the next movement; <paramref name="restart"/> re-times it when a face appears or ends.</summary>
+    private void UpdateLifeTimer(bool restart = false)
+    {
+        if (!LifeAllowed) { _life.Stop(); return; }
+        if (_life.IsEnabled && !restart) return;
+        _life.Stop();
+        bool face = Current is not null || PanelOpen;
+        _life.Interval = CompanionRules.NextDelay(_settings.Companion, face, _random)!.Value;
+        _life.Start();
+    }
+
+    private void OnLifeTimer()
+    {
+        if (LifeAllowed)
+        {
+            bool onPanel = PanelOpen;
+            Reaction? face = onPanel ? Current ?? Reaction.Neutral : Current;
+            var move = CompanionRules.Pick(_random, face, sleepy: face is null && IsSleepy, _lastLife);
+            _lastLife = move;
+            LifeTick?.Invoke(move, onPanel);
+        }
+        UpdateLifeTimer();
     }
 
     private void RestartSleepyTimer()

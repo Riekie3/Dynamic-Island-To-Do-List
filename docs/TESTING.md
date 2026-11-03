@@ -38,7 +38,8 @@ Only mark ✅ after actually testing. Record date + build/commit in the Notes co
 | M7 | No random pops while panel open, hidden, paused, full-screen, locked, display off, Battery saver, reduced motion | A | ⏳ | 2026-11-03 Phase 2: panel open, hidden, locked, reduced motion, Battery saver wired; full-screen and display-off in Phase 4. Not tested live. |
 | M8 | `MascotEnabled` off → classic count pill, no faces | A | ✅ | 2026-11-03 Phase 2: --no-mascot shows the classic black count pill (phase2-collapsed-states.png) and the tick icon in the panel header. |
 | M9 | Faces stay sharp at 100 / 150 / 200 % scaling | A+U | ⏳ | 2026-11-03 Phase 2: 125 % only (vector paths). |
-| M10 | 30 min idle with `IdleReactions=Normal` → average CPU < 0.05 % | A | ⏳ | not tested yet |
+| M10 | 30 min idle with `IdleReactions=Normal` → average CPU < 0.05 % | A | ⏳ | not tested yet (with `Companion=Off`; the companion has its own budget, M11) |
+| M11 | Companion: dots blink/glance/breathe between reactions, faces keep moving, nothing loops; pauses under reduced motion | A | ✅ | 2026-11-03: screen pixels of the notch show the eyes closing fully on Blink, the eye centre moving 3 px on Glance and ~1 px on Breathe, at the times the Debug log gives. Release CPU 60 s at rest (no mouse near): Off 0 ms, Calm 1.1–1.6 s (1.8–2.6 % of one core), Lively 1.8–2.1 s (3.1–3.5 %). Under Windows "Animation effects" off nothing plays (by design). |
 
 ## Automated tests (not part of the manual checklist)
 

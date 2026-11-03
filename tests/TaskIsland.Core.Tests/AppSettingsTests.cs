@@ -25,6 +25,7 @@ public class AppSettingsTests
         Assert.True(s.AnimationsEnabled);
         Assert.True(s.MascotEnabled);
         Assert.Equal(IdleReactions.Normal, s.IdleReactions);
+        Assert.Equal(CompanionLevel.Calm, s.Companion);
         Assert.Equal(DensityMode.Comfortable, s.Density);
         Assert.True(s.HideInFullScreen);
         Assert.Equal("", s.MonitorDeviceName);
@@ -50,7 +51,7 @@ public class AppSettingsTests
             LaunchAtStartup = false, StartCollapsed = false, CollapseOnClickOutside = false, CollapseOnEscape = false,
             AlwaysShowNotch = false, Theme = ThemeMode.System, NotchWidth = 240, HorizontalOffset = -120, TopMargin = 20,
             PanelOpacity = 0.8, AnimationsEnabled = false, MascotEnabled = false,
-            IdleReactions = IdleReactions.Lively, Density = DensityMode.Compact, HideInFullScreen = false,
+            IdleReactions = IdleReactions.Lively, Companion = CompanionLevel.Lively, Density = DensityMode.Compact, HideInFullScreen = false,
             MonitorDeviceName = @"\\.\DISPLAY2", AutoCollapseSeconds = 30, RestoreAfterWake = false, PeekOnHover = false,
             RemindersEnabled = false, ToggleHotkey = "Ctrl+Shift+Y", CompletedFadeOut = false, DailyBackupEnabled = false,
             DefaultListId = 7, PillCountScope = PillCountScope.SelectedList, FirstRunCompleted = true,
@@ -116,6 +117,16 @@ public class AppSettingsTests
     public void IdleReactions_parses_names_and_falls_back_to_Normal(string value, IdleReactions expected)
     {
         Assert.Equal(expected, From(("IdleReactions", value)).IdleReactions);
+    }
+
+    [Theory]
+    [InlineData("off", CompanionLevel.Off)]
+    [InlineData("LIVELY", CompanionLevel.Lively)]
+    [InlineData("always", CompanionLevel.Calm)]
+    [InlineData("", CompanionLevel.Calm)]
+    public void Companion_parses_names_and_falls_back_to_Calm(string value, CompanionLevel expected)
+    {
+        Assert.Equal(expected, From(("Companion", value)).Companion);
     }
 
     [Fact]

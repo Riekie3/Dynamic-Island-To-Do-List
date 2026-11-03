@@ -358,6 +358,7 @@ Rules (unit-tested):
 | `AnimationsEnabled` | `true` | Appearance | false → durations become 0 (reduced motion also turns on automatically, §6.7) |
 | `MascotEnabled` | `true` | Appearance | Face notch (§6.8). Off → the classic count pill (§6.3) is the collapsed state. New key, add in Phase 2 |
 | `IdleReactions` | `Normal` | Appearance | Random face pop-ups: `Off` / `Rare` (every 10–20 min) / `Normal` (4–8 min) / `Lively` (1–3 min). New key, Phase 2 |
+| `Companion` | `Calm` | Appearance | Idle life of the face (§6.8 Companion): `Off` / `Calm` / `Lively`. New key, 2026-11-03 |
 | `AccentSource` | `Default` | Appearance | `Default` (TaskIsland blue) / `Windows` (Windows accent colour). New key, add to `AppSettings` + tests in Phase 5 |
 | `Density` | `Comfortable` | Appearance | Comfortable (row 52 px) / Compact (row 38 px) |
 | `HideInFullScreen` | `true` | Behaviour | |
@@ -562,7 +563,7 @@ Targets (measured in Phase 6 on this laptop, Release build, collapsed, after 60 
 
 | Metric | Target |
 |---|---|
-| CPU idle (collapsed, mouse elsewhere) | **0.0 %** averaged over 60 s between mascot pops (no wake-ups except the scheduled one-shot timers); **< 0.05 %** averaged over 30 min with `IdleReactions=Normal` |
+| CPU idle (collapsed, mouse elsewhere) | **0.0 %** averaged over 60 s between mascot pops (no wake-ups except the scheduled one-shot timers); **< 0.05 %** averaged over 30 min with `IdleReactions=Normal`. These hold with `Companion=Off`. With the companion on (2026-11-03, user's request) the measured cost is the budget: Calm ≈ 2 % of one core (≈ 0.13 % of the 16-thread CPU in Task Manager), Lively ≈ 3 %, see DEVLOG |
 | GPU idle | **0 %** in Task Manager's GPU column (no frames rendered while nothing changes) |
 | Private memory idle | ≤ **50 MB** (record working set too; WPF's own floor is roughly 40–60 MB working set) |
 | Working set idle | ≤ **70 MB** |
@@ -677,6 +678,24 @@ same job (independent eyes/mouth, smooth transitions) at near-zero cost and stay
 | Look around | eyes `TranslateX` −3 → +3 → 0, 600 ms | Curious |
 
 Reduced motion (§6.7 rule 8): the expression appears instantly with no micro-animations and holds the same time.
+
+**Companion — idle life (2026-11-03 change, user request "like a live companion"):** between reactions the face keeps
+moving a little. `Core/Mascot/CompanionRules` picks a movement that suits what is showing; `ReactionDirector` arms one
+one-shot timer for the next movement (never a repeating timer or an infinite animation); `FaceRig.PlayLife` plays it as
+a short finite animation of the part transforms, and skips it while the face's own reaction micros are still running.
+
+| Setting | Resting dots: next movement after | Face showing: next movement after | Faces hold |
+|---|---|---|---|
+| `Off` | — | — | 2.5 s (alerts 5 s) |
+| `Calm` (default) | 4–9 s | 1.5–3.5 s | 4 s (alerts 5 s) |
+| `Lively` | 2.5–6 s | 1–2.5 s | 6 s |
+
+Movements: blink (140 ms), double blink, glance left/right (eyes ±3, 1.1 s), breathe (whole face 1.2 DIP down and back,
+1 s), happy squeeze (eyes 0.8 high + mouth, 300 ms), mouth twitch (260 ms), accessory wiggle (500 ms). Open eyes (Neutral,
+Curious, Surprised, Thinking, Focused, Love) blink and glance; closed or squeezed eyes (Happy, Laughing, Wink, Excited) squeeze
+instead; Sleepy and Sad never squeeze; only faces with a mouth twitch it; only faces with an accessory wiggle it. Awake dots
+blink most often; sleeping dots only breathe. Paused like random pops (hidden, locked, full screen, display off, paused,
+reduced motion) but it does run while the panel is open (on the 28 px face) and in the quiet minute after `--startup`.
 
 **Expressions and triggers** (`Services/ReactionDirector.cs`; one place that decides which face shows):
 
