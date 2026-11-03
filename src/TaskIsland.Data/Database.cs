@@ -29,7 +29,8 @@ public sealed class Database
         try
         {
             await conn.OpenAsync();
-            await ExecAsync(conn, "PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 3000;");
+            // cache_size -1024 = 1 MB page cache per connection (PLAN.md section 6.7 rule 9).
+            await ExecAsync(conn, "PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 3000; PRAGMA cache_size = -1024;");
             return conn;
         }
         catch

@@ -1,0 +1,51 @@
+<Window x:Class="TaskIsland.App.Views.IslandWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:c="clr-namespace:TaskIsland.App.Controls"
+        Title="TaskIsland"
+        WindowStyle="None" AllowsTransparency="True" Background="{x:Null}" ResizeMode="NoResize"
+        ShowInTaskbar="False" Topmost="True" ShowActivated="False" SizeToContent="Manual"
+        WindowStartupLocation="Manual" Left="0" Top="0" Width="452" Height="64"
+        UseLayoutRounding="True" FontFamily="{StaticResource TextFont}">
+    <!-- PLAN.md section 6.2: small layered window, island top-centred with no top inset. The root has no background,
+         so the transparent area around the island is click-through. -->
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="Vis"/>
+    </Window.Resources>
+
+    <Grid Background="{x:Null}">
+        <c:IslandHost x:Name="Host" AutomationProperties.Name="TaskIsland">
+            <c:IslandHost.Info>
+                <!-- Info pill (section 6.3): ring + count + chevron; on a longer hover the top task (peek). -->
+                <Grid Width="360" Height="36">
+                    <StackPanel x:Name="InfoCount" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <Grid Width="20" Height="20" VerticalAlignment="Center">
+                            <c:ProgressRing Fraction="{Binding PillFraction}" ArcBrush="{DynamicResource AccentBrush}"
+                                            TrackBrush="#33FFFFFF" Thickness="2"/>
+                            <TextBlock Text="&#xE73E;" FontFamily="{StaticResource IconFont}" FontSize="9"
+                                       Foreground="{StaticResource IslandTextBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            <Ellipse Width="6" Height="6" Fill="{DynamicResource OverdueBrush}" HorizontalAlignment="Right"
+                                     VerticalAlignment="Top" Margin="0,-1,-2,0"
+                                     Visibility="{Binding HasOverdue, Converter={StaticResource Vis}}"/>
+                        </Grid>
+                        <TextBlock x:Name="CountText" Text="{Binding PillText}" Margin="8,0,7,0" FontSize="13" FontWeight="SemiBold"
+                                   Foreground="{StaticResource IslandTextBrush}" VerticalAlignment="Center"
+                                   Typography.NumeralAlignment="Tabular">
+                            <TextBlock.RenderTransform><TranslateTransform x:Name="CountSlide"/></TextBlock.RenderTransform>
+                        </TextBlock>
+                        <TextBlock Text="&#xE70D;" FontFamily="{StaticResource IconFont}" FontSize="10"
+                                   Foreground="{StaticResource IslandTextSecondaryBrush}" VerticalAlignment="Center">
+                            <TextBlock.RenderTransform><TranslateTransform x:Name="ChevronNudge"/></TextBlock.RenderTransform>
+                        </TextBlock>
+                    </StackPanel>
+                    <StackPanel x:Name="InfoPeek" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                Opacity="0" Visibility="Collapsed">
+                        <Ellipse Width="7" Height="7" Fill="{Binding TopTaskBrush}" VerticalAlignment="Center"/>
+                        <TextBlock Text="{Binding TopTaskTitle}" Margin="8,0,0,0" MaxWidth="290" FontSize="13" FontWeight="SemiBold"
+                                   TextTrimming="CharacterEllipsis" Foreground="{StaticResource IslandTextBrush}" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Grid>
+            </c:IslandHost.Info>
+        </c:IslandHost>
+    </Grid>
+</Window>

@@ -6,6 +6,8 @@ namespace TaskIsland.Core.Models;
 public enum ThemeMode { Dark, Light, System }
 public enum DensityMode { Comfortable, Compact }
 public enum PillCountScope { AllLists, SelectedList }
+/// <summary>How often the mascot pops up on its own (PLAN.md section 6.8).</summary>
+public enum IdleReactions { Off, Rare, Normal, Lively }
 
 /// <summary>
 /// Strongly typed view of the key/value Settings table (PLAN.md section 5). Unknown, missing or invalid
@@ -26,6 +28,8 @@ public sealed class AppSettings
         public const string TopMargin = nameof(TopMargin);
         public const string PanelOpacity = nameof(PanelOpacity);
         public const string AnimationsEnabled = nameof(AnimationsEnabled);
+        public const string MascotEnabled = nameof(MascotEnabled);
+        public const string IdleReactions = nameof(IdleReactions);
         public const string Density = nameof(Density);
         public const string HideInFullScreen = nameof(HideInFullScreen);
         public const string MonitorDeviceName = nameof(MonitorDeviceName);
@@ -58,6 +62,9 @@ public sealed class AppSettings
     public int TopMargin { get; set; } = 8;
     public double PanelOpacity { get; set; } = 0.94;
     public bool AnimationsEnabled { get; set; } = true;
+    /// <summary>Face notch (section 6.8). Off = the classic count pill.</summary>
+    public bool MascotEnabled { get; set; } = true;
+    public IdleReactions IdleReactions { get; set; } = IdleReactions.Normal;
     public DensityMode Density { get; set; } = DensityMode.Comfortable;
 
     // Behaviour
@@ -112,6 +119,8 @@ public sealed class AppSettings
         s.TopMargin = I(Keys.TopMargin, s.TopMargin, 0, 40);
         s.PanelOpacity = D(Keys.PanelOpacity, s.PanelOpacity, 0.70, 1.00);
         s.AnimationsEnabled = B(Keys.AnimationsEnabled, s.AnimationsEnabled);
+        s.MascotEnabled = B(Keys.MascotEnabled, s.MascotEnabled);
+        s.IdleReactions = E(Keys.IdleReactions, s.IdleReactions);
         s.Density = E(Keys.Density, s.Density);
         s.HideInFullScreen = B(Keys.HideInFullScreen, s.HideInFullScreen);
         s.MonitorDeviceName = Get(Keys.MonitorDeviceName) ?? s.MonitorDeviceName;
@@ -149,6 +158,8 @@ public sealed class AppSettings
             [Keys.TopMargin] = TopMargin.ToString(CultureInfo.InvariantCulture),
             [Keys.PanelOpacity] = N(PanelOpacity),
             [Keys.AnimationsEnabled] = B(AnimationsEnabled),
+            [Keys.MascotEnabled] = B(MascotEnabled),
+            [Keys.IdleReactions] = IdleReactions.ToString(),
             [Keys.Density] = Density.ToString(),
             [Keys.HideInFullScreen] = B(HideInFullScreen),
             [Keys.MonitorDeviceName] = MonitorDeviceName ?? "",

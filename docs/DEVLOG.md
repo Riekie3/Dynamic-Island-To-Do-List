@@ -10,7 +10,7 @@ Newest entry at the bottom. Each phase appends one entry using the template belo
 |---|---|---|
 | 0 Planning | ✅ done 2026-11-01 | plan + checklist |
 | 1 Skeleton & data layer | ✅ done 2026-11-01 | 8537510 |
-| 2 Island UI | ⏳ | |
+| 2 Island UI | ✅ done 2026-11-03 (open: memory budget, first-expand hitch) | see Phase 2 entry |
 | 3 To-Do functionality | ⏳ | |
 | 4 Windows integration | ⏳ | |
 | 5 Settings & data | ⏳ | |
@@ -122,3 +122,115 @@ The user asked for a more modern design that uses as little CPU, GPU and RAM as 
 `docs/design/mascot-faces.html`. Run `dotnet build` + `dotnet test` (expect 218 green) before changing anything.
 Phase 2 is large (island UI + mascot); if the context gets long, commit what works, write a Handoff block naming the
 remaining Phase 2 steps, and continue in a fresh session.
+
+### Phase 2 — Dynamic Island interface + mascot (2026-11-03, Opus 5.5)
+**Implemented:**
+- *Themes:* `Themes/Dark.xaml`, `Light.xaml` (all §6.1 tokens, frozen, same keys) and `Controls.xaml` (icon buttons, round checkbox,
+  quick-add box, priority chip, list chip, segmented filter, overlay scrollbar, menus, tooltip, 2 px accent focus ring, mascot brushes).
+  `App.ApplyTheme` swaps the theme dictionary live (Phase 5 wires it to Settings).
+- *Motion:* `Controls/FluentEase` (cubic-bezier 0.2,0,0,1 and its mirror), `Controls/Anim` (finite, FillBehavior=Stop, final value left as
+  the local value, key-frame holds instead of BeginTime), `Services/MotionPolicy` (fast/normal/morph tokens; reduced motion from Windows
+  animation effects, Battery saver, remote session, all event driven). 60 fps cap in `App.OnStartup`.
+- *Island:* `Controls/IslandHost`: one shared `RectangleGeometry` drives the body paths and the content clip; `AnimateTo(state, w, h)`
+  morphs between Mini 120×32, Reaction 232×56, Info NotchWidth×36 (peek up to 360) and Panel 420×≤550 with no per-frame layout;
+  content crossfade per §6.2; cached `DropShadowEffect` + `BitmapCache` shadow shown only while still. `Views/IslandWindow`: styles
+  per §7.1, state machine, hover/peek, click, Esc/✕/click-outside/Alt+F4 collapse, window grown before expand and shrunk after collapse.
+  `Services/IslandPositioner` (primary monitor, DPI, HorizontalOffset clamp), `Services/EfficiencyMode` (EcoQoS after 10 s at rest, off on
+  hover/expand).
+- *Panel:* `Views/PanelView` (header with 28 px face, list chips, quick add with priority chip and → button, virtualised list, empty
+  state, progress bar via ScaleX, sliding filter indicator) and `Views/TaskRow` (round checkbox, list dot + name in All lists, due label,
+  priority chip, edit/delete on hover or keyboard focus). `ViewModels/IslandViewModel` runs on in-memory `SampleData` through the real
+  Core rules (`TaskSorter`, `TaskStats`): select list, filter, tick, quick add, cycle priority and delete work in memory; nothing is saved.
+- *Mascot (§6.8):* `Mascot/Expression(s)` (12 expressions + Mini dots, geometry copied 1:1 from `docs/design/mascot-faces.html`, frozen),
+  `Controls/FaceRig` (4 independent parts × 2 crossfade slots, glow = wider translucent copy, all 9 micro-animations, dots move into eye
+  positions), `Services/ReactionDirector` (priorities via Core `ReactionRules`, one-shot hold / random-pop / 60-min Sleepy / startup-quiet
+  timers, pops suppressed while the panel is open, hidden, locked, reduced motion or Battery saver). Wired now: start greeting (Wink, not
+  on `--startup`), hover → Curious → Info, click on a popped face → Laughing, random pops, Sleepy.
+- *Core:* `AppSettings.MascotEnabled` / `IdleReactions` (+ tests), `Mascot/ReactionRules` (+ tests), `Services/DueLabel` (+ tests).
+  *Data:* `PRAGMA cache_size = -1024` per connection. *App csproj:* `ConcurrentGarbageCollection=false`, `TieredPGO`, `Deterministic`.
+- *Windows project:* `Native/User32|Kernel32|Shcore`, `WindowStyler`, `MonitorService.GetPrimary`, `ProcessPower` (EcoQoS, Battery saver),
+  `Hotkeys` (RegisterHotKey only).
+- *Debug-only tools (compiled out of Release):* hotkeys Ctrl+Alt+Shift+F (cycle faces), +L (light/dark), +M (mascot on/off); arguments
+  `--demo mini|sleepy|info|peek|panel|face:Name|cycle:N`, `--snap <png>` (renders the window onto a plain backdrop and exits, so
+  screenshots never contain other windows), `--theme`, `--no-mascot`, `--filter`, `--reduced-motion`, `--pop-seconds`;
+  state log in `%TEMP%\TaskIsland-debug.log`.
+
+**Deviations from PLAN.md (PLAN updated):**
+1. Collapsed window is **452 × 64** DIP, not 376 × 64. With the same width in both sizes the window's left/top never change on resize,
+   so a stale frame can't show the pill shifted by 38 px. Cost: a few thousand more transparent pixels; idle CPU/GPU stay 0.
+2. The panel is built and laid out once **while the island rests after start-up** (ApplicationIdle), not on the first click. Building it
+   on the click froze the first expand for ~230 ms (Release) and the morph was skipped. The panel stays `Collapsed` until opened.
+   Cost: the memory it needs is taken before the first open instead of at it (see measurements).
+3. `FaceRig` is code-only (`Controls/FaceRig.cs`, no XAML) because every visual is generated from expression data.
+4. Hover flow with the mascot: Mini → Curious (400 ms) → Info pill → peek after another 600 ms. Clicking the hover face or the Info pill
+   opens the panel; clicking a face that popped up by itself shows Laughing, and a second click opens the panel. The "double-click the
+   mini notch → Laughing" trigger was dropped because a single click already opens the panel.
+5. `AnimationsEnabled=false` makes every duration 0 including the morph (§5 and UI12 say instant); automatic reduced motion keeps the
+   120 ms morph (§6.7 rule 8).
+6. The ⋯ menu has only "Exit TaskIsland" (the only way out until the tray arrives in Phase 4). Clear completed / Export / Import /
+   Settings are added in Phases 3–5 when they work. Edit (✎) and "+ new list" show disabled until Phase 3.
+
+**Tests performed:**
+- `dotnet build TaskIsland.sln -c Release` and `-c Debug`: 0 warnings, 0 errors. `dotnet test`: **249 passed, 0 failed** (132 Core incl.
+  31 new: ReactionRules, DueLabel, the two new settings; 117 Data).
+- Live checks on this PC (Windows 11, 1920×1080 at 125 %), with the user's go-ahead for the mouse tests:
+  window top-centre (centre x 960, top 10 px = TopMargin 8 × 1.25); ex-styles TOOLWINDOW + NOACTIVATE + TOPMOST, no APPWINDOW;
+  `WindowFromPoint` beside the pill returns the window underneath (click-through); hovering 1.9 s keeps Notepad in the foreground;
+  a click expands (window 565×750 px, same left/top) and the panel takes focus and accepts typing; Esc with text clears it; Esc on an
+  empty box, ✕ and a click outside each collapse; the collapsed rect returns to exactly the start rect. The Debug log confirms
+  Mini → Curious → Info → peek while hovering, and the Wink greeting returning to Mini after 2.51 s.
+- Screenshots (rendered by the app on a plain backdrop, 125 %): `docs/screenshots/phase2-faces.png`,
+  `phase2-faces-vs-reference.png` (the 12 faces next to the reference sheet), `phase2-collapsed-states.png` (Mini, sleepy Mini, Info,
+  peek, classic pill), `phase2-panel-dark.png`, `phase2-panel-light.png`, `phase2-panel-active.png`. All 12 faces match the reference
+  shapes; the panel matches `design-reference-1.webp`.
+- Security grep (§7.11) over `src/`: no hits for hooks, process access, shells, network, `Assembly.Load(` or `Process.Start`.
+
+**Baseline measurement (§6.7, Release build, collapsed, not ReadyToRun):**
+
+| Metric | Measured | Target |
+|---|---|---|
+| CPU idle, 61 s collapsed | 0.0 ms CPU time = **0.0 %** | 0.0 % ✅ |
+| CPU idle after one real open/close, 30 s | 0.0 ms | 0.0 % ✅ |
+| GPU idle (GPU Engine counter, 6 samples over 54 s) | **0 %** | 0 % ✅ |
+| Efficiency mode after 16 s at rest | EcoQoS on (`GetProcessInformation` state=1) | on ✅ |
+| Cold start to visible window (3 runs) | **0.84–0.93 s** | < 1.2 s ✅ |
+| Threads | 11 (WPF render, GC/finalizer, SystemEvents, runtime); none of ours | ✅ |
+| Private memory before the panel was built | 52–56 MB | ≤ 50 MB ❌ |
+| Private memory with the panel built (current build, at rest) | 72–73 MB | ≤ 50 MB ❌ |
+| Private memory after the quick-add box had keyboard focus once | 129 MB | ≤ 50 MB ❌ |
+| Working set at the same three moments | 98–102 / 127 / 138 MB | ≤ 70 MB ❌ |
+
+What was tried: software rendering (`RenderMode.SoftwareOnly`) and a self-contained ReadyToRun publish both measured *higher*
+(69 / 68 MB private) and were reverted. Findings: the NVIDIA driver (`nvgpucomp64.dll`, `nvd3dumx.dll`) loads into every WPF process;
+building the panel adds ~20 MB; the first keyboard focus in a text box loads Windows text input and UI Automation
+(`textinputframework.dll`, `msctfui.dll`, `UIAutomationCore.dll`, `CoreMessaging.dll`, …) for ~56 MB. Turning off the input method on the
+box would save memory but break IME typing (Chinese and others), so it was not done. No working-set trimming tricks were used (§6.7).
+
+**Remaining defects / not tested:**
+- **Memory is over the §6.7 budget** (table above). Needs a decision in Phase 6: investigate further (text/font cost of the panel, UIA
+  peers) and/or ask the user to accept a realistic WPF target.
+- **The first expand still drops ~100 ms of frames** (Release burst capture: the panel appears ~60 % open), even with the prewarm. Later
+  expands were not frame-checked. Phase 3/6: start the morph after the first rendered frame, or render the panel once while hidden.
+- One hover run showed the Info pill back at Mini before the pointer left; two re-runs with logging did not reproduce it.
+- Not tested yet: HorizontalOffset ±400 clamp (UI4), "All done"/"1 task" text in the UI (UI9), PeekOnHover off (UI10), System theme
+  (UI11), AnimationsEnabled off and automatic reduced motion (UI12/UI14, need Windows settings changed), row actions on keyboard focus
+  and the focus ring (UI13), the 5 s alert hold live (M3), micro-animations frame by frame (M5), random-pop intervals live (M6), pops
+  paused while locked / full-screen / display off (M7; full-screen and display-off detection arrive in Phase 4), 100/150/200 % scaling
+  (M9), 30-min CPU (M10).
+- Sample data only: nothing persists until Phase 3.
+
+**Commit:** "Implement Dynamic Island collapsed and expanded interface" (hash in `git log`) · **Pushed:** yes
+
+**Handoff (for Phase 3, survives /compact):**
+- *What exists:* the island UI and mascot run on `IslandViewModel` + `SampleData` (in memory). Core rules are reused (`TaskSorter`,
+  `TaskStats`, `DueLabel`). The DI root is `App.Build(paths, db, settings, options)`; settings are loaded before the container is built and
+  registered as a singleton `AppSettings` (save changes through `ISettingsStore`).
+- *Phase 3 must know:* replace `SampleData` with the repositories inside `IslandViewModel` (keep its public properties; the views bind
+  to them). Rows are recreated on every `Refresh()`. Still to build: the 2 s slide-out, Undo bar, inline edit (`TaskRow` ✎ is disabled),
+  list popup (`+` chip disabled) and the ⋯ menu items (Phases 3/5). Mascot triggers for task events go through
+  `ReactionDirector.Request(...)`, which shows them on the panel face while the panel is open. Every animation must use `Anim` and the
+  `MotionPolicy` tokens. The panel height re-animates by itself on `SizeChanged`.
+- *Testing tools:* Debug build + `--snap` for screenshots (no screen capture, nothing private in them); `--demo cycle:N` for
+  expand/collapse loops without the mouse; `%TEMP%\TaskIsland-debug.log`. Real mouse tests move the user's pointer: ask first.
+- *Open issues:* the memory budget and the first-expand hitch (above).
+- *Exact next step:* start Phase 3 (Sonnet or Opus, Medium effort): `dotnet build` + `dotnet test` (expect 249 green), then PLAN §8 Phase 3 step 1.

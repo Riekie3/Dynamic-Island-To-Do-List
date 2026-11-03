@@ -437,7 +437,8 @@ Priority always shows **text label + colour dot** (never colour alone).
 `ShowInTaskbar=False`, `Topmost=True`, `ResizeMode=NoResize`, `ShowActivated=False`.
 A layered window is needed for the anti-aliased rounded morph (DWM corners are fixed at 8 px and a window region has
 jagged edges). A layered window re-uploads its pixels every frame it animates, so **keep the window small when idle**:
-- **Collapsed size: 376 × 64 DIP** (room for the widest peek, 360, and for the mascot's Mini 120 × 32 and Reaction
+- **Collapsed size: 452 × 64 DIP** (Phase 2 change from 376 × 64: the same width as expanded keeps the window's left edge fixed, so a
+  resize can never show the pill shifted for a frame. Room for the widest peek, 360, and for the mascot's Mini 120 × 32 and Reaction
   232 × 56 states with their top-right accessory, §6.8; all collapsed states share this window, no resize between them). **Expanded size: 452 × 600 DIP** (420 panel +
   16 px each side for the shadow, 550 max panel height + shadow below).
 - The island is always drawn **top-centred** in the window with **0 top inset** in both sizes, so the pill sits on the
@@ -464,7 +465,8 @@ jagged edges). A layered window re-uploads its pixels every frame it animates, s
   with a 6 px upward slide (`TranslateTransform`, render-only). Both layouts are never visible at once.
 - Expand: Morph 0 → 1, `morph` 260 ms, `FluentEase`. Collapse: 1 → 0, 180 ms, mirrored ease.
 - When collapsed, the panel subtree is `Visibility=Collapsed` (not just transparent), so layout, rendering and hit
-  testing skip it. The panel visual tree is **created on first expand** (not at startup) and then kept.
+  testing skip it. The panel visual tree is **built once while the island rests after start-up** (Phase 2 change: building it on
+  the first click froze that expand for ~0.2 s) and then kept.
 
 **Shadow (cheap).** No `DropShadowEffect` on animating elements. One shadow `Border` behind the panel has the
 `DropShadowEffect` **plus `CacheMode=BitmapCache`**, so it is rasterised once and only composited afterwards.
@@ -582,7 +584,7 @@ Rules:
    spinners. Animation clocks end (`FillBehavior=Stop` + local value set). Cap animation frame rate at 60 fps
    (`Timeline.DesiredFrameRateProperty.OverrideMetadata(typeof(Timeline), new FrameworkPropertyMetadata(60))`) so
    120/144 Hz screens don't double the cost.
-3. **Small surfaces.** Collapsed window 376 × 64 DIP (§6.2). Panel subtree `Collapsed` when not shown. Panel and Settings
+3. **Small surfaces.** Collapsed window 452 × 64 DIP (§6.2). Panel subtree `Collapsed` when not shown. Panel and Settings
    UI created lazily. Settings window released on close.
 4. **Cheap effects only.** Only the one cached shadow uses an `Effect`. No `BlurEffect`, no `BitmapEffect`, no
    `OpacityMask` on large areas, no real-time acrylic. Freeze all brushes/geometries defined in resources
@@ -623,6 +625,9 @@ screenshots must be compared side by side with the reference sheet.
 | **Reaction** (expanded, reaction active) | 232 × 56 | face: eyes + mouth + accessory | an event or a random idle pop; holds 2.5 s (alerts 5 s), then back to Mini |
 | **Info** | NotchWidth × 36, peek up to 360 | progress ring, "3 tasks", top task on longer hover (§6.3) | hover ≥ 400 ms |
 | **Panel** | 420 × ≤ 550 | the To-Do panel (§6.4); a 28-px version of the face sits left of the title and reacts too | click / hotkey / tray |
+
+Hover (Phase 2): Mini → Curious for 400 ms → Info pill → peek after another 600 ms. Clicking the hover face or the Info pill opens
+the panel; clicking a face that popped up by itself shows Laughing and a second click opens the panel.
 
 Mini → Reaction → Mini uses the morph motion (`morph` tokens, `FluentEase`); the dots **become the eyes** (the two
 dot elements move to the eye positions and morph into the expression's eye shapes), so it reads as one creature waking up.
@@ -668,7 +673,7 @@ Reduced motion (§6.7 rule 8): the expression appears instantly with no micro-an
 |---|---|---|---|---|
 | 1 | Neutral | Normal idle | random pop; panel face at rest | — |
 | 2 | Happy | Task completed | a task is ticked | — |
-| 3 | Laughing | Playful interaction | clicking the face (Reaction state) or double-clicking the mini notch; random pop | `//` lines |
+| 3 | Laughing | Playful interaction | clicking a face that popped up by itself (Reaction state); random pop | `//` lines |
 | 4 | Wink | Friendly notification | a task is added; app start greeting (not on `--startup` during the first 60 s) | — |
 | 5 | Surprised | Important alert | a due reminder fires; overdue tasks found at startup (holds 5 s) | `//` lines |
 | 6 | Curious | User interaction | mouse hovers the mini notch (before it becomes the Info pill); random pop | `?` |
@@ -712,7 +717,7 @@ Remove `WS_EX_APPWINDOW`. Use `GetWindowLongPtr/SetWindowLongPtr(GWL_EXSTYLE)`.
 - Enumerate with `EnumDisplayMonitors` + `GetMonitorInfo` (`MONITORINFOEX`, `szDevice`, `rcMonitor`, primary flag).
   DPI via `GetDpiForMonitor(MDT_EFFECTIVE_DPI)`.
 - Target monitor = `MonitorDeviceName` match, else primary. Position in **physical pixels**:
-  `scale = dpi/96`, window size in DIP = collapsed 376 × 64 or expanded 452 × 600 (§6.2), `wPx = wDip*scale`,
+  `scale = dpi/96`, window size in DIP = collapsed 452 × 64 or expanded 452 × 600 (§6.2), `wPx = wDip*scale`,
   `centreX = rc.Left + rc.Width/2 + HorizontalOffset*scale`, `x = centreX - wPx/2`, `y = rc.Top + TopMargin*scale`.
   Clamp `centreX` (not x) so the 420-wide panel stays inside `rcMonitor`; both sizes share the same centre and top, so
   the pill does not move when the window switches size. Apply with `SetWindowPos(HWND_TOPMOST, x, y, wPx, hPx, SWP_NOACTIVATE)`.

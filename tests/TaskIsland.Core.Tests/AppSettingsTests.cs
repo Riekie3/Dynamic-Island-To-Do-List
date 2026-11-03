@@ -23,6 +23,8 @@ public class AppSettingsTests
         Assert.Equal(8, s.TopMargin);
         Assert.Equal(0.94, s.PanelOpacity);
         Assert.True(s.AnimationsEnabled);
+        Assert.True(s.MascotEnabled);
+        Assert.Equal(IdleReactions.Normal, s.IdleReactions);
         Assert.Equal(DensityMode.Comfortable, s.Density);
         Assert.True(s.HideInFullScreen);
         Assert.Equal("", s.MonitorDeviceName);
@@ -47,7 +49,8 @@ public class AppSettingsTests
         {
             LaunchAtStartup = false, StartCollapsed = false, CollapseOnClickOutside = false, CollapseOnEscape = false,
             AlwaysShowNotch = false, Theme = ThemeMode.System, NotchWidth = 240, HorizontalOffset = -120, TopMargin = 20,
-            PanelOpacity = 0.8, AnimationsEnabled = false, Density = DensityMode.Compact, HideInFullScreen = false,
+            PanelOpacity = 0.8, AnimationsEnabled = false, MascotEnabled = false,
+            IdleReactions = IdleReactions.Lively, Density = DensityMode.Compact, HideInFullScreen = false,
             MonitorDeviceName = @"\\.\DISPLAY2", AutoCollapseSeconds = 30, RestoreAfterWake = false, PeekOnHover = false,
             RemindersEnabled = false, ToggleHotkey = "Ctrl+Shift+Y", CompletedFadeOut = false, DailyBackupEnabled = false,
             DefaultListId = 7, PillCountScope = PillCountScope.SelectedList, FirstRunCompleted = true,
@@ -101,6 +104,25 @@ public class AppSettingsTests
         Assert.Equal(0, s.DefaultListId);
         Assert.Null(s.LastBackupAt);
         Assert.Equal("Ctrl+Alt+T", s.ToggleHotkey);
+    }
+
+    [Theory]
+    [InlineData("off", IdleReactions.Off)]
+    [InlineData("Rare", IdleReactions.Rare)]
+    [InlineData("LIVELY", IdleReactions.Lively)]
+    [InlineData("often", IdleReactions.Normal)]
+    [InlineData("7", IdleReactions.Normal)]
+    [InlineData("", IdleReactions.Normal)]
+    public void IdleReactions_parses_names_and_falls_back_to_Normal(string value, IdleReactions expected)
+    {
+        Assert.Equal(expected, From(("IdleReactions", value)).IdleReactions);
+    }
+
+    [Fact]
+    public void MascotEnabled_garbage_keeps_the_default_and_false_is_kept()
+    {
+        Assert.True(From(("MascotEnabled", "yes")).MascotEnabled);
+        Assert.False(From(("MascotEnabled", "false")).MascotEnabled);
     }
 
     [Fact]

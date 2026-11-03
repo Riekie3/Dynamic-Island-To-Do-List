@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
@@ -7,6 +7,10 @@
     <AssemblyName>TaskIsland</AssemblyName>
     <RootNamespace>TaskIsland.App</RootNamespace>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <!-- PLAN.md section 6.7 rule 9: no background GC thread (the heap is tiny), profile-guided tiering. -->
+    <ConcurrentGarbageCollection>false</ConcurrentGarbageCollection>
+    <TieredPGO>true</TieredPGO>
+    <Deterministic>true</Deterministic>
   </PropertyGroup>
 
   <ItemGroup>
