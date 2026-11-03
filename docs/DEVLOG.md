@@ -234,3 +234,19 @@ box would save memory but break IME typing (Chinese and others), so it was not d
   expand/collapse loops without the mouse; `%TEMP%\TaskIsland-debug.log`. Real mouse tests move the user's pointer: ask first.
 - *Open issues:* the memory budget and the first-expand hitch (above).
 - *Exact next step:* start Phase 3 (Sonnet or Opus, Medium effort): `dotnet build` + `dotnet test` (expect 249 green), then PLAN §8 Phase 3 step 1.
+
+### Change — smaller compact island (2026-11-03, Opus 5.5)
+**Asked:** the notch should be a bit smaller; the user runs Nusa (another notch app) and asked to compare its position and size.
+**Nusa, measured live** (its running window, not the installer; `NusaSetup.exe` was not run): one 800 × 238 px window at the top
+centre of the screen (y = 0) whose window region follows the visible shape. At rest the drawn notch is **180 × 37 px** at 125 %
+(≈ 144 × 30 DIP), flush with the top edge, flat top, rounded bottom corners. TaskIsland was Mini 120 × 32, Info 200 × 36 and
+Reaction 232 × 56 DIP, 8 DIP below the top edge.
+**Done:** `IslandHost.CompactScale = 0.8` draws Mini, Reaction and Info at 0.8× (Mini 96 × 25.6, Info 160 × 28.8 by default,
+Reaction 185.6 × 44.8 DIP; at 125 % that is 120 × 32, 200 × 36, 232 × 56 px). The face and info content keep their design-size
+layout under a frozen `LayoutTransform`, so the 1:1 reference geometry is unchanged; outline/glow strokes and the gloss scale with
+it. The panel is not scaled. Window size, position and `TopMargin` are unchanged. PLAN §6.8 updated.
+**Tests:** Release + Debug build 0 warnings / 0 errors; `dotnet test` 249 passed. `--snap` renders of every compact state and all
+12 faces checked (nothing clipped; replaced `docs/screenshots/phase2-collapsed-states.png` and `phase2-faces.png`). Release start
+checked live: window 565 × 80 px at (678, 10), unchanged. Hover/click not re-run with the mouse (no input code changed; the hit
+area is the painted shape, which scales with it).
+**Open:** position is still a floating pill 8 DIP below the top edge, unlike Nusa's flush notch; the user decides whether to change it.

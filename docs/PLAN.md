@@ -626,6 +626,12 @@ screenshots must be compared side by side with the reference sheet.
 | **Info** | NotchWidth × 36, peek up to 360 | progress ring, "3 tasks", top task on longer hover (§6.3) | hover ≥ 400 ms |
 | **Panel** | 420 × ≤ 550 | the To-Do panel (§6.4); a 28-px version of the face sits left of the title and reacts too | click / hotkey / tray |
 
+**Compact scale (2026-11-03 change):** Mini, Reaction and Info are drawn at **0.8×** the sizes above
+(`IslandHost.CompactScale`): Mini 96 × 25.6, Reaction 185.6 × 44.8, Info NotchWidth × 0.8 by 28.8 DIP (at 125 %: 120 × 32,
+232 × 56, 200 × 36 px). The user asked for a smaller notch; for reference, the Nusa notch app measured 180 × 37 px at 125 %. Code
+still passes the design sizes above and the face/info content keeps its 1:1 reference geometry under the scale. The panel is not
+scaled.
+
 Hover (Phase 2): Mini → Curious for 400 ms → Info pill → peek after another 600 ms. Clicking the hover face or the Info pill opens
 the panel; clicking a face that popped up by itself shows Laughing and a second click opens the panel.
 

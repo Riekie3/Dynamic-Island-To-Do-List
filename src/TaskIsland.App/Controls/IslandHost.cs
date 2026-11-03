@@ -20,6 +20,14 @@ public sealed class IslandHost : Grid
 {
     public const double HostWidth = 452;
 
+    /// <summary>
+    /// Mini, Reaction and Info are drawn at this scale: callers pass the design sizes (120 x 32, 232 x 56, NotchWidth x 36)
+    /// and the face/info content is laid out at the design size under the same scale. The panel is not scaled.
+    /// </summary>
+    public const double CompactScale = 0.8;
+
+    private static readonly ScaleTransform CompactTransform = Frozen(new ScaleTransform(CompactScale, CompactScale));
+
     public static readonly DependencyProperty MorphProperty = DependencyProperty.Register(
         nameof(Morph), typeof(double), typeof(IslandHost),
         new PropertyMetadata(0.0, (d, e) => ((IslandHost)d).OnMorph((double)e.NewValue)));
@@ -32,6 +40,7 @@ public sealed class IslandHost : Grid
     private readonly TranslateTransform _panelSlide = new();
     private FrameworkElement? _face, _info, _panel;
     private Look _from, _to, _now;
+    private Size _requested = new(120, 32);
     private bool _fromPanel, _toPanel, _resetting, _mascotLook = true;
     private int _generation;
     private double _panelOpacity = 0.94;
@@ -43,7 +52,7 @@ public sealed class IslandHost : Grid
         VerticalAlignment = VerticalAlignment.Stretch;
         Background = null;
 
-        _glow = new Path { Data = _geo, StrokeThickness = 7, IsHitTestVisible = false };
+        _glow = new Path { Data = _geo, StrokeThickness = 7 * CompactScale, IsHitTestVisible = false };
         _glow.SetResourceReference(Shape.StrokeProperty, "MascotGlowRingBrush");
 
         _shadowEffect = new DropShadowEffect { BlurRadius = 28, ShadowDepth = 8, Direction = 270, Color = Colors.Black, Opacity = 0.35 };
@@ -67,7 +76,7 @@ public sealed class IslandHost : Grid
         _gloss = new Path { Data = _glossGeo, IsHitTestVisible = false };
         _gloss.SetResourceReference(Shape.FillProperty, "MascotGlossBrush");
         _clipLayer = new Grid { Clip = _geo, Background = null };
-        _outline = new Path { Data = _geo, StrokeThickness = 2, IsHitTestVisible = false };
+        _outline = new Path { Data = _geo, StrokeThickness = 2 * CompactScale, IsHitTestVisible = false };
         _outline.SetResourceReference(Shape.StrokeProperty, "MascotOutlineBrush");
 
         foreach (var e in new UIElement[] { _glow, _shadow, _body, _panelBody, _gloss, _clipLayer, _outline }) Children.Add(e);
@@ -93,7 +102,8 @@ public sealed class IslandHost : Grid
             if (value is null) return;
             value.HorizontalAlignment = HorizontalAlignment.Center;
             value.VerticalAlignment = VerticalAlignment.Top;
-            value.Margin = new Thickness(0, -4, 0, 0); // the rig's pill starts at y = 4
+            value.LayoutTransform = CompactTransform;
+            value.Margin = new Thickness(0, -4 * CompactScale, 0, 0); // the rig's pill starts at y = 4
             Children.Add(value);
             Render(_now);
         }
@@ -103,7 +113,11 @@ public sealed class IslandHost : Grid
     public FrameworkElement? Info
     {
         get => _info;
-        set => SetClipped(ref _info, value);
+        set
+        {
+            SetClipped(ref _info, value);
+            if (value is not null) value.LayoutTransform = CompactTransform;
+        }
     }
 
     /// <summary>The to-do panel, created on first expand.</summary>
@@ -129,7 +143,7 @@ public sealed class IslandHost : Grid
         _mascotLook = on;
         _body.SetResourceReference(Shape.FillProperty, on ? "MascotBodyBrush" : "PillBrush");
         _outline.SetResourceReference(Shape.StrokeProperty, on ? "MascotOutlineBrush" : "StrokeBrush");
-        _outline.StrokeThickness = on ? 2 : 1;
+        _outline.StrokeThickness = on ? 2 * CompactScale : 1;
         if (!IsAnimating) Snap();
     }
 
@@ -154,7 +168,7 @@ public sealed class IslandHost : Grid
 
     /// <summary>
     /// Morphs to a state. Only the shared geometry and opacities change per frame. A new call smoothly takes over
-    /// from wherever a running morph is.
+    /// from wherever a running morph is. Sizes are design sizes; Mini/Reaction/Info are scaled by <see cref="CompactScale"/>.
     /// </summary>
     public void AnimateTo(IslandState state, double width, double height, TimeSpan duration, IEasingFunction ease,
         Action? completed = null)
@@ -163,6 +177,7 @@ public sealed class IslandHost : Grid
         _fromPanel = State == IslandState.Panel;
         _toPanel = state == IslandState.Panel;
         State = state;
+        _requested = new Size(width, height);
         _from = snapshot;
         _to = Target(state, width, height);
         int generation = ++_generation;
@@ -218,7 +233,7 @@ public sealed class IslandHost : Grid
         completed?.Invoke();
     }
 
-    private void Snap() => AnimateTo(State, _to.W, _to.H, TimeSpan.Zero, FluentEase.Decelerate);
+    private void Snap() => AnimateTo(State, _requested.Width, _requested.Height, TimeSpan.Zero, FluentEase.Decelerate);
 
     private void OnMorph(double p)
     {
@@ -240,8 +255,10 @@ public sealed class IslandHost : Grid
         double x = (HostWidth - l.W) / 2;
         _geo.Rect = new Rect(x, 0, l.W, l.H);
         _geo.RadiusX = _geo.RadiusY = l.R;
-        double gh = Math.Min(20, l.H * 0.36);
-        _glossGeo.Rect = new Rect(x + 10, 4, Math.Max(0, l.W - 20), gh);
+        // The gloss is only visible in the compact states, so it uses their scale.
+        const double k = CompactScale;
+        double gh = Math.Min(20 * k, l.H * 0.36);
+        _glossGeo.Rect = new Rect(x + 10 * k, 4 * k, Math.Max(0, l.W - 20 * k), gh);
         _glossGeo.RadiusX = _glossGeo.RadiusY = gh / 2;
         _body.Opacity = l.Body;
         _panelBody.Opacity = l.PanelBody;
@@ -260,6 +277,11 @@ public sealed class IslandHost : Grid
     private Look Target(IslandState state, double w, double h)
     {
         double m = _mascotLook ? 1 : 0;
+        if (state != IslandState.Panel)
+        {
+            w *= CompactScale;
+            h *= CompactScale;
+        }
         return state switch
         {
             IslandState.Mini => new Look(w, h, h / 2, 1, 0, m, m, m, 1, 0, 0),
@@ -292,6 +314,7 @@ public sealed class IslandHost : Grid
         if (e is not null && to <= 0) e.Visibility = Visibility.Collapsed;
     }
 
+    private static T Frozen<T>(T f) where T : Freezable { f.Freeze(); return f; }
     private static double Lerp(double a, double b, double p) => a + (b - a) * p;
     private static double Clamp01(double v) => Math.Clamp(v, 0, 1);
 
