@@ -695,6 +695,7 @@ nothing without a reminder. It is the open M10 item; the release notes now say s
   `tools/ui-tests/installer-test.ps1` (re-run it for every installer change; about 2 minutes).
 - *Decided 2026-11-04 (PLAN 4b):* code signing: **no, stay unsigned** (user: "No, stay unsigned"). 1.0.0 ships unsigned with the
   SmartScreen "More info > Run anyway" note; S8 is n/a.
-- *Waiting on the user:* testing findings, licence choice, optional VirusTotal OK.
+- *Decided 2026-11-04:* licence **MIT**, (c) 2026 RieSources (user: "MIT (open source)"). LICENSE, README and release notes updated after rc.2 was published (rc.2's own files still carry the old all-rights-reserved text).
+- *Waiting on the user:* testing findings, optional VirusTotal OK.
 - *Exact next step:* fix findings; then Version `1.0.0`, `tools/publish.ps1`, `tools/build-installer.ps1`, scans, installer
   test, tag `v1.0.0`, `gh release create v1.0.0` with both files (not a pre-release).

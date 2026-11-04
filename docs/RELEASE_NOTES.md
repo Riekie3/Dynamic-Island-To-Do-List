@@ -62,7 +62,7 @@ No administrator rights, no internet connection, no .NET install needed (the run
   0.13 %. Settings > Appearance > "Face pops up on its own" turns it down or off.
 - Sleep, hibernate, reboot auto-start, multi-monitor and display-scaling behaviour is being verified in real use.
   If something goes wrong, check `%LocalAppData%\TaskIsland\Logs`.
-- Not code-signed (see above). No licence has been chosen yet: personal use only for now (see LICENSE).
+- Not code-signed (see above). Licence: MIT (see LICENSE).
 
 ## Remove it
 

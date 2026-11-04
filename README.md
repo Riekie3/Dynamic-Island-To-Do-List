@@ -179,7 +179,8 @@ Open them from the tray icon (right-click > **Settings…**) or from the panel's
 - The face's random animations cost a little CPU: about 1.5-2 % of one core averaged over the first minutes after a
   first start in our latest check (lower over long idle periods; "Face pops up on its own" can be turned down).
 - Sleep, hibernate, reboot auto-start, multiple monitors and display scaling are being verified in real use.
-- Not code-signed yet. No licence has been chosen yet: personal use only for now (see [LICENSE](LICENSE)).
+- Not code-signed (by choice), so SmartScreen warns on first run.
+- Licence: [MIT](LICENSE). Free to use, copy and modify.
 
 Project documents: [PLAN](docs/PLAN.md) (design and build guide), [TESTING](docs/TESTING.md) (test checklist with
 results), [DEVLOG](docs/DEVLOG.md) (what was built when, with measurements).
