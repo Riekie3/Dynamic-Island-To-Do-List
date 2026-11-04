@@ -84,6 +84,7 @@
                         <ContextMenu x:Name="MoreMenu">
                             <MenuItem Header="Clear completed…" Command="{Binding ClearCompletedCommand}"
                                       AutomationProperties.Name="Clear completed"/>
+                            <MenuItem Header="Settings…" Click="Settings_Click" AutomationProperties.Name="Settings"/>
                             <MenuItem Header="Exit TaskIsland" Click="Exit_Click" AutomationProperties.Name="Exit TaskIsland"/>
                         </ContextMenu>
                     </Button.ContextMenu>

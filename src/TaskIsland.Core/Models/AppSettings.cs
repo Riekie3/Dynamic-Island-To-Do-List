@@ -167,6 +167,16 @@ public sealed class AppSettings
         return s;
     }
 
+    /// <summary>
+    /// Copies every value from <paramref name="other"/> into this live instance (after a restore from backup the settings
+    /// come from the restored database, but the rest of the app holds this object).
+    /// </summary>
+    public void CopyFrom(AppSettings other)
+    {
+        foreach (var p in typeof(AppSettings).GetProperties())
+            if (p.CanWrite && p.GetIndexParameters().Length == 0) p.SetValue(this, p.GetValue(other));
+    }
+
     public IReadOnlyDictionary<string, string> ToDictionary()
     {
         static string B(bool v) => v ? "true" : "false";

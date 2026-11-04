@@ -1,4 +1,4 @@
-﻿using System.Collections.ObjectModel;
+using System.Collections.ObjectModel;
 using System.Windows.Media;
 using System.Windows.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -143,6 +143,51 @@ public sealed partial class IslandViewModel : ObservableObject, ITaskRowHost
         await ReconcileAsync(leave, enter);
         DataChanged?.Invoke(_tasks);
     }
+
+    /// <summary>
+    /// Reloads lists and tasks after something outside the view model changed the data (Settings: list changes, import,
+    /// restore, clear completed). <paramref name="reloadSettings"/> also re-reads the default list and the selection, which an
+    /// import "Replace" or a restore changes in the database.
+    /// </summary>
+    public async Task RefreshAsync(bool reloadSettings = false)
+    {
+        await _gate.WaitAsync();
+        try
+        {
+            CancelTransientUi();
+            if (reloadSettings)
+            {
+                var fresh = await _settingsStore.LoadAsync();
+                _settings.DefaultListId = fresh.DefaultListId;
+                SelectListInternal(fresh.SelectedListId);
+                QuickAddListId = DefaultListId();
+            }
+            await ReloadAsync();
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
+    /// <summary>Settings → Lists: the default list or the pill count scope changed.</summary>
+    public async Task ListSettingsChangedAsync()
+    {
+        await _gate.WaitAsync();
+        try
+        {
+            if (_lists.Any(l => l.Id == _settings.DefaultListId)) QuickAddListId = _settings.DefaultListId;
+            RefreshCounts();
+            UpdateQuickAddList();
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
+    /// <summary>Open task count per list id (Settings → Lists).</summary>
+    public int TaskCount(long listId) => _tasks.Count(t => t.ListId == listId);
 
     /// <summary>Every task that is not deleted, as last loaded (reminders start from it).</summary>
     public IReadOnlyList<TaskItem> AllTasks => _tasks;
@@ -432,6 +477,25 @@ public sealed partial class IslandViewModel : ObservableObject, ITaskRowHost
         HasUndo = false;
         _undoIds = [];
         await RunAsync("remove the deleted tasks", () => _tasksRepo.PurgeDeletedAsync());
+    }
+
+    // ---- clear completed (Settings -> Data) ----
+
+    /// <summary>Completed tasks in all lists.</summary>
+    public int CompletedCount => _tasks.Count(t => t.IsCompleted);
+
+    /// <summary>Settings -> Data -> Clear completed tasks (after its own confirmation): all lists, with the Undo bar.</summary>
+    public async Task<int> ClearAllCompletedAsync()
+    {
+        int cleared = 0;
+        await RunAsync("clear the completed tasks", async () =>
+        {
+            var ids = _tasks.Where(t => t.IsCompleted).Select(t => t.Id).ToList();
+            cleared = await _tasksRepo.ClearCompletedAsync(null);
+            await ReloadAsync(leave: RowLeave.SlideOut);
+            if (cleared > 0) ShowUndo(cleared == 1 ? "1 completed task cleared" : $"{cleared} completed tasks cleared", ids);
+        });
+        return cleared;
     }
 
     // ---- clear completed ----

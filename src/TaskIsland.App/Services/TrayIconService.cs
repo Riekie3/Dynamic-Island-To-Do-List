@@ -1,4 +1,4 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using Microsoft.Win32;
 using TaskIsland.App.Logging;
 using TaskIsland.App.ViewModels;
@@ -18,15 +18,16 @@ public sealed class TrayIconService : IDisposable
     private readonly IslandWindow _window;
     private readonly System.Windows.Forms.NotifyIcon _icon;
     private readonly System.Windows.Forms.ContextMenuStrip _menu;
-    private readonly System.Windows.Forms.ToolStripMenuItem _open, _expand, _show, _pause, _exit;
+    private readonly System.Windows.Forms.ToolStripMenuItem _open, _expand, _show, _pause, _exit, _settingsItem;
     private System.Drawing.Icon? _current;
     private bool _lightTaskbar, _iconPaused, _disposed;
     private Action? _balloonClick;
 
-    public TrayIconService(IslandViewModel vm, IslandWindow window)
+    public TrayIconService(IslandViewModel vm, IslandWindow window, SettingsLauncher settings)
     {
         _vm = vm;
         _window = window;
+        _settingsItem = Item("Settings…", settings.Show);
         _menu = new System.Windows.Forms.ContextMenuStrip { ShowImageMargin = false };
         _open = Item("Open TaskIsland", () => _window.OpenFromOutside());
         _open.Font = new System.Drawing.Font(_open.Font, System.Drawing.FontStyle.Bold);
@@ -34,7 +35,7 @@ public sealed class TrayIconService : IDisposable
         _show = Item("Hide", () => _window.SetUserHidden(!_window.IsUserHidden));
         _pause = Item("Pause visibility", () => _window.SetPaused(!_window.IsPaused));
         _exit = Item("Exit", () => ((App)System.Windows.Application.Current).ExitApp());
-        _menu.Items.AddRange([_open, _expand, _show, _pause, new System.Windows.Forms.ToolStripSeparator(), _exit]);
+        _menu.Items.AddRange([_open, _expand, _show, _pause, new System.Windows.Forms.ToolStripSeparator(), _settingsItem, _exit]);
         _menu.Opening += (_, _) => UpdateMenu();
 
         _icon = new System.Windows.Forms.NotifyIcon { ContextMenuStrip = _menu };

@@ -1,0 +1,369 @@
+<Window x:Class="TaskIsland.App.Views.SettingsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:c="clr-namespace:TaskIsland.App.Controls"
+        Title="TaskIsland Settings" Width="640" Height="580" MinWidth="560" MinHeight="460"
+        WindowStartupLocation="CenterScreen" UseLayoutRounding="True" SnapsToDevicePixels="True"
+        Background="{DynamicResource SurfaceBrush}" FontFamily="{StaticResource TextFont}"
+        Foreground="{DynamicResource TextPrimaryBrush}" AutomationProperties.Name="TaskIsland Settings">
+    <!-- PLAN.md section 6.6: left navigation, cards, toggle switches. A normal window (taskbar entry while open), released
+         on close. On Windows 11 the Mica backdrop shows through the transparent background; otherwise the solid Surface colour. -->
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="Vis"/>
+        <c:InverseBoolConverter x:Key="Not"/>
+        <Style x:Key="HintText" TargetType="TextBlock" BasedOn="{StaticResource MutedText}">
+            <Setter Property="Margin" Value="4,6,0,0"/>
+            <Style.Triggers>
+                <Trigger Property="Text" Value="">
+                    <Setter Property="Visibility" Value="Collapsed"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+        <Style x:Key="WarnText" TargetType="TextBlock" BasedOn="{StaticResource HintText}">
+            <Setter Property="Foreground" Value="{DynamicResource OverdueBrush}"/>
+        </Style>
+    </Window.Resources>
+
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="170"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- Navigation -->
+        <DockPanel Margin="10,16,6,12">
+            <TextBlock DockPanel.Dock="Bottom" Style="{StaticResource MutedText}" Margin="12,0,0,0"
+                       Text="{Binding AppVersion, StringFormat='TaskIsland {0}'}"/>
+            <StackPanel>
+                <TextBlock Text="Settings" FontSize="18" FontWeight="SemiBold" FontFamily="{StaticResource DisplayFont}" Margin="12,0,0,14"/>
+                <RadioButton x:Name="NavGeneral" Content="General" GroupName="nav" IsChecked="True" Style="{StaticResource NavButton}"/>
+                <RadioButton x:Name="NavAppearance" Content="Appearance" GroupName="nav" Style="{StaticResource NavButton}"/>
+                <RadioButton x:Name="NavBehaviour" Content="Behaviour" GroupName="nav" Style="{StaticResource NavButton}"/>
+                <RadioButton x:Name="NavLists" Content="Lists" GroupName="nav" Style="{StaticResource NavButton}"/>
+                <RadioButton x:Name="NavData" Content="Data" GroupName="nav" Style="{StaticResource NavButton}"/>
+                <RadioButton x:Name="NavAbout" Content="About" GroupName="nav" Style="{StaticResource NavButton}"/>
+            </StackPanel>
+        </DockPanel>
+
+        <ScrollViewer Grid.Column="1" Style="{StaticResource OverlayScrollViewer}" VerticalScrollBarVisibility="Auto">
+            <Grid Margin="10,18,22,24">
+
+                <!-- General -->
+                <StackPanel Visibility="{Binding IsChecked, ElementName=NavGeneral, Converter={StaticResource Vis}}">
+                    <TextBlock Style="{StaticResource PageTitle}" Text="General"/>
+                    <Border Style="{StaticResource SettingsCard}">
+                        <StackPanel>
+                            <c:SettingRow Title="Start with Windows" Description="Adds TaskIsland to Windows startup (Task Manager → Startup apps shows it).">
+                                <CheckBox Style="{StaticResource ToggleSwitch}" IsChecked="{Binding LaunchAtStartup}"/>
+                            </c:SettingRow>
+                            <Rectangle Style="{StaticResource CardDivider}"/>
+                            <c:SettingRow Title="Open expanded when I start it" Description="Off: it starts as the small notch. Starting with Windows always stays collapsed.">
+                                <CheckBox Style="{StaticResource ToggleSwitch}" IsChecked="{Binding OpenExpanded}"/>
+                            </c:SettingRow>
+                            <Rectangle Style="{StaticResource CardDivider}"/>
+                            <c:SettingRow Title="Collapse when I click outside">
+                                <CheckBox Style="{StaticResource ToggleSwitch}" IsChecked="{Binding CollapseOnClickOutside}"/>
+                            </c:SettingRow>
+                            <Rectangle Style="{StaticResource CardDivider}"/>
+                            <c:SettingRow Title="Collapse with Esc">
+                                <CheckBox Style="{StaticResource ToggleSwitch}" IsChecked="{Binding CollapseOnEscape}"/>
+                            </c:SettingRow>
+                            <Rectangle Style="{StaticResource CardDivider}"/>
+                            <c:SettingRow Title="Always show the notch" Description="Off: the notch slides up to a thin line and comes back when the mouse touches it.">
+                                <CheckBox Style="{StaticResource ToggleSwitch}" IsChecked="{Binding AlwaysShowNotch}"/>
+                            </c:SettingRow>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+
+                <!-- Appearance -->
+                <StackPanel Visibility="{Binding IsChecked, ElementName=NavAppearance, Converter={StaticResource Vis}}">
+                    <TextBlock Style="{StaticResource PageTitle}" Text="Appearance"/>
+                    <Border Style="{StaticResource SettingsCard}">
+                        <StackPanel>
+                            <c:SettingRow Title="Theme" Description="System follows the Windows app mode.">
+                                <c:SegmentedControl Options="{Binding ThemeOptions}" SelectedIndex="{Binding ThemeIndex, Mode=TwoWay}"/>
+                            </c:SettingRow>
+                            <Rectangle Style="{StaticResource CardDivider}"/>
+                            <c:SettingRow Title="Accent colour">
+                                <c:SegmentedControl Options="{Binding AccentOptions}" SelectedIndex="{Binding AccentIndex, Mode=TwoWay}"/>
+                            </c:SettingRow>
+                            <Rectangle Style="{StaticResource CardDivider}"/>
+                            <c:SettingRow Title="Row size">
+                                <c:SegmentedControl Options="{Binding DensityOptions}" SelectedIndex="{Binding DensityIndex, Mode=TwoWay}"/>
+                            </c:SettingRow>
+                        </StackPanel>
+                    </Border>
+
+                    <TextBlock Style="{StaticResource SectionLabel}" Text="Notch"/>
+                    <Border Style="{StaticResource SettingsCard}">
+                        <StackPanel>
+                            <c:SettingRow Title="Notch width">
+                                <StackPanel Orientation="Horizontal">
+                                    <Slider Style="{StaticResource SettingsSlider}" Minimum="160" Maximum="280" SmallChange="1" LargeChange="10" Value="{Binding NotchWidth}"/>
+                                    <TextBlock Width="52" TextAlignment="Right" VerticalAlignment="Center" Style="{StaticResource MutedText}" Text="{Binding NotchWidth, StringFormat='{}{0:0} px'}"/>
+                                </StackPanel>
+                            </c:SettingRow>
+                            <Rectangle Style="{StaticResource CardDivider}"/>
+                            <c:SettingRow Title="Position" Description="Left or right of the screen centre.">
+                                <StackPanel Orientation="Horizontal">
+                                    <Slider Style="{StaticResource SettingsSlider}" Minimum="-400" Maximum="400" SmallChange="1" LargeChange="20" Value="{Binding HorizontalOffset}"/>
+                                    <TextBlock Width="52" TextAlignment="Right" VerticalAlignment="Center" Style="{StaticResource MutedText}" Text="{Binding HorizontalOffset, StringFormat='{}{0:+0;-0;0} px'}"/>
+                                </StackPanel>
+                            </c:SettingRow>
+                            <Rectangle Style="{StaticResource CardDivider}"/>
+                            <c:SettingRow Title="Gap from the top" Description="0 keeps it flush with the top edge; more makes a floating pill.">
+                                <StackPanel Orientation="Horizontal">
+                                    <Slider Style="{StaticResource SettingsSlider}" Minimum="0" Maximum="40" SmallChange="1" LargeChange="4" Value="{Binding TopMargin}"/>
+                                    <TextBlock Width="52" TextAlignment="Right" VerticalAlignment="Center" Style="{StaticResource MutedText}" Text="{Binding TopMargin, StringFormat='{}{0:0} px'}"/>
+                                </StackPanel>
+                            </c:SettingRow>
+                            <Rectangle Style="{StaticResource CardDivider}"/>
+                            <c:SettingRow Title="Panel opacity">
+                                <StackPanel Orientation="Horizontal">
+                                    <Slider Style="{StaticResource SettingsSlider}" Minimum="0.7" Maximum="1" SmallChange="0.01" LargeChange="0.05" Value="{Binding PanelOpacity}"/>
+                                    <TextBlock Width="52" TextAlignment="Right" VerticalAlignment="Center" Style="{StaticResource MutedText}" Text="{Binding PanelOpacity, StringFormat='{}{0:P0}'}"/>
+                                </StackPanel>
+                            </c:SettingRow>
+                        </StackPanel>
+                    </Border>
+
+                    <TextBlock Style="{StaticResource SectionLabel}" Text="Mascot and motion"/>
+                    <Border Style="{StaticResource SettingsCard}">
+                        <StackPanel>
+                            <c:SettingRow Title="Show the mascot face" Description="Off: the notch is a plain black pill with the task count.">
+                                <CheckBox Style="{StaticResource ToggleSwitch}" IsChecked="{Binding MascotEnabled}"/>
+                            </c:SettingRow>
+                            <Rectangle Style="{StaticResource CardDivider}"/>
+                            <c:SettingRow Title="Face pops up on its own">
+                                <c:SegmentedControl Options="{Binding IdleOptions}" SelectedIndex="{Binding IdleIndex, Mode=TwoWay}"/>
+                            </c:SettingRow>
+                            <Rectangle Style="{StaticResource CardDivider}"/>
+                            <c:SettingRow Title="Companion" Description="Blinks, glances and breathing while the face is on screen.">
+                                <c:SegmentedControl Options="{Binding CompanionOptions}" SelectedIndex="{Binding CompanionIndex, Mode=TwoWay}"/>
+                            </c:SettingRow>
+                            <Rectangle Style="{StaticResource CardDivider}"/>
+                            <c:SettingRow Title="Animations" Description="Off: everything changes instantly.">
+                                <CheckBox Style="{StaticResource ToggleSwitch}" IsChecked="{Binding AnimationsEnabled}"/>
+                            </c:SettingRow>
+                            <Rectangle Style="{StaticResource CardDivider}"/>
+                            <c:SettingRow Title="Follow the Windows animation setting" Description="When Windows has animation effects off, reduce motion here too.">
+                                <CheckBox Style="{StaticResource ToggleSwitch}" IsChecked="{Binding FollowWindowsAnimations}"/>
+                            </c:SettingRow>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+
+                <!-- Behaviour -->
+                <StackPanel Visibility="{Binding IsChecked, ElementName=NavBehaviour, Converter={StaticResource Vis}}">
+                    <TextBlock Style="{StaticResource PageTitle}" Text="Behaviour"/>
+                    <Border Style="{StaticResource SettingsCard}">
+                        <StackPanel>
+                            <c:SettingRow Title="Show on display">
+                                <ComboBox Style="{StaticResource SettingsCombo}" ItemsSource="{Binding MonitorOptions}" SelectedIndex="{Binding MonitorIndex}" x:Name="MonitorBox"/>
+                            </c:SettingRow>
+                            <Rectangle Style="{StaticResource CardDivider}"/>
+                            <c:SettingRow Title="Hide in full-screen apps" Description="Videos, games and slide shows.">
+                                <CheckBox Style="{StaticResource ToggleSwitch}" IsChecked="{Binding HideInFullScreen}"/>
+                            </c:SettingRow>
+                            <Rectangle Style="{StaticResource CardDivider}"/>
+                            <c:SettingRow Title="Collapse by itself" Description="Only when the mouse is away and you are not typing.">
+                                <ComboBox Style="{StaticResource SettingsCombo}" ItemsSource="{Binding AutoCollapseOptions}" SelectedIndex="{Binding AutoCollapseIndex}" x:Name="AutoBox"/>
+                            </c:SettingRow>
+                            <Rectangle Style="{StaticResource CardDivider}"/>
+                            <c:SettingRow Title="Come back after sleep or lock" Description="Re-places the notch when the PC wakes up.">
+                                <CheckBox Style="{StaticResource ToggleSwitch}" IsChecked="{Binding RestoreAfterWake}"/>
+                            </c:SettingRow>
+                            <Rectangle Style="{StaticResource CardDivider}"/>
+                            <c:SettingRow Title="Show the next task when I hover">
+                                <CheckBox Style="{StaticResource ToggleSwitch}" IsChecked="{Binding PeekOnHover}"/>
+                            </c:SettingRow>
+                            <Rectangle Style="{StaticResource CardDivider}"/>
+                            <c:SettingRow Title="Slide out ticked tasks" Description="Ticked tasks stay for 2 seconds, then slide away.">
+                                <CheckBox Style="{StaticResource ToggleSwitch}" IsChecked="{Binding CompletedFadeOut}"/>
+                            </c:SettingRow>
+                            <Rectangle Style="{StaticResource CardDivider}"/>
+                            <c:SettingRow Title="Open or close shortcut" Description="Works from any app. Click the box, then press the keys.">
+                                <c:HotkeyBox x:Name="HotkeyBox" Text="{Binding ToggleHotkey, Mode=OneWay}"/>
+                            </c:SettingRow>
+                        </StackPanel>
+                    </Border>
+                    <TextBlock Style="{StaticResource HintText}" Text="{Binding Hint, ElementName=HotkeyBox}"/>
+                    <TextBlock Style="{StaticResource WarnText}" Text="{Binding HotkeyWarning}"/>
+
+                    <TextBlock Style="{StaticResource SectionLabel}" Text="Reminders"/>
+                    <Border Style="{StaticResource SettingsCard}">
+                        <StackPanel>
+                            <c:SettingRow Title="Reminders" Description="A notification, a pulse and a face when a task with a due date comes due.">
+                                <CheckBox Style="{StaticResource ToggleSwitch}" IsChecked="{Binding RemindersEnabled}"/>
+                            </c:SettingRow>
+                            <Rectangle Style="{StaticResource CardDivider}"/>
+                            <c:SettingRow Title="Remind me before the due time" Description="Also remind this long before. Only for tasks that have a due time, not just a date.">
+                                <ComboBox Style="{StaticResource SettingsCombo}" ItemsSource="{Binding LeadOptions}" SelectedIndex="{Binding LeadIndex}"
+                                          IsEnabled="{Binding LeadEnabled}" x:Name="LeadBox"/>
+                            </c:SettingRow>
+                            <Rectangle Style="{StaticResource CardDivider}"/>
+                            <c:SettingRow Title="Widen the island when a reminder fires" Description="Shows the task title for 5 seconds. Off: just the pulse, the face and the notification.">
+                                <CheckBox Style="{StaticResource ToggleSwitch}" IsChecked="{Binding ReminderPillAlert}"/>
+                            </c:SettingRow>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+
+                <!-- Lists -->
+                <StackPanel Visibility="{Binding IsChecked, ElementName=NavLists, Converter={StaticResource Vis}}">
+                    <TextBlock Style="{StaticResource PageTitle}" Text="Lists"/>
+                    <Border Style="{StaticResource SettingsCard}" Padding="8,6">
+                        <ItemsControl ItemsSource="{Binding ListRows}" Focusable="False">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid Margin="0,4">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Ellipse Width="12" Height="12" Fill="{Binding Brush}" Margin="8,0,12,0" VerticalAlignment="Center"/>
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding Name}" FontSize="13" TextTrimming="CharacterEllipsis"/>
+                                            <TextBlock Text="{Binding CountText}" Style="{StaticResource MutedText}"/>
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="2" Orientation="Horizontal">
+                                            <Button Content="&#xE70E;" ToolTip="Move up" Style="{StaticResource SmallIconButton}" IsEnabled="{Binding CanUp}"
+                                                    Command="{Binding DataContext.MoveListUpCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}"
+                                                    AutomationProperties.Name="Move up"/>
+                                            <Button Content="&#xE70D;" ToolTip="Move down" Style="{StaticResource SmallIconButton}" IsEnabled="{Binding CanDown}"
+                                                    Command="{Binding DataContext.MoveListDownCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}"
+                                                    AutomationProperties.Name="Move down"/>
+                                            <Button Content="&#xE70F;" ToolTip="Rename or change colour" Style="{StaticResource SmallIconButton}"
+                                                    Command="{Binding DataContext.EditListCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}"
+                                                    AutomationProperties.Name="Rename or change colour"/>
+                                            <Button Content="&#xE74D;" ToolTip="Delete" Style="{StaticResource SmallIconButton}" IsEnabled="{Binding CanDelete}"
+                                                    Command="{Binding DataContext.DeleteListCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}"
+                                                    AutomationProperties.Name="Delete"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </Border>
+                    <Button Content="New list…" Style="{StaticResource TextButton}" HorizontalAlignment="Left" Margin="0,10,0,0"
+                            Command="{Binding NewListCommand}" IsEnabled="{Binding CanAddList}"/>
+                    <TextBlock Style="{StaticResource WarnText}" Text="{Binding ListsMessage}"/>
+
+                    <TextBlock Style="{StaticResource SectionLabel}" Text="Where new tasks go"/>
+                    <Border Style="{StaticResource SettingsCard}">
+                        <StackPanel>
+                            <c:SettingRow Title="Default list" Description="Where quick-add puts a task when All lists is showing.">
+                                <ComboBox Style="{StaticResource SettingsCombo}" ItemsSource="{Binding ListNames}" SelectedIndex="{Binding DefaultListIndex}" x:Name="DefaultListBox"/>
+                            </c:SettingRow>
+                            <Rectangle Style="{StaticResource CardDivider}"/>
+                            <c:SettingRow Title="The notch counts" Description="Which tasks the number on the notch adds up.">
+                                <c:SegmentedControl Options="{Binding PillScopeOptions}" SelectedIndex="{Binding PillScopeIndex, Mode=TwoWay}"/>
+                            </c:SettingRow>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+
+                <!-- Data -->
+                <StackPanel Visibility="{Binding IsChecked, ElementName=NavData, Converter={StaticResource Vis}}">
+                    <TextBlock Style="{StaticResource PageTitle}" Text="Data"/>
+                    <Border Style="{StaticResource SettingsCard}">
+                        <StackPanel>
+                            <c:SettingRow Title="Back up every day" Description="{Binding LastBackupText}">
+                                <CheckBox Style="{StaticResource ToggleSwitch}" IsChecked="{Binding DailyBackupEnabled}"/>
+                            </c:SettingRow>
+                        </StackPanel>
+                    </Border>
+
+                    <TextBlock Style="{StaticResource SectionLabel}" Text="Move your tasks"/>
+                    <Border Style="{StaticResource SettingsCard}">
+                        <StackPanel IsEnabled="{Binding Busy, Converter={StaticResource Not}}">
+                            <c:SettingRow Title="Export to a file" Description="Saves your lists and tasks as a JSON file.">
+                                <Button Content="Export JSON…" Style="{StaticResource TextButton}" Command="{Binding ExportJsonCommand}"/>
+                            </c:SettingRow>
+                            <Rectangle Style="{StaticResource CardDivider}"/>
+                            <c:SettingRow Title="Import from a file" Description="Merge into what you have, or replace everything.">
+                                <Button Content="Import JSON…" Style="{StaticResource TextButton}" Command="{Binding ImportJsonCommand}"/>
+                            </c:SettingRow>
+                        </StackPanel>
+                    </Border>
+
+                    <TextBlock Style="{StaticResource SectionLabel}" Text="Backups"/>
+                    <Border Style="{StaticResource SettingsCard}">
+                        <StackPanel IsEnabled="{Binding Busy, Converter={StaticResource Not}}">
+                            <c:SettingRow Title="Back up now" Description="Saves a copy of everything wherever you choose.">
+                                <Button Content="Back up now…" Style="{StaticResource TextButton}" Command="{Binding BackupNowCommand}"/>
+                            </c:SettingRow>
+                            <Rectangle Style="{StaticResource CardDivider}"/>
+                            <c:SettingRow Title="Restore from a backup" Description="Replaces your data with a backup. Your current data is saved first.">
+                                <Button Content="Restore…" Style="{StaticResource TextButton}" Command="{Binding RestoreBackupCommand}"/>
+                            </c:SettingRow>
+                            <Rectangle Style="{StaticResource CardDivider}"/>
+                            <c:SettingRow Title="Open the data folder" Description="{Binding DataFolder}">
+                                <Button Content="Open folder" Style="{StaticResource TextButton}" Command="{Binding OpenDataFolderCommand}"/>
+                            </c:SettingRow>
+                        </StackPanel>
+                    </Border>
+
+                    <TextBlock Style="{StaticResource SectionLabel}" Text="Tidy up"/>
+                    <Border Style="{StaticResource SettingsCard}">
+                        <c:SettingRow Title="Clear completed tasks" Description="Removes every ticked task in all lists. You can undo for 5 seconds.">
+                            <Button Content="Clear completed…" Style="{StaticResource TextButton}" Command="{Binding ClearCompletedCommand}"/>
+                        </c:SettingRow>
+                    </Border>
+
+                    <TextBlock Style="{StaticResource HintText}" Text="{Binding DataStatus}" x:Name="DataStatusText"/>
+                    <Border Margin="0,8,0,0" CornerRadius="10" Padding="12,8" Background="{DynamicResource AccentSoftBrush}"
+                            Visibility="{Binding Island.HasUndo, Converter={StaticResource Vis}}">
+                        <DockPanel>
+                            <Button DockPanel.Dock="Right" Content="Undo" Style="{StaticResource PrimaryTextButton}" Height="28" Padding="14,0"
+                                    Command="{Binding Island.UndoCommand}"/>
+                            <TextBlock Text="{Binding Island.UndoText}" VerticalAlignment="Center"/>
+                        </DockPanel>
+                    </Border>
+                </StackPanel>
+
+                <!-- About -->
+                <StackPanel Visibility="{Binding IsChecked, ElementName=NavAbout, Converter={StaticResource Vis}}">
+                    <TextBlock Style="{StaticResource PageTitle}" Text="About"/>
+                    <Border Style="{StaticResource SettingsCard}" Padding="16,14">
+                        <StackPanel>
+                            <TextBlock Text="TaskIsland" FontSize="22" FontWeight="SemiBold" FontFamily="{StaticResource DisplayFont}"/>
+                            <TextBlock Text="A Dynamic Island style to-do list for Windows 11." Style="{StaticResource MutedText}" Margin="0,2,0,12"/>
+                            <Grid>
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="110"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/>
+                                </Grid.RowDefinitions>
+                                <TextBlock Text="Version" Style="{StaticResource MutedText}" Margin="0,3"/>
+                                <TextBlock Grid.Column="1" Text="{Binding AppVersion}" Margin="0,3"/>
+                                <TextBlock Grid.Row="1" Text="Built" Style="{StaticResource MutedText}" Margin="0,3"/>
+                                <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding BuildDate}" Margin="0,3"/>
+                                <TextBlock Grid.Row="2" Text="Runtime" Style="{StaticResource MutedText}" Margin="0,3"/>
+                                <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding RuntimeText}" Margin="0,3"/>
+                                <TextBlock Grid.Row="3" Text="Data folder" Style="{StaticResource MutedText}" Margin="0,3"/>
+                                <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding DataFolder}" TextWrapping="Wrap" Margin="0,3"/>
+                            </Grid>
+                            <TextBlock Text="No data leaves this PC. TaskIsland never connects to the internet." Margin="0,12,0,0" TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </Border>
+                    <TextBlock Style="{StaticResource SectionLabel}" Text="Credits"/>
+                    <Border Style="{StaticResource SettingsCard}" Padding="16,12">
+                        <StackPanel>
+                            <TextBlock Text="Developed by RieSources" FontSize="13"/>
+                            <TextBlock Text="rie-sources.com" Style="{StaticResource MutedText}" Margin="0,2,0,10"/>
+                            <StackPanel Orientation="Horizontal">
+                                <Button Content="Open rie-sources.com" Style="{StaticResource TextButton}" Command="{Binding OpenLinkCommand}"
+                                        CommandParameter="https://rie-sources.com" Margin="0,0,8,0"/>
+                                <Button Content="Open GitHub page" Style="{StaticResource TextButton}" Command="{Binding OpenLinkCommand}"
+                                        CommandParameter="https://github.com/Riekie3/Dynamic-Island-To-Do-List"/>
+                            </StackPanel>
+                            <TextBlock Text="The buttons open your browser. Nothing opens until you click." Style="{StaticResource MutedText}" Margin="0,8,0,0"/>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </Grid>
+        </ScrollViewer>
+    </Grid>
+</Window>

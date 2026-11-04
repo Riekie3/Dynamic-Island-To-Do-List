@@ -1,4 +1,4 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
@@ -49,6 +49,7 @@ public partial class PanelView : UserControl
 
     public event EventHandler? CollapseRequested;
     public event EventHandler? ExitRequested;
+    public event EventHandler? SettingsRequested;
 
     public bool QuickAddHasText => QuickAddBox.Text.Length > 0;
 
@@ -256,6 +257,8 @@ public partial class PanelView : UserControl
     }
 
     private void Close_Click(object sender, RoutedEventArgs e) => CollapseRequested?.Invoke(this, EventArgs.Empty);
+
+    private void Settings_Click(object sender, RoutedEventArgs e) => SettingsRequested?.Invoke(this, EventArgs.Empty);
 
     private void Exit_Click(object sender, RoutedEventArgs e) => ExitRequested?.Invoke(this, EventArgs.Empty);
 

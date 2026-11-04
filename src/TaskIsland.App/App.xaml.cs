@@ -26,7 +26,11 @@ public partial class App : Application
     private ServiceProvider? _services;
     private IslandViewModel? _vm;
     private AppTheme _theme;
+    private AppSettings? _liveSettings;
     private bool _exiting;
+
+    /// <summary>True when TASKISLAND_ROOT redirects the data folder (tests): separate Run key, mutex and pipe.</summary>
+    public static bool TestRoot { get; private set; }
 
     protected override async void OnStartup(StartupEventArgs e)
     {
@@ -39,6 +43,7 @@ public partial class App : Application
         // TASKISLAND_ROOT lets tests and smoke runs use a throw-away data folder.
         var root = Environment.GetEnvironmentVariable("TASKISLAND_ROOT");
         bool testRoot = !string.IsNullOrWhiteSpace(root);
+        TestRoot = testRoot;
         var paths = testRoot ? new AppPaths(root!) : new AppPaths();
 
         // 1. Single instance before anything else (section 7.7). A test data folder gets its own instance scope.
@@ -74,7 +79,10 @@ public partial class App : Application
 #if DEBUG
             options.ApplyDebugOverrides(settings);
 #endif
+            _liveSettings = settings;
+            Appearance.ApplyDensity(Resources, settings.Density);
             ApplyTheme(settings.Theme);
+            Microsoft.Win32.SystemEvents.UserPreferenceChanged += OnWindowsPreferenceChanged;
             StartupManager.ApplyOnLaunch(settings, testRoot);
 
             _services = Build(paths, db, settings, options);
@@ -135,6 +143,13 @@ public partial class App : Application
 #if DEBUG
             if (options.Demo is { } demo) window.RunDemo(demo);
             if (options.Snap is { } snap) window.SnapAndExit(snap, TimeSpan.FromSeconds(2.2));
+            if (options.SettingsPage is { } page)
+            {
+                var launcher = _services.GetRequiredService<SettingsLauncher>();
+                launcher.Show();
+                launcher.Window?.SelectPage(page);
+                if (options.SnapSettings is { } snapSettings) launcher.Window?.SnapAndExit(snapSettings, TimeSpan.FromSeconds(1.5));
+            }
 #endif
             FileLogger.Info("started" + (options.Startup ? " (--startup)" : ""));
         }
@@ -208,7 +223,7 @@ public partial class App : Application
     }
 
     /// <summary>Explorer on our own data folder, only after a user click (PLAN.md section 7.11 rule 3).</summary>
-    private static void OpenFolder(string folder)
+    internal static void OpenFolder(string folder)
     {
         try
         {
@@ -262,6 +277,7 @@ public partial class App : Application
 
     protected override void OnExit(ExitEventArgs e)
     {
+        Microsoft.Win32.SystemEvents.UserPreferenceChanged -= OnWindowsPreferenceChanged;
         try { _services?.Dispose(); }
         catch (Exception ex) { FileLogger.Error("dispose at exit failed", ex); }
         Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
@@ -279,6 +295,8 @@ public partial class App : Application
         if (_exiting) return;
         _exiting = true;
         FileLogger.Info("exit requested");
+        try { _services?.GetService<SettingsLauncher>()?.Close(); }
+        catch (Exception ex) { FileLogger.Error("settings close failed", ex); }
         try { _services?.GetService<TrayIconService>()?.Dispose(); }
         catch (Exception ex) { FileLogger.Error("tray dispose failed", ex); }
         try { _services?.GetService<RecoveryCoordinator>()?.Dispose(); }
@@ -299,6 +317,9 @@ public partial class App : Application
         return h.ToString("x8");
     }
 
+    /// <summary>Opens (or brings forward) the Settings window.</summary>
+    public void OpenSettings() => _services?.GetService<SettingsLauncher>()?.Show();
+
     /// <summary>Swaps the theme dictionary (index 0). Every theme brush is a DynamicResource, so it applies live.</summary>
     public void ApplyTheme(AppTheme mode)
     {
@@ -306,6 +327,38 @@ public partial class App : Application
         bool light = mode == AppTheme.Light || (mode == AppTheme.System && WindowsUsesLightTheme());
         var dict = new ResourceDictionary { Source = new Uri(light ? "Themes/Light.xaml" : "Themes/Dark.xaml", UriKind.Relative) };
         Resources.MergedDictionaries[0] = dict;
+        IsLightTheme = light;
+        Appearance.ApplyAccent(Resources, _liveSettings?.AccentSource ?? AccentSource.Default);
+        ThemeChanged?.Invoke(light);
+    }
+
+    /// <summary>The light theme is in use (also resolves "System").</summary>
+    public bool IsLightTheme { get; private set; }
+
+    /// <summary>Raised after the theme dictionary was swapped; the argument is true for the light theme.</summary>
+    public event Action<bool>? ThemeChanged;
+
+    /// <summary>Accent source or density changed in Settings.</summary>
+    public void ApplyAppearance()
+    {
+        if (_liveSettings is not { } s) return;
+        Appearance.ApplyDensity(Resources, s.Density);
+        Appearance.ApplyAccent(Resources, s.AccentSource);
+    }
+
+    /// <summary>Windows changed its theme or accent: follow when the setting says "System" or "Windows accent".</summary>
+    private void OnWindowsPreferenceChanged(object? sender, Microsoft.Win32.UserPreferenceChangedEventArgs e)
+    {
+        if (e.Category is not (Microsoft.Win32.UserPreferenceCategory.General or Microsoft.Win32.UserPreferenceCategory.VisualStyle)) return;
+        Dispatcher.BeginInvoke(() =>
+        {
+            if (_liveSettings is null || _exiting) return;
+            if (_liveSettings.Theme == AppTheme.System || _liveSettings.AccentSource == AccentSource.Windows)
+            {
+                FileLogger.Info("Windows theme or accent changed: re-applying");
+                ApplyTheme(_liveSettings.Theme);
+            }
+        });
     }
 
     public void ToggleTheme()
@@ -353,6 +406,8 @@ public partial class App : Application
         services.AddSingleton<TrayIconService>();
         services.AddSingleton<ReminderService>();
         services.AddSingleton<RecoveryCoordinator>();
+        services.AddSingleton<SettingsApplier>();
+        services.AddSingleton<SettingsLauncher>();
         return services.BuildServiceProvider();
     }
 }
@@ -371,6 +426,9 @@ public sealed class LaunchOptions
     public string? Filter { get; private set; }
     public string? Snap { get; private set; }
     public string? Companion { get; private set; }
+    /// <summary>Debug: open the Settings window at start (optionally on a page: general, appearance, behaviour, lists, data, about).</summary>
+    public string? SettingsPage { get; private set; }
+    public string? SnapSettings { get; private set; }
 
     public static LaunchOptions Parse(string[] args)
     {
@@ -391,6 +449,8 @@ public sealed class LaunchOptions
             else if (a == "--filter") o.Filter = Next();
             else if (a == "--snap") o.Snap = Next();
             else if (a == "--companion") o.Companion = Next();
+            else if (a == "--settings") o.SettingsPage = Next();
+            else if (a == "--snap-settings") o.SnapSettings = Next();
             else if (a == "--pop-seconds" && int.TryParse(Next(), out var s)) o.PopSeconds = s;
 #endif
         }

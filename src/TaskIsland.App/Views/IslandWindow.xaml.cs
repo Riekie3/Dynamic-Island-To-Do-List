@@ -34,7 +34,9 @@ public partial class IslandWindow : Window
     private readonly EfficiencyMode _efficiency;
     private readonly IslandPositioner _positioner;
     private readonly FaceRig _face = new();
-    private readonly DispatcherTimer _peekTimer, _alertTimer;
+    private readonly DispatcherTimer _peekTimer, _alertTimer, _tuckTimer, _autoCollapseTimer;
+    private readonly TranslateTransform _tuckSlide = new();
+    private bool _tucked;                          // AlwaysShowNotch off: the notch is slid up to a 6 px sliver
     private PanelView? _panel;
     private IntPtr _hwnd;
     private bool _hovering, _expanded, _peeking, _allowClose;
@@ -75,6 +77,16 @@ public partial class IslandWindow : Window
             if (_hovering) _alertHeld = true; // hover keeps it open until the mouse leaves
             else EndAlert();
         };
+
+        // AlwaysShowNotch off (PLAN.md section 5): after 500 ms with the mouse away the notch slides up to a 6 px sliver and
+        // comes back when the mouse touches it. A one-shot timer; nothing runs while AlwaysShowNotch is on.
+        _tuckTimer = new DispatcherTimer(DispatcherPriority.Normal) { Interval = TimeSpan.FromMilliseconds(500) };
+        _tuckTimer.Tick += (_, _) => { _tuckTimer.Stop(); if (WantsTuck()) SlideTo(tucked: true); };
+        Host.RenderTransform = _tuckSlide;
+
+        // AutoCollapseSeconds (PLAN.md section 5): one-shot while the panel is open.
+        _autoCollapseTimer = new DispatcherTimer(DispatcherPriority.Normal);
+        _autoCollapseTimer.Tick += (_, _) => OnAutoCollapseTick();
 
         director.ReactionStarted += OnReactionStarted;
         director.ReactionEnded += OnReactionEnded;
@@ -210,6 +222,81 @@ public partial class IslandWindow : Window
         WindowStyler.ReassertTopmost(_hwnd);
     }
 
+    // ---- AlwaysShowNotch off: the 6 px sliver ----
+
+    private const double SliverHeight = 6;
+
+    /// <summary>The notch may hide: setting off, panel closed, nothing hovering, no alert or face on screen.</summary>
+    private bool WantsTuck() =>
+        !_settings.AlwaysShowNotch && !_expanded && !_hovering && _alert is null && _director.Current is null
+        && Host.State is IslandState.Mini or IslandState.Info && !Host.IsAnimating;
+
+    private void SlideTo(bool tucked)
+    {
+        if (_tucked == tucked) return;
+        _tucked = tucked;
+        double y = tucked ? -Math.Max(0, Host.IslandRect.Height - SliverHeight) : 0;
+        Anim.To(_tuckSlide, TranslateTransform.YProperty, y, _motion.IsReduced ? TimeSpan.Zero : TimeSpan.FromMilliseconds(160),
+            tucked ? FluentEase.Accelerate : FluentEase.Decelerate);
+        FileLogger.Info(tucked ? "notch tucked to a sliver" : "notch revealed");
+    }
+
+    /// <summary>Re-evaluates the sliver after anything that changes what is on screen. Costs nothing while the setting is on.</summary>
+    private void RefreshTuck()
+    {
+        if (_settings.AlwaysShowNotch)
+        {
+            _tuckTimer.Stop();
+            if (_tucked) SlideTo(tucked: false);
+            return;
+        }
+        if (WantsTuck())
+        {
+            if (!_tucked && !_tuckTimer.IsEnabled) _tuckTimer.Start();
+        }
+        else
+        {
+            _tuckTimer.Stop();
+            if (_tucked) SlideTo(tucked: false);
+        }
+    }
+
+    /// <summary>Settings: AlwaysShowNotch changed.</summary>
+    public void ApplyAlwaysShow()
+    {
+        if (!_settings.AlwaysShowNotch && !_expanded && !_hovering) _tuckTimer.Start();
+        else RefreshTuck();
+    }
+
+    /// <summary>The notch is tucked away right now (tests read it from the log).</summary>
+    public bool IsTucked => _tucked;
+
+    // ---- AutoCollapseSeconds ----
+
+    private void StartAutoCollapse()
+    {
+        _autoCollapseTimer.Stop();
+        if (_settings.AutoCollapseSeconds <= 0 || IsDemo) return;
+        _autoCollapseTimer.Interval = TimeSpan.FromSeconds(_settings.AutoCollapseSeconds);
+        _autoCollapseTimer.Start();
+    }
+
+    /// <summary>Collapses only when the mouse is away and nobody is typing or editing; otherwise waits another full period.</summary>
+    private void OnAutoCollapseTick()
+    {
+        _autoCollapseTimer.Stop();
+        if (!_expanded) return;
+        bool busy = IsMouseOver || _vm.HasOverlay || _vm.Editing is not null || _panel is { QuickAddHasText: true }
+            || _panel is { IsPopupOpen: true };
+        if (busy || _settings.AutoCollapseSeconds <= 0)
+        {
+            StartAutoCollapse();
+            return;
+        }
+        FileLogger.Info($"auto-collapse after {_settings.AutoCollapseSeconds} s");
+        Collapse();
+    }
+
     // ---- reminder pill alert (PLAN.md section 7.9) ----
 
     public bool IsAlerting => _alert is not null;
@@ -227,6 +314,8 @@ public partial class IslandWindow : Window
         if (!_settings.ReminderPillAlert || _expanded || !IsVisible || _userHidden || _paused || _fullScreen) return false;
         _peekTimer.Stop();
         EndPeekVisual();
+        _tuckTimer.Stop();
+        if (_tucked) SlideTo(tucked: false);
         _director.End();
         _alert = notice;
         _alertHeld = false;
@@ -311,6 +400,7 @@ public partial class IslandWindow : Window
 
     private void Rested()
     {
+        RefreshTuck();
         if (!_hovering && !_expanded) _efficiency.ScheduleOn();
         if (_panel is null)
             Dispatcher.BeginInvoke(PrewarmPanel, DispatcherPriority.ApplicationIdle);
@@ -354,6 +444,8 @@ public partial class IslandWindow : Window
         if (_expanded) return;
         _peekTimer.Stop();
         EndPeekVisual();
+        _tuckTimer.Stop();
+        if (_tucked) SlideTo(tucked: false);
         bool fromMini = Host.State == IslandState.Mini;
         if (Host.State != IslandState.Reaction)
             Host.AnimateTo(IslandState.Reaction, 232, 56, _motion.MorphExpand, FluentEase.Decelerate);
@@ -402,6 +494,8 @@ public partial class IslandWindow : Window
         _hovering = true;
         _efficiency.Off();
         _director.NoteInteraction();
+        _tuckTimer.Stop();
+        if (_tucked) SlideTo(tucked: false);
         if (_alert is not null) return; // hover keeps the reminder pill open
         if (!Mascot)
         {
@@ -419,6 +513,7 @@ public partial class IslandWindow : Window
         if (_expanded) return;
         _hovering = false;
         _peekTimer.Stop();
+        if (!_settings.AlwaysShowNotch && _alert is null) _tuckTimer.Start();
         if (_alert is not null)
         {
             if (_alertHeld) EndAlert();
@@ -497,6 +592,9 @@ public partial class IslandWindow : Window
         EndAlert(settle: false);
         _expanded = true;
         _peekTimer.Stop();
+        _tuckTimer.Stop();
+        if (_tucked) SlideTo(tucked: false);
+        StartAutoCollapse();
         _efficiency.Off();
         _director.End();
         _director.SetSuppressed(Suppression.PanelOpen, true);
@@ -522,6 +620,7 @@ public partial class IslandWindow : Window
     {
         if (!_expanded) return;
         _expanded = false;
+        _autoCollapseTimer.Stop();
         _vm.CancelTransientUi(); // an open edit form or dialog card is dropped, not saved
         Host.ShowShadow(false, TimeSpan.Zero);
         EndPeekVisual();
@@ -554,6 +653,12 @@ public partial class IslandWindow : Window
         _panel = new PanelView(_vm, Mascot);
         _panel.CollapseRequested += (_, _) => Collapse();
         _panel.ExitRequested += (_, _) => ((App)Application.Current).ExitApp();
+        _panel.SettingsRequested += (_, _) =>
+        {
+            // The settings window is a normal window: collapse the island first so it does not sit over it.
+            Collapse();
+            ((App)Application.Current).OpenSettings();
+        };
         _panel.SizeChanged += OnPanelSizeChanged;
         Host.Panel = _panel;
     }
@@ -638,10 +743,12 @@ public partial class IslandWindow : Window
     public void ApplyLookSettings()
     {
         Host.SetMascotLook(Mascot);
+        Host.Flush = _settings.TopMargin == 0;
         Host.PanelOpacity = _settings.PanelOpacity;
         _panel?.SetMascot(Mascot);
         _director.SettingsChanged();
         if (!_expanded) GoResting(animate: false);
+        if (_expanded) StartAutoCollapse();
     }
 
 #if !DEBUG
