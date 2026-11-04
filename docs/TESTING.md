@@ -184,7 +184,7 @@ Targets from PLAN §6.7. Record the measured number in Notes, every phase from P
 | S5 | Startup entry visible and switchable in Task Manager → Startup apps; turned off there → TaskIsland doesn't re-add it | A | ⏳ | |
 | S6 | Controlled Folder Access on → app runs normally; export to Documents shows the friendly message; Downloads works | A | ⏳ | |
 | S7 | All exe/dll files show Company "RieSources", product, version and description in file Properties | A | ✅ | 2026-11-04 Phase 6: our five files (TaskIsland.exe and the four TaskIsland.*.dll) show Company RieSources, Product TaskIsland, Version 0.1.0.0. Third-party DLLs keep their own properties; the publish folder is checked in Phase 7. | 2026-11-04 Phase 7: in `publish\win-x64` TaskIsland.exe and the four TaskIsland.*.dll show Company RieSources, Product TaskIsland, Version 1.0.0-rc.1+hash and their own description (`tools/ui-tests/fileprops.ps1`). Third-party DLLs keep their own properties. |
-| S8 | Signed build only: `Get-AuthenticodeSignature` = Valid on exe, dlls, installer, uninstaller | A | ⏳ | n/a if unsigned |
+| S8 | Signed build only: `Get-AuthenticodeSignature` = Valid on exe, dlls, installer, uninstaller | A | n/a | 2026-11-04: the user decided to stay unsigned (PLAN 4b). |
 | S9 | VirusTotal scan (only with the user's OK) → 0 detections or false positives reported | A+U | ⏳ | optional |
 
 ## Deployment

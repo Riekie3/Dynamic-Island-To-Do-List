@@ -693,6 +693,8 @@ nothing without a reminder. It is the open M10 item; the release notes now say s
 **Handoff (for 1.0.0, survives /compact):**
 - *What exists:* rc.2 installer + portable on GitHub (pre-release). `installer/TaskIsland.iss`, `tools/build-installer.ps1`,
   `tools/ui-tests/installer-test.ps1` (re-run it for every installer change; about 2 minutes).
-- *Waiting on the user:* testing findings, code signing yes/no (PLAN 4b), licence choice, optional VirusTotal OK.
+- *Decided 2026-11-04 (PLAN 4b):* code signing: **no, stay unsigned** (user: "No, stay unsigned"). 1.0.0 ships unsigned with the
+  SmartScreen "More info > Run anyway" note; S8 is n/a.
+- *Waiting on the user:* testing findings, licence choice, optional VirusTotal OK.
 - *Exact next step:* fix findings; then Version `1.0.0`, `tools/publish.ps1`, `tools/build-installer.ps1`, scans, installer
   test, tag `v1.0.0`, `gh release create v1.0.0` with both files (not a pre-release).
