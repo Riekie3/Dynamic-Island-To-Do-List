@@ -12,6 +12,10 @@
     <AssemblyName>TaskIsland</AssemblyName>
     <RootNamespace>TaskIsland.App</RootNamespace>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>Assets/TaskIsland.ico</ApplicationIcon>
+    <AssemblyTitle>TaskIsland</AssemblyTitle>
+    <Description>TaskIsland - a Dynamic Island style to-do list for Windows</Description>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
     <!-- PLAN.md section 6.7 rule 9: no background GC thread (the heap is tiny). Tiered compilation is off (Phase 6): it keeps
          both the quick and the optimised copy of hot code and the call-counting data; measured -13 MB private and -18 MB
          working set at idle for about +0.25 s cold start (DEVLOG Phase 6). TieredPGO needs tiering, so it is off too. -->

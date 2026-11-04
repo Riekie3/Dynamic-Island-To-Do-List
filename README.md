@@ -9,9 +9,19 @@ survives sleep / wake. Organise tasks into lists such as Office Work, Personal o
 
 ![TaskIsland design preview](docs/design-reference-1.webp)
 
+## Download (portable test release)
+
+Get `TaskIsland-1.0.0-rc.1-win-x64-portable.zip` from the
+[Releases page](https://github.com/Riekie3/Dynamic-Island-To-Do-List/releases), unzip it somewhere permanent and run
+`TaskIsland.exe`. No installer, no administrator rights, no .NET install needed. The file is not code-signed, so
+Windows SmartScreen may warn: click **More info**, then **Run anyway**. An installer follows after a few days of testing.
+See [docs/RELEASE_NOTES.md](docs/RELEASE_NOTES.md) for what is known to be rough.
+
 ## Status
 
-🚧 In development: Phases 1-5 are done (database layer, the island interface, the working to-do features, Windows integration: tray icon, start with Windows, one instance, Ctrl+Alt+T, sleep/wake recovery, full-screen hiding, due-date reminders, and the Settings window: themes, accent colour, lists, JSON export/import, backup and restore, early reminders and the widening reminder pill). See [docs/PLAN.md](docs/PLAN.md) (build guide), [docs/TESTING.md](docs/TESTING.md) and [docs/DEVLOG.md](docs/DEVLOG.md).
+Phases 1-7 are done for the portable build (database, island interface, to-do features, Windows integration, Settings,
+testing and optimisation, publish). The installer and the user's own sleep/hibernate/multi-monitor tests are still open.
+See [docs/PLAN.md](docs/PLAN.md) (build guide), [docs/TESTING.md](docs/TESTING.md) and [docs/DEVLOG.md](docs/DEVLOG.md).
 
 ## Tech
 
@@ -24,6 +34,7 @@ Needs the .NET 10 SDK. `nuget.config` points at nuget.org only.
 ```
 dotnet build TaskIsland.sln
 dotnet test
+powershell -File tools\publish.ps1     # portable folder + zip in the publish folder
 ```
 
 ---

@@ -1,0 +1,15 @@
+TaskIsland (portable)  -  by RieSources, https://rie-sources.com
+
+Run:        double-click TaskIsland.exe. A small pill appears at the top centre of the screen and a tray icon is added.
+            No installer, no administrator rights, no internet connection needed.
+First run:  Windows may show "Windows protected your PC" (SmartScreen) because the file is not code-signed.
+            Click "More info", then "Run anyway". If you unzipped it from a download, you can instead right-click the zip
+            before unzipping, choose Properties and tick "Unblock".
+Keep it:    put the TaskIsland folder somewhere permanent (for example C:\Users\<you>\Apps\TaskIsland) before the first run.
+            "Start with Windows" is ON by default and points at the exe where it first ran. If you move the folder later,
+            run TaskIsland.exe from the new place once (it rewrites the entry) or turn the setting off and on again.
+Your data:  %LocalAppData%\TaskIsland  (Data, Backups, Logs). Deleting or moving the program folder never deletes it.
+Exit:       tray icon, right-click, Exit.
+Remove:     1) Settings > General > untick "Start with Windows"  2) Exit from the tray  3) delete the program folder
+            4) optional: delete %LocalAppData%\TaskIsland to remove your tasks and backups.
+Network:    the app makes no network connections.

@@ -1,0 +1,27 @@
+=== run 1
+cold start to visible window: 841 ms
+Mode=idle Companion=Off
+after 4 s                   :    62.7 MB private,   123.4 MB WS, 21 threads, 629 handles
+after 60 s                  :    62.4 MB private,   123.3 MB WS, 15 threads, 625 handles
+idle 60 s: CPU time 0 ms = 0.000 % of one core; disk write ops 0, bytes 0
+after idle                  :    62.4 MB private,   123.3 MB WS, 15 threads, 625 handles
+GPU (30 s window, raw): 0|0
+network: 0 TCP, 0 UDP
+=== run 2
+cold start to visible window: 856 ms
+Mode=idle Companion=Off
+after 4 s                   :    63.5 MB private,   123.7 MB WS, 21 threads, 629 handles
+after 60 s                  :    63.2 MB private,   123.6 MB WS, 15 threads, 623 handles
+idle 60 s: CPU time 0 ms = 0.000 % of one core; disk write ops 0, bytes 0
+after idle                  :    59.4 MB private,   119.8 MB WS, 17 threads, 629 handles
+GPU (30 s window, raw): 0|0
+network: 0 TCP, 0 UDP
+=== run 3
+cold start to visible window: 782 ms
+Mode=idle Companion=Off
+after 4 s                   :    62.9 MB private,   123.5 MB WS, 21 threads, 629 handles
+after 60 s                  :    62.7 MB private,   123.5 MB WS, 15 threads, 625 handles
+idle 60 s: CPU time 0 ms = 0.000 % of one core; disk write ops 0, bytes 0
+after idle                  :    62.7 MB private,   123.5 MB WS, 15 threads, 625 handles
+GPU (30 s window, raw): 0|0
+network: 0 TCP, 0 UDP

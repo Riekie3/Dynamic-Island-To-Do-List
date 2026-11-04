@@ -15,7 +15,7 @@ Newest entry at the bottom. Each phase appends one entry using the template belo
 | 4 Windows integration | ✅ done 2026-11-04 (open: user tests sleep/reboot/monitors/scaling, memory budget) | see Phase 4 entry |
 | 5 Settings & data | ✅ done 2026-11-04 (open: user tests of mouse hover/sliver/System theme, memory budget) | see Phase 5 entry |
 | 6 Testing & optimisation | ✅ done 2026-11-04 (open: memory over budget, M10 CPU, user tests) | see Phase 6 entry |
-| 7 Release | ⏳ | |
+| 7 Release | 🟡 portable 1.0.0-rc.1 released 2026-11-04; installer (steps 4, 4b, 5) waits for the user's few days of testing | see Phase 7 entry |
 
 ## Entry template
 
@@ -572,3 +572,36 @@ first-expand hitch; slow handle creep that the GC clears; the 👤 lists in TEST
   temp data folder; a second TaskIsland with the same data folder just asks the first to expand, so never run two against the same root).
 - *Open issues:* see "Remaining defects"; the user's results for the Phase 4/5/6 steps in TESTING.md are not in yet.
 - *Exact next step:* get the user's results for the 👤 steps (or their go-ahead), then start Phase 7: `dotnet build` + `dotnet test` (expect 419 green), then PLAN §8 Phase 7 step 1.
+
+### Phase 7 (portable part) — Production release, portable first (2026-11-04, Sonnet 5.5)
+**Decision (user, 2026-11-04):** "go to phase 7 but no need to build installer yet, release a portable first. After I test for a few days, only then we build the installer."
+So this entry covers PLAN §8 Phase 7 steps 1, 2, 3, 4c (scan of the portable files), 6 and the portable half of step 7. **Not done on purpose:** step 4 (installer
+`installer/TaskIsland.iss`), 4b (code-signing question), 5 (install/upgrade/uninstall test), the installer scan and the `v1.0.0` release with the installer.
+- **Icon:** `tools/IconGen` (small WPF console project, not in the solution) renders the 256 px master (dark rounded square, blue circle, white tick) and writes
+  `src/TaskIsland.App/Assets/TaskIsland.ico` with 8 PNG-compressed sizes (16, 20, 24, 32, 40, 48, 64, 256). `<ApplicationIcon>` set. The tray icon stays drawn in
+  memory by `TrayIconArt` (it follows the taskbar theme and the paused state, so shipped files would not add anything).
+- **Version:** `1.0.0-rc.1` in `Directory.Build.props` (a release candidate while the user tests; the About page shows it; the installer build will make it `1.0.0`).
+  `AssemblyTitle`/`Description` set so the exe's file description is "TaskIsland". Git short hash is part of the informational version.
+- **Publish:** `tools/publish.ps1` = `dotnet publish -c Release -r win-x64 --self-contained true -p:PublishReadyToRun=true -p:DebugType=none` into `publish\win-x64`,
+  copies LICENSE and `docs/PORTABLE.txt` (as README.txt) in, and zips it as `publish\TaskIsland-1.0.0-rc.1-win-x64-portable.zip` (66.6 MB). Folder: 264 files, 160 MB,
+  no `runtimes\` folder (a RID-specific publish only copies the win-x64 native SQLite), no language sub-folders (`SatelliteResourceLanguages=en`), no .pdb.
+  `PublishTrimmed` is not used (WPF). `msquic.dll` and `createdump.exe` come from the .NET runtime pack and were left in.
+- **Measured on the published exe (Companion Off, empty data, 3 runs, `perf-results/publish_idle_off.txt`):** cold start **0.78 / 0.84 / 0.86 s** (the plain Release build
+  with tiering off was 0.99-1.13 s: ReadyToRun more than pays for the tiering-off cost, so tiering stays off); private **62.4-63.2 MB**, working set 123-124 MB; CPU 0 ms
+  over 60 s; disk writes 0; GPU 0; TCP 0, UDP 0. Memory is still above the 50 / 70 MB targets (same open defect as Phase 6; ReadyToRun saved ~2 MB private).
+- **Checks:** `dotnet build` Release 0 warnings, `dotnet test` **419 green** (296 + 123). Zip extracted into a fresh folder and started: island, tray icon, hotkey, DB and
+  backup created (log). Defender: signatures updated first (1.463.119.0), custom scan with `-DisableRemediation` of `publish\win-x64` and of the zip, both "found no threats";
+  no TaskIsland entry in the Defender threat history. File properties of all five TaskIsland files: Company RieSources, Product TaskIsland (TESTING S7 ✅, S2 portable half).
+- **Docs:** `docs/RELEASE_NOTES.md` (what it is, how to run, SmartScreen "More info, Run anyway", honest known limits), README (download section, status, publish command),
+  `docs/PORTABLE.txt`, `LICENSE` (only "Copyright (c) 2026 RieSources, all rights reserved"; **the user has not chosen a licence yet**), `THIRD-PARTY-NOTICES.txt`.
+  Credit RieSources: About page, exe properties, README footer, LICENSE, release notes, PORTABLE.txt. The installer's publisher/welcome text comes with the installer.
+- **Mistakes this phase (so they are not repeated):** a background chain started with `&` inside a subshell kept running after the tool call "ended", so the second
+  chain collided with it on the same data folder (the same trap as in Phase 6); both were killed by process path and the three runs repeated once, cleanly.
+- **Open for the installer phase:** PLAN steps 4 (Inno Setup script; check `winget`/Inno Setup 6 is installed), 4b (ask the user: sign or not), 5 (install, upgrade,
+  uninstall tests), the installer scan (S2 rest), S4-S6, S8, S9, R3-R5, then `v1.0.0` with `TaskIsland-Setup-1.0.0-x64.exe` plus the portable zip; the `Version` becomes `1.0.0`.
+  Also remember to ask which licence the user wants. The user's 👤 steps (Phases 4, 5, 6 in TESTING.md) are the "few days of testing": record their findings first.
+**Handoff (for the installer phase, survives /compact):**
+- *What exists:* everything through Phase 6, plus the portable build: `tools/publish.ps1`, IconGen, icon, version 1.0.0-rc.1, release notes, README, LICENSE.
+- *Exact next step:* get the user's test findings (defects first). Fix them, bump to `1.0.0-rc.2` if needed and re-run `tools/publish.ps1`. When the user says the testing is done:
+  install Inno Setup 6, write `installer/TaskIsland.iss` per PLAN step 4, ask the signing question (4b), scan, run the step 5 tests, set Version `1.0.0`, then tag and release.
+- *Perf scripts:* `tools/ui-tests/perf.ps1` takes `TI_EXE` (env var) to measure any exe; never run two chains against the same `%TEMP%\TaskIslandP6<mode>` folder.

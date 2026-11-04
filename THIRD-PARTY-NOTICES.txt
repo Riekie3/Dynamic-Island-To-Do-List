@@ -1,0 +1,7 @@
+TaskIsland uses these third-party components. Each keeps its own licence.
+
+- .NET runtime and Windows Desktop (WPF, Windows Forms) - Microsoft, MIT licence - https://github.com/dotnet/runtime
+- CommunityToolkit.Mvvm - Microsoft / .NET Foundation, MIT licence - https://github.com/CommunityToolkit/dotnet
+- Microsoft.Extensions.DependencyInjection - Microsoft, MIT licence - https://github.com/dotnet/runtime
+- Microsoft.Data.Sqlite and SQLitePCLRaw (bundled SQLite native library) - Microsoft / Eric Sink,
+  MIT and Apache-2.0 licences; SQLite itself is in the public domain - https://sqlite.org

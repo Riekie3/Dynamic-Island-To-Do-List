@@ -37,7 +37,7 @@ function Gpu([int]$procId, [int]$sec) {
 
 $root = "$env:TEMP\TaskIslandP6$Mode"
 if (Test-Path $root) { Remove-Item $root -Recurse -Force }
-$exe = 'D:\Rie\Claude\TaskIsland\src\TaskIsland.App\bin\Release\net10.0-windows\TaskIsland.exe'
+$exe = if ($env:TI_EXE) { $env:TI_EXE } else { 'D:\Rie\Claude\TaskIsland\src\TaskIsland.App\bin\Release\net10.0-windows\TaskIsland.exe' }
 $env:TASKISLAND_ROOT = $root
 # first run creates the database, then we adjust settings / seed
 $p = Start-Process $exe -PassThru; $script:TIProc = $p; Start-Sleep -Seconds 4; Stop-TI; Start-Sleep -Milliseconds 800
