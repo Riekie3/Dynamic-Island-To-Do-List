@@ -678,6 +678,16 @@ zip; 1.0.0 itself still waits for the user's days of testing, the code-signing a
 (ProcessName includes `.tmp`): the test now finds the dialog by that process and the folder name in its text and sends
 BM_CLICK to that one button. A message box left open by an aborted run kept its log locked until answered.
 
+**Rebuild after the README request (same day):** the user asked to "update all the documentation and how to use/install
+and also screenshot". README rewritten as a full guide with nine screenshots (`tools/ui-tests/readme_shots.ps1`: the app
+renders its own window, no screen capture). The first peek screenshot showed two texts on top of each other: the sample
+data's overdue reminder fired while the demo forced the hover peek. Real hovering was already blocked during a reminder,
+but `StartPeek` itself had no guard; it now returns while a reminder pill shows. Rebuilt as 1.0.0-rc.2+9bea5b3: 438 tests
+green, Defender 1.463.121.0 clean on installer, folder and zip, installer test 31/31 again.
+CPU check while preparing the release: right after a first start with default settings, rc.1 and rc.2 side by side used
+1.64 % and 2.05 % of one core over 4 minutes (random face pops, so noise); not caused by the reminder change, which runs
+nothing without a reminder. It is the open M10 item; the release notes now say so instead of only the 30-minute 0.13 %.
+
 **Release:** see the line below.
 
 **Handoff (for 1.0.0, survives /compact):**

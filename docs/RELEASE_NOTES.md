@@ -12,6 +12,8 @@ a few days.
   Settings > Behaviour > Reminders: **Reminder width** (Compact, 30 %, 40 %, 50 %, 60 %, 75 % or Full width) and
   **Blink a red border** (off brings back the blue pulse).
 - **Installer** `TaskIsland-Setup-1.0.0-rc.2-x64.exe`: installs for your user only, no administrator rights, no UAC prompt.
+- Fix: the hover preview of the next task no longer starts on top of a reminder.
+- The README on GitHub is now a full install and how-to-use guide with screenshots.
 
 ## Install (recommended)
 
@@ -43,8 +45,8 @@ No administrator rights, no internet connection, no .NET install needed (the run
 
 ## Checks done for this release
 
-- 438 automated tests green. Defender (signatures 1.463.119.0) found no threats in the installer, the program folder or
-  the zip; 10 minutes of running with Defender on raised nothing.
+- 438 automated tests green. Defender (signatures 1.463.121.0) found no threats in the installer, the program folder or
+  the zip; 10 minutes of running with Defender on raised nothing (first rc.2 build; the final build ran 3 minutes clean).
 - Installer tested on this PC with a separate test build (own folder, data folder and registry key): per-user install with
   no administrator mode, Start menu entry, Apps list entry (publisher RieSources); upgrade is refused while TaskIsland
   runs and works over the top once it is closed, tasks kept; uninstall removes the program, the Start menu entry and its
@@ -55,7 +57,9 @@ No administrator rights, no internet connection, no .NET install needed (the run
 
 - **Memory is above the target.** About 64 MB private memory (126 MB working set) at idle; once the list panel has been
   opened it stays around 130-140 MB working set. The target was 50 MB / 70 MB. WPF itself needs a lot of that.
-- The random face "pops" use a little CPU each time (about 0.13 % of one core on average over 30 minutes).
+- The face's random animations use a little CPU. Measured right after a first start with default settings: about
+  1.5-2 % of one core averaged over 4 minutes (rc.1 the same within noise); an earlier 30-minute measurement averaged
+  0.13 %. Settings > Appearance > "Face pops up on its own" turns it down or off.
 - Sleep, hibernate, reboot auto-start, multi-monitor and display-scaling behaviour is being verified in real use.
   If something goes wrong, check `%LocalAppData%\TaskIsland\Logs`.
 - Not code-signed (see above). No licence has been chosen yet: personal use only for now (see LICENSE).
@@ -69,8 +73,8 @@ No administrator rights, no internet connection, no .NET install needed (the run
 
 ## SHA-256
 
-- `TaskIsland-Setup-1.0.0-rc.2-x64.exe`: `2EEF828B73934D5CCFB37B84447EBB466E433F1A9E536860DBD5CA480618719A`
-- `TaskIsland-1.0.0-rc.2-win-x64-portable.zip`: `DF0204B01B76BC5C2235F4E1092595C422BB8007444B2F1EBBC1C290D0F3A429`
+- `TaskIsland-Setup-1.0.0-rc.2-x64.exe`: `E3CE55F9137A4A019E42BEE2241E837DC53D5CF6BFB6808CD734E30929B771C1`
+- `TaskIsland-1.0.0-rc.2-win-x64-portable.zip`: `8ACE638D1D6BE2010B817149A21C9D1C7E183893E9DE883800D1C96A108FB5EA`
 
 ---
 
