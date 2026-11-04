@@ -36,6 +36,7 @@ public sealed class SettingRow : ContentControl
             case Panel panel:
                 foreach (var child in panel.Children.OfType<DependencyObject>().Where(c => c is Slider or ComboBox or CheckBox)) Name(child);
                 break;
+            case Button: break; // a button keeps its own text as its name
             case DependencyObject d: Name(d); break;
         }
     }
@@ -114,6 +115,17 @@ public sealed class HotkeyBox : Control
     static HotkeyBox() => DefaultStyleKeyProperty.OverrideMetadata(typeof(HotkeyBox), new FrameworkPropertyMetadata(typeof(HotkeyBox)));
 
     public HotkeyBox() { Focusable = true; IsTabStop = true; }
+
+    protected override System.Windows.Automation.Peers.AutomationPeer OnCreateAutomationPeer() => new HotkeyBoxPeer(this);
+
+    private sealed class HotkeyBoxPeer(HotkeyBox owner) : System.Windows.Automation.Peers.FrameworkElementAutomationPeer(owner)
+    {
+        protected override System.Windows.Automation.Peers.AutomationControlType GetAutomationControlTypeCore() => System.Windows.Automation.Peers.AutomationControlType.Custom;
+        protected override bool IsControlElementCore() => true;
+        protected override bool IsContentElementCore() => true;
+        protected override string GetClassNameCore() => "HotkeyBox";
+        protected override string GetHelpTextCore() => owner.Text;
+    }
 
     public string Text { get => (string)GetValue(TextProperty); set => SetValue(TextProperty, value); }
     /// <summary>A message under the box: "Press a shortcut…", or why the last one was refused.</summary>

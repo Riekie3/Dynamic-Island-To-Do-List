@@ -1,4 +1,4 @@
-﻿using System.Windows;
+using System.Windows;
 using System.Windows.Interop;
 using System.Windows.Threading;
 using Microsoft.Win32;
@@ -73,6 +73,7 @@ public sealed class RecoveryCoordinator : IDisposable
         {
             if (_fullScreen.IsRunning) return;
             _noticeWindow ??= CreateNoticeWindow();
+            FileLogger.Info("full-screen detection running");
             if (!_fullScreen.Start(_noticeWindow?.Handle ?? IntPtr.Zero)) FileLogger.Warn("full-screen detection unavailable (SetWinEventHook failed)");
             else if (!_fullScreen.ShellNoticesRegistered) FileLogger.Warn("shell full-screen notices unavailable; F11-style full screen is seen at the next window switch");
         }
@@ -80,6 +81,7 @@ public sealed class RecoveryCoordinator : IDisposable
         {
             _fullScreen.Stop();
             _window.SetFullScreen(false);
+            FileLogger.Info("full-screen detection stopped (HideInFullScreen off)");
         }
     }
 

@@ -328,6 +328,7 @@ public partial class App : Application
         var dict = new ResourceDictionary { Source = new Uri(light ? "Themes/Light.xaml" : "Themes/Dark.xaml", UriKind.Relative) };
         Resources.MergedDictionaries[0] = dict;
         IsLightTheme = light;
+        FileLogger.Info($"theme applied: {(light ? "Light" : "Dark")} (setting {mode}), accent {_liveSettings?.AccentSource ?? AccentSource.Default}");
         Appearance.ApplyAccent(Resources, _liveSettings?.AccentSource ?? AccentSource.Default);
         ThemeChanged?.Invoke(light);
     }
@@ -344,6 +345,7 @@ public partial class App : Application
         if (_liveSettings is not { } s) return;
         Appearance.ApplyDensity(Resources, s.Density);
         Appearance.ApplyAccent(Resources, s.AccentSource);
+        FileLogger.Info($"appearance applied: density {s.Density}, accent {s.AccentSource}");
     }
 
     /// <summary>Windows changed its theme or accent: follow when the setting says "System" or "Windows accent".</summary>

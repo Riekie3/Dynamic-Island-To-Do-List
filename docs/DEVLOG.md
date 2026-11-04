@@ -13,7 +13,7 @@ Newest entry at the bottom. Each phase appends one entry using the template belo
 | 2 Island UI | ✅ done 2026-11-03 (open: memory budget, first-expand hitch) | see Phase 2 entry |
 | 3 To-Do functionality | ✅ done 2026-11-04 (open: mouse-only tests, memory budget) | see Phase 3 entry |
 | 4 Windows integration | ✅ done 2026-11-04 (open: user tests sleep/reboot/monitors/scaling, memory budget) | see Phase 4 entry |
-| 5 Settings & data | ⏳ | |
+| 5 Settings & data | ✅ done 2026-11-04 (open: user tests of mouse hover/sliver/System theme, memory budget) | see Phase 5 entry |
 | 6 Testing & optimisation | ⏳ | |
 | 7 Release | ⏳ | |
 
@@ -450,3 +450,51 @@ in 30 s. Two other runs were thrown away because the panel was opened during the
   e.g. 1 hour before, new column `EarlyReminderShownAt`). Spec: PLAN §7.9 "Alert style" and "Early reminder", Phase 5 step 10;
   tests T15b-T15d. `ReminderService` / `ReminderScheduler` / `IslandHost` (peek width tween) are the places to extend.
 
+
+### Phase 5 — Settings & data (2026-11-04, Sonnet 5.5)
+**Implemented:** PLAN §8 Phase 5 steps 1-10 (deviations below and in PLAN.md "Phase 5 as built").
+- Settings window (6 pages: General, Appearance, Behaviour, Lists, Data, About), opened from the tray ("Settings…") and the panel's ⋯ menu;
+  one instance, released (GC) on close. Every control applies live through `SettingsApplier` (sliders save 300 ms debounced).
+- Themes: Dark / Light / System (follows Windows live), accent source Default / Windows, density Comfortable / Compact, Mica with solid fallback.
+- Data page: export JSON, import (Merge / Replace), backup now, restore (pre-restore copy), open data folder, clear completed with Undo bar.
+- Lists page: create, rename, recolour, reorder, delete (move or delete tasks, backup first), default list, pill count scope.
+- Hotkey capture box (needs 2+ modifiers) with in-use warning; monitor dropdown; AlwaysShowNotch=false sliver; AutoCollapseSeconds.
+- Step 10: reminders on/off, "Remind me before due time" (Off/5/15/30 min/1 h/2 h/1 day), early reminder with the new `EarlyReminderShownAt`
+  column (migration 2), and the widening pill alert (title + list dot, 5 s, hover holds it, click opens that list).
+**Files created/modified:** Core: `AppSettings`, `TaskItem`, `ReminderScheduler`, `ReminderText`, interfaces. Data: `Migrations`, `Sql`,
+`SqliteTaskRepository`. App: new `SettingsApplier`, `SettingsLauncher`, `Appearance`, `Windows/Dwm`, `Views/SettingsWindow`, `Views/DialogWindow`,
+`Controls/SettingsControls`, `Themes/SettingsControls.xaml`, `ViewModels/SettingsViewModel(.Lists/.Data)`; changed `App.xaml.cs`, `IslandWindow`,
+`IslandViewModel(.Lists)`, `ReminderService`, `TrayIconService`, `RecoveryCoordinator`, `PanelView`, `TaskRow`. Tests: `Phase5RulesTests` etc.
+UI scripts `tools/ui-tests/p5a-p5f.ps1`, `seed_p5.py`.
+**Tests performed:** `dotnet build` Release + Debug 0 warnings / 0 errors; `dotnet test` **419 pass** (296 Core + 123 Data). UI Automation scripts:
+p5b 115 checks (all Settings pages, lists, export/import/backup/restore through the real file dialogs, hotkey, auto-collapse, sliver,
+restart persistence) all pass in the last run except the memory line, which is now informational (see below); p5a (early reminder + pill) 23 checks pass;
+p5c 22 checks pass. TESTING.md: T15b, T15c, T15d, L4, L11, L13, W5, W16, D5, D7, D8, R1 ✅; UI10, UI11, UI12, M4, W2, D6, D10 stay ⏳ with notes.
+- **Memory (acceptance):** Release, seeded data. Idle 88 MB private. Settings opened and closed with no automation client attached:
+  83 MB open, 84 MB after closing (28 s) = back at baseline. With a UI Automation client attached it grows to 109-120 MB after closing;
+  that is the test tool keeping the accessibility tree alive (p5d vs p5e), not confirmed as an app leak. The Phase 2 memory budget (§6.7) is still exceeded: idle is 88 MB private on this seeded Release run.
+**Deviations:**
+- The pill alert replaces the Surprised face on the island while it shows (the face still shows on the open panel and when the pill setting is off).
+  Early reminders never show the face.
+- Settings window is 640×580 (plan 560×520) for the nav and cards. Info grid is 420 DIP wide for the alert.
+- A hotkey conflict can only be seen at start-up / after wake (a held shortcut swallows the key before the box sees it).
+- The island's UI Automation name ("TaskIsland reminder: …") is set in code but my scanner never sees it, so it is not tested.
+- Import does not show the Thinking face (not built).
+**Remaining defects / not tested:**
+- 👤 see TESTING.md "Phase 5 — steps for the user": real mouse hover/click on the pill alert, sliver reveal with the mouse, System theme and
+  Windows accent following live, Mica look, second monitor dropdown.
+- Replace import through the UI (D6), lead = 1 hour waited out in real time, per-key re-read of every setting after restart (D10).
+- Phase 4 user tests (sleep, reboot, monitors, scaling) still open. Memory budget still over.
+- Test-script fixes only: WinForms swallows the first button-up after a double-click (p5c sends it twice); file-dialog name box is a Pane.
+**Commit:** "Add settings window, themes, JSON import/export and backup/restore" plus earlier parts 9093187 and db5f90a; final hash in `git log` · **Pushed:** yes (see below)
+
+**Handoff (for Phase 6, survives /compact):**
+- *What exists:* full app per PLAN through Phase 5. Settings live-apply is centralised in `SettingsApplier` (keyed by setting key); add a key there
+  when adding a setting. `App.ApplyTheme` + `Appearance.ApplyAccent/ApplyDensity` drive look. `SettingsLauncher.Close()` drops the window and GCs.
+  `ReminderService` handles early + due reminders (marks `EarlyReminderShownAt` / `ReminderShownAt`). `IslandWindow` has the alert API
+  (`ShowReminderAlert`, `EndAlert`) and sliver/auto-collapse timers.
+- *Phase 6 must know:* test scripts are `tools/ui-tests/*.ps1` (Debug build, temp `TASKISLAND_ROOT`; p5e is the Release memory control). Debug options:
+  `--settings [page]`, `--snap-settings <png>`, `--full-motion`, `--pop-seconds`. File dialogs need SetFocus + SendKeys with AutomationId 1001/1148.
+  Kill TaskIsland.exe before building. No hooks, no shell spawn except explorer.exe for the data folder and the two About links on click.
+- *Open issues:* memory over budget (idle 88 MB private seeded Release), first-expand hitch, companion CPU, the 👤 lists above.
+- *Exact next step:* start Phase 6: `dotnet build` + `dotnet test` (expect 419 green), then PLAN §8 Phase 6 step 1.

@@ -742,6 +742,7 @@ public partial class IslandWindow : Window
     /// <summary>Settings that change the island's look live (Phase 5 calls this from the Settings window).</summary>
     public void ApplyLookSettings()
     {
+        FileLogger.Info($"look applied: mascot {Mascot}, notch width {_settings.NotchWidth}, opacity {_settings.PanelOpacity:0.##}, flush {_settings.TopMargin == 0}");
         Host.SetMascotLook(Mascot);
         Host.Flush = _settings.TopMargin == 0;
         Host.PanelOpacity = _settings.PanelOpacity;
