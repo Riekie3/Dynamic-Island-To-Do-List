@@ -1,12 +1,12 @@
-using System.IO;
+﻿using System.IO;
 using System.Text;
 
 namespace TaskIsland.App.Logging;
 
 /// <summary>
 /// Minimal file log: <c>Logs\taskisland-yyyyMMdd.log</c>, one line per event (PLAN.md section 7.10). Appends only when
-/// something is logged, so an idle app writes nothing. Files older than 14 days are removed at start. Phase 4 hooks the
-/// global exception handlers into it.
+/// something is logged, so an idle app writes nothing. Files older than 14 days are removed at start. The global exception
+/// handlers in <c>App</c> write here too.
 /// </summary>
 public static class FileLogger
 {
@@ -32,6 +32,9 @@ public static class FileLogger
     public static void Info(string message) => Write("INFO", message, null);
     public static void Warn(string message) => Write("WARN", message, null);
     public static void Error(string message, Exception? ex = null) => Write("ERROR", message, ex);
+
+    /// <summary>Unhandled exceptions: the full exception text with its stack trace, for diagnosis.</summary>
+    public static void Crash(string message, Exception? ex) => Write("ERROR", message + (ex is null ? "" : Environment.NewLine + ex), null);
 
     private static void Write(string level, string message, Exception? ex)
     {

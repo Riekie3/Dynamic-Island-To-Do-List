@@ -34,7 +34,7 @@ Check 'L9 deleted list was selected, so All is shown and saved' ((Db "select Set
 Check 'L9 backup made before deleting' (@(Get-ChildItem "$root\Backups" -Filter 'pre-delete-*.db').Count -eq 1)
 # the backup really holds the deleted list
 $bk = (Get-ChildItem "$root\Backups" -Filter 'pre-delete-*.db' | Select-Object -First 1).FullName
-$bn = python -I -c "import sqlite3,sys; c=sqlite3.connect(sys.argv[1]); print(c.execute(""select count(*) from Tasks t join Lists l on l.Id=t.ListId where l.Name='Temp'"").fetchone()[0])" $bk
+$bn = python -I -c "import sqlite3,sys; c=sqlite3.connect(sys.argv[1]); print(c.execute(sys.argv[2]).fetchone()[0])" $bk "select count(*) from Tasks t join Lists l on l.Id=t.ListId where l.Name='Temp'"
 Check 'L9 backup contains the deleted list tasks' ($bn -eq '2') $bn
 
 # L9: delete the default list, moving its tasks; the default moves to the first remaining list

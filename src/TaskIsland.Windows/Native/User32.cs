@@ -1,4 +1,4 @@
-using System.Runtime.InteropServices;
+﻿using System.Runtime.InteropServices;
 
 namespace TaskIsland.Windows.Native;
 
@@ -70,4 +70,78 @@ internal static class User32
     [DllImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]
     public static extern bool UnregisterHotKey(IntPtr hWnd, int id);
+
+    // ---- Phase 4: monitors, foreground window (rect + class only, section 7.11 rule 2), foreground WinEvent, power ----
+
+    public const uint MONITOR_DEFAULTTONEAREST = 2;
+    public const uint MONITORINFOF_PRIMARY = 1;
+
+    public delegate bool MonitorEnumProc(IntPtr hMonitor, IntPtr hdc, IntPtr lprcMonitor, IntPtr data);
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool EnumDisplayMonitors(IntPtr hdc, IntPtr clip, MonitorEnumProc proc, IntPtr data);
+
+    [DllImport("user32.dll")]
+    public static extern IntPtr MonitorFromWindow(IntPtr hwnd, uint flags);
+
+    [DllImport("user32.dll")]
+    public static extern IntPtr GetForegroundWindow();
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool GetWindowRect(IntPtr hWnd, out RECT rect);
+
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    public static extern int GetClassName(IntPtr hWnd, System.Text.StringBuilder className, int maxCount);
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool IsZoomed(IntPtr hWnd);
+
+    public const uint EVENT_SYSTEM_FOREGROUND = 0x0003;
+    public const uint WINEVENT_OUTOFCONTEXT = 0x0000;
+
+    public delegate void WinEventProc(IntPtr hook, uint eventType, IntPtr hwnd, int idObject, int idChild, uint thread, uint time);
+
+    [DllImport("user32.dll")]
+    public static extern IntPtr SetWinEventHook(uint eventMin, uint eventMax, IntPtr hmodWinEventProc, WinEventProc proc,
+        uint idProcess, uint idThread, uint flags);
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool UnhookWinEvent(IntPtr hook);
+
+    [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    public static extern uint RegisterWindowMessage(string message);
+
+    public const int WM_DISPLAYCHANGE = 0x007E;
+    public const int WM_POWERBROADCAST = 0x0218;
+    public const int WM_DPICHANGED = 0x02E0;
+    public const int PBT_APMSUSPEND = 0x0004;
+    public const int PBT_APMRESUMESUSPEND = 0x0007;
+    public const int PBT_APMRESUMEAUTOMATIC = 0x0012;
+    public const int PBT_POWERSETTINGCHANGE = 0x8013;
+    public const int DEVICE_NOTIFY_WINDOW_HANDLE = 0;
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct POWERBROADCAST_SETTING
+    {
+        public Guid PowerSetting;
+        public uint DataLength;
+        public uint Data; // the first DWORD of the data; enough for GUID_CONSOLE_DISPLAY_STATE
+    }
+
+    [DllImport("user32.dll", SetLastError = true)]
+    public static extern IntPtr RegisterPowerSettingNotification(IntPtr recipient, ref Guid powerSetting, int flags);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool UnregisterPowerSettingNotification(IntPtr handle);
+
+    public const int ASFW_ANY = -1;
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool AllowSetForegroundWindow(int processId);
 }

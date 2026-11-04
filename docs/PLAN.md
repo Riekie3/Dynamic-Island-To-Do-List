@@ -1050,6 +1050,33 @@ Self-testable by the agent (do these and record results):
 plug/unplug external monitor, 150%/200% scaling on an external display.
 Commit: `Add tray, startup, single instance, sleep/wake recovery, multi-monitor and full-screen handling`.
 
+**Phase 4 as built (deviations and additions, 2026-11-04):**
+- **Full screen (§7.4):** the `EVENT_OBJECT_LOCATIONCHANGE` hook was built and worked, but it woke TaskIsland for every window,
+  caret and cursor move in the foreground app (63 ms CPU per 45 s while the PC was in use, against the 0.0 % idle target in §6.7).
+  It is replaced by the shell's own full-screen notice: a hidden, zero-size helper window registered with `SHAppBarMessage(ABM_NEW)`
+  (no `ABM_SETPOS`, so no screen space is reserved) receives `ABN_FULLSCREENAPP`. F11 in a browser is still caught. The foreground
+  WinEvent hook stays. Both run only while `HideInFullScreen` is on. Maximised windows never count (with an auto-hiding taskbar they
+  cover the monitor too).
+- **Tray menu (§7.5):** no "Settings…" item yet: the Settings window arrives in Phase 5 and a button that does nothing is not
+  allowed (§0 rule 6). Phase 5 adds the item. The tray icon is drawn in memory (`TrayIconArt`) until Phase 7's IconGen ships the
+  .ico files; it follows the taskbar theme and is dimmed while paused. Clicking a reminder works from the notification centre too.
+- **Visibility model:** Show/Hide, Pause and full screen are three separate reasons to hide the notch. Opening the panel (tray,
+  hotkey, second launch, reminder click) always works, even while hidden or paused; when it collapses, the notch hides again if a
+  reason is still set.
+- **Single instance (§7.7):** the second launch calls `AllowSetForegroundWindow(ASFW_ANY)` before sending EXPAND, so the first
+  instance may take the focus. A test data folder (`TASKISLAND_ROOT`) gets its own mutex/pipe names, and a separate Run key
+  (`HKCU\Software\TaskIsland-Test\Run`, or `TASKISLAND_RUNKEY`), so tests never meet the real app or register a dev build.
+- **Run key (§7.6, §7.11 rule 5):** with the setting off, launch removes an existing value; with it on, a missing value is written
+  only on the first run (never re-added silently) and an old path is rewritten. `StartupManager.ApplyToggle` is ready for Phase 5.
+- **Reminders (§7.9):** a due date the user saves in the past is marked quietly (the row is already red) instead of a "due now"
+  balloon; reminders more than 60 s late say "overdue". Several due at once → one combined balloon.
+- **Errors (§7.10):** the start-up dialog is a Windows task dialog (WinForms `TaskDialog`). "Restore from backup" keeps the
+  unreadable file as `Backups\broken-*.db` (`BackupService.RestoreBrokenAsync`). The SQLite command timeout is 5 s (was the 30 s
+  default) so a locked file shows the dialog after about 10 s instead of a minute of nothing.
+- **Daily backup** (§4.5) now runs at start-up and in the wake recovery.
+- `TaskIsland.App.csproj` suppresses the WinForms analyzer warning WFO0003 (it asks WinForms apps to move DPI settings out of the
+  manifest; this is a WPF app and §7.2 requires the manifest).
+
 ### Phase 5 — Settings & data management
 
 **Goal:** §5 and §6.6 complete, all settings live-apply and persist.

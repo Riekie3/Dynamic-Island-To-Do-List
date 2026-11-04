@@ -1,4 +1,4 @@
-using System.Windows;
+﻿using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
@@ -37,6 +37,7 @@ public sealed class IslandHost : Grid
 
     private readonly RectangleGeometry _geo = new(), _glossGeo = new();
     private readonly Path _glow, _body, _panelBody, _gloss, _outline;
+    private Path? _pulse;
     private readonly Border _shadow;
     private readonly DropShadowEffect _shadowEffect;
     private readonly Grid _clipLayer;
@@ -88,6 +89,40 @@ public sealed class IslandHost : Grid
     }
 
     public double Morph { get => (double)GetValue(MorphProperty); set => SetValue(MorphProperty, value); }
+
+    /// <summary>
+    /// Reminder pulse (PLAN.md section 6.2): an accent ring the shape of the island scales 1 → 1.12 and fades out,
+    /// <paramref name="cycles"/> times, then the element is removed again, so nothing stays alive afterwards.
+    /// </summary>
+    public void Pulse(TimeSpan cycle, int cycles)
+    {
+        if (_pulse is not null) return;
+        var geo = _geo.Clone();
+        geo.Freeze();
+        var scale = new ScaleTransform(1, 1, HostWidth / 2, 0);
+        var ring = new Path { Data = geo, StrokeThickness = 2, IsHitTestVisible = false, RenderTransform = scale };
+        ring.SetResourceReference(Shape.StrokeProperty, "AccentBrush");
+        _pulse = ring;
+        Children.Add(ring);
+        double ms = cycle.TotalMilliseconds;
+        var grow = new List<(double, double)>();
+        var fade = new List<(double, double)>();
+        for (int i = 0; i < cycles; i++)
+        {
+            grow.Add((i * ms, 1)); grow.Add(((i + 1) * ms - 1, 1.12));
+            fade.Add((i * ms, 1)); fade.Add(((i + 1) * ms - 1, 0));
+        }
+        grow.Add((cycles * ms, 1.12));
+        fade.Add((cycles * ms, 0));
+        void Done()
+        {
+            Children.Remove(ring);
+            if (ReferenceEquals(_pulse, ring)) _pulse = null;
+        }
+        Anim.Keys(scale, ScaleTransform.ScaleXProperty, FluentEase.Decelerate, null, grow.ToArray());
+        Anim.Keys(scale, ScaleTransform.ScaleYProperty, FluentEase.Decelerate, null, grow.ToArray());
+        Anim.Keys(ring, OpacityProperty, null, Done, fade.ToArray());
+    }
 
     public IslandState State { get; private set; } = IslandState.Mini;
     public bool IsAnimating { get; private set; }

@@ -1,4 +1,4 @@
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using System.Windows.Media;
 using System.Windows.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -67,6 +67,9 @@ public sealed partial class IslandViewModel : ObservableObject, ITaskRowHost
 
     /// <summary>Raised when Add is pressed with an empty title (the view shakes the input).</summary>
     public event EventHandler? AddRejected;
+
+    /// <summary>Raised after every reload with the active (not deleted) tasks of all lists; reminders recompute from it.</summary>
+    public event Action<IReadOnlyList<TaskItem>>? DataChanged;
 
     [ObservableProperty] private TaskFilter _filter;
     [ObservableProperty] private long _selectedListId;
@@ -138,6 +141,28 @@ public sealed partial class IslandViewModel : ObservableObject, ITaskRowHost
         UpdateQuickAddList();
         RefreshCounts();
         await ReconcileAsync(leave, enter);
+        DataChanged?.Invoke(_tasks);
+    }
+
+    /// <summary>Every task that is not deleted, as last loaded (reminders start from it).</summary>
+    public IReadOnlyList<TaskItem> AllTasks => _tasks;
+
+    /// <summary>Name of a list, or null when it no longer exists.</summary>
+    public string? ListName(long listId) => _lists.FirstOrDefault(l => l.Id == listId)?.Name;
+
+    /// <summary>A reminder was clicked: show that list (or All lists) in the Active view.</summary>
+    public void ShowList(long? listId)
+    {
+        long id = listId is { } l && _lists.Any(x => x.Id == l) ? l : 0;
+        if (Filter != TaskFilter.Active) Filter = TaskFilter.Active;
+        if (SelectedListId != id) SelectedListId = id;
+    }
+
+    /// <summary>An unexpected error was caught by the global handler (PLAN.md section 7.10): a small notice and the Sad face.</summary>
+    public void ReportUnexpectedError()
+    {
+        ShowNotice("Something went wrong. It was written to the log; your tasks are safe.", error: true);
+        _director.Request(Reaction.Sad);
     }
 
     private long DefaultListId() =>

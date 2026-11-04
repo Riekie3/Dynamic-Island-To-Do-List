@@ -71,7 +71,8 @@ Check 'Empty title in edit is rejected with a message' (Text-Visible 'The title 
 Set-TIText 'Task title' 'Gym'
 Set-TIText 'Due time' '25:99'
 Invoke-TI 'Save task'
-Check 'Bad time is rejected with a message' (Text-Visible 'Time must look like*')
+# Gym has no due date, so a time on its own is rejected with the 'pick a date' message (the '09:30' format message needs a date).
+Check 'A time without a date is rejected with a message' (Text-Visible 'Pick a date for the time*')
 Invoke-TI 'Cancel edit'
 
 # --- T14 clear completed -> confirm -> Undo

@@ -6,6 +6,7 @@ using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Threading;
 using TaskIsland.App.Controls;
+using TaskIsland.App.Logging;
 using TaskIsland.App.Services;
 using TaskIsland.App.ViewModels;
 using TaskIsland.Core.Mascot;
@@ -36,6 +37,9 @@ public partial class IslandWindow : Window
     private PanelView? _panel;
     private IntPtr _hwnd;
     private bool _hovering, _expanded, _peeking, _allowClose;
+    private bool _windowLarge;                    // the window currently has the expanded size
+    private bool _userHidden, _paused, _fullScreen; // reasons the notch is hidden (PLAN.md sections 7.4 and 7.5)
+    private DateTime _lastAutoCollapse = DateTime.MinValue;
 
     public IslandWindow(IslandViewModel vm, AppSettings settings, MotionPolicy motion, ReactionDirector director,
         EfficiencyMode efficiency, IslandPositioner positioner)
@@ -70,12 +74,137 @@ public partial class IslandWindow : Window
         Deactivated += (_, _) =>
         {
             // A calendar popup is a window of its own: opening it is not a click outside.
-            if (_expanded && _settings.CollapseOnClickOutside && !IsDemo && _panel is not { IsPopupOpen: true }) Collapse();
+            if (_expanded && _settings.CollapseOnClickOutside && !IsDemo && _panel is not { IsPopupOpen: true })
+            {
+                _lastAutoCollapse = DateTime.UtcNow;
+                Collapse();
+            }
         };
         IsVisibleChanged += (_, _) => director.SetSuppressed(Suppression.Hidden, !IsVisible);
     }
 
     public bool IsExpanded => _expanded;
+    public IntPtr Hwnd => _hwnd;
+    public bool IsUserHidden => _userHidden;
+    public bool IsPaused => _paused;
+    public bool IsFullScreenHidden => _fullScreen;
+
+    /// <summary>Show/Hide, Pause or full-screen changed (the tray updates its icon and menu).</summary>
+    public event Action? VisibilityStateChanged;
+
+    // ---- Windows integration (PLAN.md section 7): visibility, toggles, placement ----
+
+    /// <summary>Tray "Show / Hide": hides the notch now. Automatic events (wake, full-screen end) may show it again.</summary>
+    public void SetUserHidden(bool hidden)
+    {
+        _userHidden = hidden;
+        FileLogger.Info($"notch {(hidden ? "hidden" : "shown")} by the user");
+        if (hidden && _expanded) Collapse();
+        ApplyVisibility();
+    }
+
+    /// <summary>Tray "Pause visibility": hidden, and no automatic event shows it until Resume.</summary>
+    public void SetPaused(bool paused)
+    {
+        _paused = paused;
+        if (!paused) _userHidden = false;
+        FileLogger.Info(paused ? "visibility paused" : "visibility resumed");
+        if (paused && _expanded) Collapse();
+        ApplyVisibility();
+    }
+
+    /// <summary>A full-screen app on the island's monitor started or ended (only when HideInFullScreen is on).</summary>
+    public void SetFullScreen(bool fullScreen)
+    {
+        if (_fullScreen == fullScreen) return;
+        _fullScreen = fullScreen;
+        _director.SetSuppressed(Suppression.FullScreen, fullScreen);
+        FileLogger.Info(fullScreen ? "full-screen app: notch hidden" : "full-screen ended: notch back");
+        if (!fullScreen && !_paused) _userHidden = false; // an automatic event may show it again
+        ApplyVisibility();
+    }
+
+    /// <summary>Wake/unlock with RestoreAfterWake: show the notch unless paused or covered by a full-screen app.</summary>
+    public void AutoShow()
+    {
+        if (_paused) return;
+        _userHidden = false;
+        ApplyVisibility();
+    }
+
+    /// <summary>
+    /// The window is visible while the panel is open or when nothing hides the notch. Opening the panel from the tray,
+    /// the hotkey or a second launch always works; when it collapses, the notch hides again if a reason is still set.
+    /// </summary>
+    private void ApplyVisibility()
+    {
+        bool show = _expanded || !(_userHidden || _paused || _fullScreen);
+        if (show && !IsVisible)
+        {
+            Show();
+            if (_hwnd != IntPtr.Zero) WindowStyler.ReassertTopmost(_hwnd);
+        }
+        else if (!show && IsVisible)
+        {
+            Hide();
+        }
+        VisibilityStateChanged?.Invoke();
+    }
+
+    /// <summary>Tray Open, double-click, the hotkey and a second launch: show the window if needed, then expand.</summary>
+    public void OpenFromOutside()
+    {
+        if (!IsVisible) Show();
+        if (_expanded)
+        {
+            WindowStyler.BringToForeground(_hwnd);
+            _panel?.FocusQuickAdd();
+            return;
+        }
+        Expand();
+    }
+
+    /// <summary>Global hotkey: toggle.</summary>
+    public void Toggle()
+    {
+        if (_expanded) Collapse();
+        else OpenFromOutside();
+    }
+
+    /// <summary>
+    /// Tray left-click: toggle. Clicking the tray while the panel is open first takes the focus away, which already
+    /// collapsed it (click outside), so that click must not open it again.
+    /// </summary>
+    public void ToggleFromTray()
+    {
+        if (_expanded) { Collapse(); return; }
+        if (DateTime.UtcNow - _lastAutoCollapse < TimeSpan.FromMilliseconds(500)) return;
+        OpenFromOutside();
+    }
+
+    /// <summary>Moves the window to its place on the chosen monitor (also after DPI, display and wake changes).</summary>
+    public void Reposition()
+    {
+        if (_hwnd == IntPtr.Zero) return;
+        _positioner.Apply(_hwnd, _windowLarge);
+    }
+
+    /// <summary>After wake, display change or an Explorer restart: our window styles and topmost again.</summary>
+    public void ReapplyWindowStyles()
+    {
+        if (_hwnd == IntPtr.Zero) return;
+        WindowStyler.ApplyIslandStyles(_hwnd);
+        if (_expanded) WindowStyler.SetNoActivate(_hwnd, false);
+        WindowStyler.ReassertTopmost(_hwnd);
+    }
+
+    /// <summary>Reminder: an accent ring pulses twice around the island (none in reduced motion: the overdue dot shows).</summary>
+    public void PulseReminder()
+    {
+        if (_expanded || !IsVisible || _motion.IsReduced) return;
+        FileLogger.Info("reminder pulse on the island");
+        Host.Pulse(TimeSpan.FromMilliseconds(600), 2);
+    }
 
     /// <summary>Lets Exit close the window; otherwise Alt+F4 only collapses.</summary>
     public void AllowClose() => _allowClose = true;
@@ -291,6 +420,7 @@ public partial class IslandWindow : Window
         EnsurePanel();
         DebugLog($"expand: EnsurePanel {sw.ElapsedMilliseconds} ms");
 
+        _windowLarge = true;
         _positioner.Apply(_hwnd, expanded: true); // grow first, while nothing moves
         WindowStyler.SetNoActivate(_hwnd, false);
         Activate();
@@ -315,9 +445,11 @@ public partial class IslandWindow : Window
         void Done()
         {
             if (_expanded) return; // re-expanded during the collapse
+            _windowLarge = false;
             _positioner.Apply(_hwnd, expanded: false); // shrink after, while nothing moves
             WindowStyler.SetNoActivate(_hwnd, true);
             _director.SetSuppressed(Suppression.PanelOpen, false);
+            ApplyVisibility(); // hidden again if Hide, Pause or a full-screen app is still in effect
             Rested();
         }
         if (Mascot)

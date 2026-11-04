@@ -7,7 +7,7 @@ $script:PC = [System.Windows.Automation.PropertyCondition]
 function Start-TI([string]$Root, [string[]]$ArgList, [string]$Config = 'Debug') {
     $exe = "D:\Rie\Claude\TaskIsland\src\TaskIsland.App\bin\$Config\net10.0-windows\TaskIsland.exe"
     $env:TASKISLAND_ROOT = $Root
-    $p = Start-Process $exe -ArgumentList $ArgList -PassThru
+    $p = if ($ArgList -and $ArgList.Count -gt 0) { Start-Process $exe -ArgumentList $ArgList -PassThru } else { Start-Process $exe -PassThru }
     Start-Sleep -Seconds 4
     $script:TIProc = $p
     return $p
@@ -98,4 +98,5 @@ function Get-FgTitle {
     $h = [W.U]::GetForegroundWindow(); $procId = 0; [void][W.U]::GetWindowThreadProcessId($h, [ref]$procId)
     return $procId
 }
+
 

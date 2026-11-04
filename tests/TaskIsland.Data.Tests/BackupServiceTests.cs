@@ -168,6 +168,41 @@ public class BackupServiceTests
     }
 
     [Fact]
+    public async Task Start_up_restore_keeps_the_broken_file_and_opens_the_backup()
+    {
+        using var t = await TestDb.CreateAsync();
+        await t.Tasks.AddAsync(P, "saved", Priority.High);
+        var backup = await t.Backup.BackupAsync(Path.Combine(t.Root, "good.db"));
+        SqliteConnection.ClearAllPools();
+        var garbage = "this file was damaged and is not a database any more";
+        await File.WriteAllTextAsync(t.Paths.DatabasePath, garbage);
+        await Assert.ThrowsAnyAsync<Exception>(() => t.Db.InitializeAsync());
+
+        var kept = await t.Backup.RestoreBrokenAsync(backup);
+
+        Assert.NotNull(kept);
+        Assert.StartsWith(BackupService.BrokenPrefix, Path.GetFileName(kept));
+        Assert.Equal(garbage, await File.ReadAllTextAsync(kept!)); // never deleted
+        Assert.Equal("saved", (await t.Tasks.GetAllAsync()).Single().Title);
+        Assert.Equal("wal", await t.ScalarAsync<string>("PRAGMA journal_mode"));
+    }
+
+    [Fact]
+    public async Task Start_up_restore_refuses_an_invalid_backup_and_changes_nothing()
+    {
+        using var t = await TestDb.CreateAsync();
+        SqliteConnection.ClearAllPools();
+        await File.WriteAllTextAsync(t.Paths.DatabasePath, "broken but long enough to look like something");
+        var junk = Path.Combine(t.Root, "junk.db");
+        await File.WriteAllTextAsync(junk, "not a database at all, not even close, but long enough");
+
+        await Assert.ThrowsAsync<InvalidDataException>(() => t.Backup.RestoreBrokenAsync(junk));
+
+        Assert.Equal("broken but long enough to look like something", await File.ReadAllTextAsync(t.Paths.DatabasePath));
+        Assert.Empty(Directory.GetFiles(t.Paths.BackupsDir, BackupService.BrokenPrefix + "*"));
+    }
+
+    [Fact]
     public async Task The_app_keeps_working_after_a_restore()
     {
         using var t = await TestDb.CreateAsync();

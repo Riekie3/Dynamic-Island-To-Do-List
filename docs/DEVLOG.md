@@ -12,7 +12,7 @@ Newest entry at the bottom. Each phase appends one entry using the template belo
 | 1 Skeleton & data layer | ✅ done 2026-11-01 | 8537510 |
 | 2 Island UI | ✅ done 2026-11-03 (open: memory budget, first-expand hitch) | see Phase 2 entry |
 | 3 To-Do functionality | ✅ done 2026-11-04 (open: mouse-only tests, memory budget) | see Phase 3 entry |
-| 4 Windows integration | ⏳ | |
+| 4 Windows integration | ✅ done 2026-11-04 (open: user tests sleep/reboot/monitors/scaling, memory budget) | see Phase 4 entry |
 | 5 Settings & data | ⏳ | |
 | 6 Testing & optimisation | ⏳ | |
 | 7 Release | ⏳ | |
@@ -363,3 +363,85 @@ the fields, and the row scrolls into view); a stray `AutomationProperties.Name` 
   Real mouse tests move the user's pointer: ask first.
 - *Open issues:* the mouse-only checks above, the memory budget, the first-expand hitch, the companion CPU cost.
 - *Exact next step:* start Phase 4 (Opus recommended): `dotnet build` + `dotnet test` (expect 324 green), then PLAN §8 Phase 4 step 1.
+
+### Phase 4 — Windows integration (2026-11-04, Opus 5.5)
+**Implemented:** PLAN §7.1–7.10 (deviations listed in PLAN.md under "Phase 4 as built").
+- **Single instance:** named mutex + `CurrentUserOnly` named pipe; the second launch passes the foreground right, sends EXPAND and
+  exits with 0; the pipe ignores anything else (max 16 bytes).
+- **Tray:** NotifyIcon with Open · Expand/Collapse · Show/Hide · Pause/Resume visibility · Exit; left-click toggles, double-click
+  opens; tooltip "TaskIsland — 3 tasks left" / "Paused"; icon drawn in memory, follows the taskbar theme, dimmed while paused;
+  re-added after an Explorer restart. Exit is the only way out and disposes the icon, hooks, hotkey and DB pools.
+- **Start with Windows:** HKCU Run value on first run, `--startup` starts collapsed without focus, rules from §7.11 rule 5.
+- **Monitors / DPI:** monitors enumerated on every placement; `MonitorDeviceName` else primary; `WM_DPICHANGED` repositions.
+- **Power / session / display recovery:** suspend and lock collapse; resume, unlock, display on and display changes trigger one
+  debounced recovery (750 ms) plus follow-ups at +2 s / +6 s; display off and lock pause the mascot.
+- **Full screen:** foreground WinEvent + the shell's ABN_FULLSCREENAPP notice (replaces the planned location hook, see below).
+- **Hotkey:** Ctrl+Alt+T through RegisterHotKey; failure (e.g. 1409, in use) is logged; re-registered in recovery if lost.
+- **Reminders:** one-shot timer to the next due moment (max 24 h); balloon with the list name, island pulse ring, Surprised face;
+  overdue tasks at start → one combined balloon; clicking it opens the task's list.
+- **Errors:** global handlers (UI thread → logged + inline notice + Sad face, kept running; others logged with stack);
+  start-up DB failure → task dialog Open data folder / Restore from backup / Exit.
+
+**Files created:** Core `HotkeyGesture`, `StartupPolicy`, `ScreenRules` (placement + full-screen rule), `ReminderText`; Windows
+`SingleInstance`, `StartupRegistration`, `PowerEventsService`, `FullScreenDetector`, `HotkeyService`, `Native/Shell32`; App
+`TrayIconService`, `TrayIconArt`, `RecoveryCoordinator`, `ReminderService`, `StartupManager`, `StartupFailureDialog`; tests
+`Phase4RulesTests` (42); `tools/ui-tests/p4a`–`p4f.ps1`, `seed_reminders.py`, `make_backup.py`.
+**Modified:** `App.xaml.cs` (start-up flow, exit path, handlers), `IslandWindow` (visibility reasons, toggles, reposition, pulse),
+`IslandHost` (pulse ring), `IslandPositioner` (monitor choice), `IslandViewModel` (DataChanged, ShowList, error notice),
+`BackupService.RestoreBrokenAsync`, `Database` (5 s command timeout), `MonitorService`, `User32`, `EfficiencyMode` and
+`FileLogger` (Crash), App csproj (WinForms for the tray only).
+
+**Tests performed:** Release + Debug 0 warnings / 0 errors; **368 tests pass** (249 Core, 119 Data). §7.11 grep: no banned APIs.
+UI scripts, no mouse (Debug unless noted, temp data folders): p4a 24/24 (single instance, Run key incl. the real key once, hotkey,
+pipe, Exit), p4b 37/37 (reminders, recovery from posted messages, TaskbarCreated, every tray menu item), p4c 16/16 (damaged and
+locked database dialog, Explorer, restore), p4d 9/9 (full screen with test windows, with the user's OK), p4e 5/5 (real Explorer
+restart, with the user's OK), p4f 11/11 (Release: Alt+F4, no network, 0 ms CPU paused, hotkey conflict). Phase 3 scripts t1–t6
+re-run green.
+TESTING ticked: W0 (new), W1, W4, W5, W18, T15, P1, S1, R1. Partly done, still ⏳: W2, W3, W7 (agent part), W10, W12, W13, W15–W17,
+M4, M7, P10, D9.
+
+**Performance (Release, collapsed, seeded data, 60 s, no mouse near):** Companion Off 16 ms CPU (two runs; window switches
+only), Calm 1,125 ms (1.9 % of one core). Private 64.6–66.6 MB, working set 128–132 MB (Phase 3: 62–64 / 114–119). Paused: 0 ms
+in 30 s. Two other runs were thrown away because the panel was opened during them (log), so they measured use, not idle.
+
+**Problems found and fixed on the way:**
+- The planned `EVENT_OBJECT_LOCATIONCHANGE` hook cost 63 ms CPU per 45 s while the PC was in use (0 ms with it off): replaced by
+  the shell notice `ABN_FULLSCREENAPP` on a hidden helper window; the F11 case still passes.
+- A locked database took about 63 s to reach the dialog (two SQLite commands × 30 s default timeout): command timeout now 5 s,
+  about 10 s.
+- The reminder click action was dropped when Windows moved the balloon to the notification centre: kept until the next one.
+- Test-script fixes only (the app was right): t2 expected the "09:30" message for a time without a date ("Pick a date…" is correct),
+  t6 broke on PowerShell 5.1 quoting, `Start-TI` failed with no arguments, task-dialog buttons need Space, not Enter.
+
+**Remaining defects / not tested:**
+- **Needs the user** (steps at the end of TESTING.md): reboot auto-start (W6), sleep (W7), hibernate (W8), screen off (W9), Win+L
+  (W10, declined for now), monitor plug/unplug (W11), resolution and 100/150/200 % scaling (W12, W13), tray icon after Explorer
+  restart seen in the flyout (W17), tray menu with the real mouse (W2/W3), real video / Edge F11 / PowerPoint (W15).
+- Not seen on screen by me: the reminder toast and pulse ring (verified by logs), the tray icon art (it sits in the hidden-icons
+  flyout), the tray menu's look at 125 %.
+- Posted tray clicks carry no foreground right, so in tests "Open" from the tray could not take the keyboard focus; a real click
+  does (the second-launch path was checked with real focus).
+- Memory still over the §6.7 budget (Phase 2 issue); the companion costs about 2 % of a core in Calm.
+- Phase 5 items by design: Settings… in the tray menu, the hotkey capture box and its conflict warning, the startup toggle UI
+  (`StartupManager.ApplyToggle` ready), the HideInFullScreen toggle (`RecoveryCoordinator.ApplyFullScreenSetting` ready).
+
+**Commit:** "Add tray, startup, single instance, sleep/wake recovery, multi-monitor and full-screen handling" (hash in `git log`) · **Pushed:** yes
+
+**Handoff (for Phase 5, survives /compact):**
+- *What exists:* `App.OnStartup` order is single instance → log + handlers → DB (with the error dialog) → Run key → services →
+  window → tray → `RecoveryCoordinator.Attach()` → reminders → pipe server → first-run flag → daily backup. `RecoveryCoordinator`
+  owns the HwndSource hook (hotkey + power messages), SystemEvents, the full-screen detector and the hidden notice window.
+  `IslandWindow` has `OpenFromOutside/Toggle/ToggleFromTray/SetUserHidden/SetPaused/SetFullScreen/AutoShow/Reposition/
+  ReapplyWindowStyles/PulseReminder`. `ReminderService.Recompute()` re-arms reminders. All Windows events are logged.
+- *Phase 5 must know:* live-apply hooks already exist: `StartupManager.ApplyToggle(on, testRoot)`,
+  `RecoveryCoordinator.RegisterHotkey()` (reads `settings.ToggleHotkey`; check `Hotkey.IsRegistered` / `LastError` 1409 for the
+  "in use" warning; require `HotkeyGesture.IsAllowedForRebind`), `RecoveryCoordinator.ApplyFullScreenSetting()`,
+  `ReminderService.Recompute()` (RemindersEnabled), `IslandWindow.Reposition()` (MonitorDeviceName, offset, margin). Add
+  "Settings…" to the tray menu (`TrayIconService` constructor) once the window exists. The tray menu is WinForms; WPF windows
+  opened from it need `Activate()`. Test runs must keep `TASKISLAND_ROOT` set (separate mutex, pipe and Run key).
+- *Testing tools:* `tools/ui-tests/p4*.ps1` (see TESTING.md "Automated tests"). Tray menu without the mouse: post `0x800` with
+  lParam `0x205` (right-click) / `0x202` / `0x203` / `0x405` (balloon click) to the process's `WindowsForms*` windows, then invoke
+  the MenuItem with UI Automation. p4d/p4e interrupt the user: ask first. Scripts written by the Write tool are read as ANSI by
+  PowerShell 5.1: avoid non-ASCII literals or save with a BOM.
+- *Open issues:* the user tests listed above, memory budget, the first-expand hitch, the companion CPU cost.
+- *Exact next step:* start Phase 5: `dotnet build` + `dotnet test` (expect 368 green), then PLAN §8 Phase 5 step 1.

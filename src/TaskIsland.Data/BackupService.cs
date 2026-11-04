@@ -111,6 +111,34 @@ public sealed class BackupService(Database db, IClock clock)
         return safety;
     }
 
+    public const string BrokenPrefix = "broken-";
+
+    /// <summary>
+    /// Start-up recovery when the live database cannot be opened (PLAN.md section 7.10): the broken file (and its -wal/-shm
+    /// side files) is moved to the Backups folder as "broken-*.db" (never deleted), then the chosen backup is copied in and
+    /// opened. Returns the path the broken file was kept at, or null when there was no database file.
+    /// </summary>
+    public async Task<string?> RestoreBrokenAsync(string backupPath)
+    {
+        await ValidateBackupAsync(backupPath);
+        Paths.EnsureCreated();
+        SqliteConnection.ClearAllPools();
+        string? kept = null;
+        if (File.Exists(Paths.DatabasePath))
+        {
+            kept = UniquePath(Paths.BackupsDir, BrokenPrefix);
+            File.Move(Paths.DatabasePath, kept);
+            foreach (var suffix in new[] { "-wal", "-shm" })
+            {
+                var side = Paths.DatabasePath + suffix;
+                if (File.Exists(side)) File.Move(side, kept + suffix, overwrite: true);
+            }
+        }
+        File.Copy(backupPath, Paths.DatabasePath, overwrite: true);
+        await db.InitializeAsync();
+        return kept;
+    }
+
     private string UniquePath(string dir, string prefix)
     {
         var stamp = clock.Now.ToString("yyyyMMdd-HHmmss");

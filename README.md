@@ -11,7 +11,7 @@ survives sleep / wake. Organise tasks into lists such as Office Work, Personal o
 
 ## Status
 
-🚧 In development: Phases 1-3 are done (database layer, the island interface, and the working to-do features). See [docs/PLAN.md](docs/PLAN.md) (build guide), [docs/TESTING.md](docs/TESTING.md) and [docs/DEVLOG.md](docs/DEVLOG.md).
+🚧 In development: Phases 1-4 are done (database layer, the island interface, the working to-do features, and Windows integration: tray icon, start with Windows, one instance, Ctrl+Alt+T, sleep/wake recovery, full-screen hiding, due-date reminders). See [docs/PLAN.md](docs/PLAN.md) (build guide), [docs/TESTING.md](docs/TESTING.md) and [docs/DEVLOG.md](docs/DEVLOG.md).
 
 ## Tech
 

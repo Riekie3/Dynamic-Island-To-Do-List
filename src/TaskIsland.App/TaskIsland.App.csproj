@@ -4,6 +4,11 @@
     <OutputType>WinExe</OutputType>
     <TargetFramework>net10.0-windows</TargetFramework>
     <UseWPF>true</UseWPF>
+    <!-- WinForms only for the tray icon (NotifyIcon), its menu and the start-up TaskDialog (PLAN.md section 3.3). -->
+    <UseWindowsForms>true</UseWindowsForms>
+    <!-- WFO0003 asks WinForms apps to set DPI awareness in code. This is a WPF app: PLAN.md section 7.2 requires the
+         PerMonitorV2 manifest, which WPF reads and WinForms (tray menu only) follows. -->
+    <NoWarn>$(NoWarn);WFO0003</NoWarn>
     <AssemblyName>TaskIsland</AssemblyName>
     <RootNamespace>TaskIsland.App</RootNamespace>
     <ApplicationManifest>app.manifest</ApplicationManifest>
@@ -12,6 +17,11 @@
     <TieredPGO>true</TieredPGO>
     <Deterministic>true</Deterministic>
   </PropertyGroup>
+
+  <ItemGroup>
+    <Using Remove="System.Windows.Forms" />
+    <Using Remove="System.Drawing" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />

@@ -18,6 +18,10 @@ public sealed class Database
             DataSource = paths.DatabasePath,
             Mode = SqliteOpenMode.ReadWriteCreate,
             Pooling = true,
+            // Seconds a command keeps retrying while another program holds a lock (the default is 30). Only TaskIsland
+            // uses this file, so a long wait means it is locked from outside: fail sooner and show the start-up dialog
+            // (PLAN.md section 7.10) instead of a minute of nothing.
+            DefaultTimeout = 5,
         }.ToString();
     }
 

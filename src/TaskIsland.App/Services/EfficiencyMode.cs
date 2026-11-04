@@ -1,5 +1,4 @@
-using System.Diagnostics;
-using System.Windows.Threading;
+﻿using System.Windows.Threading;
 using TaskIsland.Windows;
 
 namespace TaskIsland.App.Services;
@@ -56,7 +55,6 @@ public sealed class EfficiencyMode
         if (_failed) return;
         _failed = true;
         _on = false;
-        // FileLogger arrives in Phase 4; until then the reason goes to the debug output.
-        Trace.WriteLine($"TaskIsland: Efficiency mode unavailable: {reason}");
+        TaskIsland.App.Logging.FileLogger.Warn($"Efficiency mode unavailable: {reason}");
     }
 }
