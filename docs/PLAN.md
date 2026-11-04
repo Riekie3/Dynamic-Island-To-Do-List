@@ -1102,6 +1102,15 @@ Commit: `Add tray, startup, single instance, sleep/wake recovery, multi-monitor 
 - `TaskIsland.App.csproj` suppresses the WinForms analyzer warning WFO0003 (it asks WinForms apps to move DPI settings out of the
   manifest; this is a WPF app and §7.2 requires the manifest).
 
+**Phase 5 as built (deviations and additions, 2026-11-04):**
+- Settings window is 640×580 with six pages (General, Appearance, Behaviour, Lists, Data, About) and a left pill nav; dialogs are code-built (`DialogWindow`).
+- Live apply is centralised in `SettingsApplier`; the monitor list shows "Display N — W×H (Primary)"; the hotkey box needs 2+ modifiers and the in-use warning appears at start-up/wake.
+- New settings: `AccentSource` (Default/Windows), `ReminderLeadMinutes` (0, 5, 15, 30, 60, 120, 1440), `ReminderPillAlert`. New column `Tasks.EarlyReminderShownAt` (migration 2).
+- Pill alert: the Info state widens to min(NotchWidth+200, 420) DIP, shows the title with the list dot for 5 s; it replaces the Surprised face on the island while shown (the face still shows on the open panel or when the pill setting is off). Early reminders never show the face.
+- Early reminder moments already past at start-up, wake or a data change (or older than 60 s on the timer) are marked quietly without a notification.
+- About links open with UseShellExecute only on a click; the data folder opens with explorer.exe. Mica uses `Dwm` calls with a solid fallback.
+- Memory: closing Settings returns to baseline (83 → 84 MB, no automation client attached). Overall idle memory is still over the §6.7 budget.
+
 ### Phase 5 — Settings & data management
 
 **Goal:** §5 and §6.6 complete, all settings live-apply and persist.
