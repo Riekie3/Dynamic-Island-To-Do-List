@@ -71,8 +71,8 @@ locally with up-to-date signatures, no threats found). We believe this is a **fa
   code is in this repository, and you can build the same installer yourself (see [Build from source](#build-from-source)).
 
 If you would rather not take our word for it: compare the SHA-256 hash above, scan the file with your own antivirus,
-or use the **portable zip** and the source code. The detection has been reported to the vendor as a false positive;
-such flags usually disappear within days. The rc.2 files are unsigned on purpose for now (code signing is a paid
+or use the **portable zip** and the source code. We are asking the vendor to review the flag; such flags often
+disappear after a review, but we cannot promise when. The rc.2 files are unsigned on purpose for now (code signing is a paid
 certificate), which is also why Windows SmartScreen shows its warning.
 
 ## Install
