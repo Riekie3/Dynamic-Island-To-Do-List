@@ -1,4 +1,4 @@
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using System.Windows;
 using System.Windows.Automation;
 using System.Windows.Input;
@@ -67,7 +67,11 @@ public partial class IslandWindow : Window
         vm.PropertyChanged += OnVmChanged;
 
         SourceInitialized += OnSourceInitialized;
-        Deactivated += (_, _) => { if (_expanded && _settings.CollapseOnClickOutside && !IsDemo) Collapse(); };
+        Deactivated += (_, _) =>
+        {
+            // A calendar popup is a window of its own: opening it is not a click outside.
+            if (_expanded && _settings.CollapseOnClickOutside && !IsDemo && _panel is not { IsPopupOpen: true }) Collapse();
+        };
         IsVisibleChanged += (_, _) => director.SetSuppressed(Suppression.Hidden, !IsVisible);
     }
 
@@ -304,6 +308,7 @@ public partial class IslandWindow : Window
     {
         if (!_expanded) return;
         _expanded = false;
+        _vm.CancelTransientUi(); // an open edit form or dialog card is dropped, not saved
         Host.ShowShadow(false, TimeSpan.Zero);
         EndPeekVisual();
         var d = _motion.MorphCollapse;
@@ -351,14 +356,41 @@ public partial class IslandWindow : Window
 
     protected override void OnPreviewKeyDown(KeyEventArgs e)
     {
-        if (e.Key == Key.Escape && _expanded && _settings.CollapseOnEscape)
+        if (_expanded && HandlePanelKey(e)) return;
+        base.OnPreviewKeyDown(e);
+    }
+
+    /// <summary>
+    /// Esc closes the innermost thing first: a dialog card, the open edit form, the typed text, and only then the panel.
+    /// Ctrl+1…9 jump to a list, Ctrl+0 shows All lists, Ctrl+Tab / Ctrl+Shift+Tab cycle (PLAN.md section 6.4).
+    /// </summary>
+    private bool HandlePanelKey(KeyEventArgs e)
+    {
+        var mods = Keyboard.Modifiers;
+        if (e.Key == Key.Escape && _settings.CollapseOnEscape)
         {
             e.Handled = true;
-            if (_panel is { QuickAddHasText: true } p && p.IsKeyboardFocusWithin) p.ClearQuickAdd();
+            if (_vm.HasOverlay || _vm.Editing is not null) _vm.CancelTransientUi();
+            else if (_panel is { QuickAddHasText: true } p && p.IsKeyboardFocusWithin) p.ClearQuickAdd();
             else Collapse();
-            return;
+            return true;
         }
-        base.OnPreviewKeyDown(e);
+        if (mods != ModifierKeys.Control && !(mods == (ModifierKeys.Control | ModifierKeys.Shift) && e.Key == Key.Tab)) return false;
+        if (_vm.HasOverlay) return false;
+        int digit = e.Key is >= Key.D0 and <= Key.D9 ? e.Key - Key.D0 : e.Key is >= Key.NumPad0 and <= Key.NumPad9 ? e.Key - Key.NumPad0 : -1;
+        if (digit >= 0)
+        {
+            _vm.SelectChipAt(digit);
+            e.Handled = true;
+            return true;
+        }
+        if (e.Key == Key.Tab)
+        {
+            _vm.SelectNextChip(mods.HasFlag(ModifierKeys.Shift) ? -1 : 1);
+            e.Handled = true;
+            return true;
+        }
+        return false;
     }
 
     protected override void OnClosing(CancelEventArgs e)
@@ -534,6 +566,23 @@ public partial class IslandWindow : Window
             case "panel":
                 _director.End();
                 Expand();
+                break;
+            case "edit":       // Phase 3 screenshots: first row's edit form
+            case "newlist":    // the list editor card
+            case "deletelist": // the delete-list card
+            case "calendar":   // the edit form with the due-date popup open
+                _director.End();
+                Expand();
+                Dispatcher.BeginInvoke(() =>
+                {
+                    if (demo == "newlist") _vm.NewListCommand.Execute(null);
+                    else if (demo == "deletelist") _vm.OpenDeleteListCommand.Execute(_vm.Chips.Skip(1).FirstOrDefault());
+                    else if (_vm.Tasks.FirstOrDefault() is { } row)
+                    {
+                        row.EditCommand.Execute(null);
+                        if (demo == "calendar") _panel?.OpenFirstCalendar();
+                    }
+                }, DispatcherPriority.ApplicationIdle);
                 break;
             case "sleepy":
                 _director.End();

@@ -1010,6 +1010,19 @@ TESTING.md passes manually. Kill the process (`taskkill /f`) mid-use → relaunc
 All row animations follow §6.2 animation rules (render properties only, finite). Re-measure idle CPU/memory (§6.7) and log in DEVLOG.
 Commit: `Implement task CRUD, priorities, sorting, filters and persistence`.
 
+**Phase 3 as built (deviations and additions, 2026-11-04):**
+- Date entry uses an own `Controls/MiniCalendar` popup instead of the stock `DatePicker`, and the List/Priority pickers are chips
+  instead of `ComboBox`es: the stock controls cannot follow the dark theme. "Change colour…" opens the list editor card rather than a
+  Colour ▸ submenu.
+- Create/rename list, delete list, Clear completed and the Undo bar are overlay cards inside the panel (not separate windows), so they
+  never trigger click-outside collapse. `ListEditPopup` is therefore `IslandViewModel.Lists.cs` plus overlay XAML in `PanelView`.
+- Extra keyboard shortcuts: F2 edit, Del delete, Alt+Up / Alt+Down reorder (also the way to test reordering without a mouse).
+- Row delete is a render-only fade and shrink (the clip then re-animates), not a real height collapse.
+- `FileLogger` was added in this phase (small), not in Phase 4. A list delete first writes a `pre-delete-` backup.
+- A moved row is given a new `TaskItemViewModel` (reusing the old one left a stale UI Automation node).
+- New files: `Controls/MiniCalendar`, `Themes/FormControls.xaml`, `ViewModels/IslandViewModel.Lists.cs`, Core `DueInput`,
+  `ReorderRules`, `Mascot/TickStreak`.
+
 ### Phase 4 — Windows integration (Opus recommended)
 
 **Goal:** §7.1–7.10 complete. Reliable background utility.

@@ -1,38 +1,65 @@
 using System.Collections.ObjectModel;
 using System.Windows.Media;
+using System.Windows.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using TaskIsland.App.Controls;
+using TaskIsland.App.Logging;
+using TaskIsland.App.Services;
+using TaskIsland.Core.Mascot;
 using TaskIsland.Core.Models;
 using TaskIsland.Core.Services;
+using TaskIsland.Data;
 
 namespace TaskIsland.App.ViewModels;
 
 /// <summary>
-/// State behind the pill and the panel. Phase 2 runs on in-memory sample data (<see cref="SampleData"/>) through the
-/// real Core rules (<see cref="TaskSorter"/>, <see cref="TaskStats"/>); nothing is saved. Phase 3 connects the
-/// repositories, Undo, inline edit and list management.
+/// State behind the pill and the panel, working against the real repositories (PLAN.md sections 4 and 6.4). Every action
+/// is awaited against the database first and the UI follows only on success; on failure the error is logged, the UI is
+/// reloaded from the database (which reverts it) and an inline notice is shown. Operations run one at a time
+/// (<see cref="RunAsync"/>), so the in-memory copy is always the database's.
 /// </summary>
-public sealed partial class IslandViewModel : ObservableObject
+public sealed partial class IslandViewModel : ObservableObject, ITaskRowHost
 {
     private static readonly Color AllColor = Color.FromRgb(0x2F, 0x8C, 0xFF);
-    private readonly List<TodoList> _lists;
-    private readonly List<TaskItem> _tasks;
+    private static readonly TimeSpan UndoTime = TimeSpan.FromSeconds(5);
+    private static readonly TimeSpan NoticeTime = TimeSpan.FromSeconds(6);
+    private static readonly TimeSpan SlideOutDelay = TimeSpan.FromSeconds(2);
+
+    private readonly ITaskRepository _tasksRepo;
+    private readonly ITodoListRepository _listsRepo;
+    private readonly ISettingsStore _settingsStore;
     private readonly AppSettings _settings;
     private readonly IClock _clock;
-    private long _nextId;
+    private readonly BackupService _backup;
+    private readonly ReactionDirector _director;
+    private readonly SemaphoreSlim _gate = new(1, 1);
+    private readonly TickStreak _streak = new();
+    private readonly HashSet<long> _lingering = [];
+    private readonly Dictionary<long, DispatcherTimer> _lingerTimers = [];
+    private readonly DispatcherTimer _undoTimer, _noticeTimer;
+    private List<TodoList> _lists = [];
+    private List<TaskItem> _tasks = [];
+    private Dictionary<long, TaskItem> _tasksById = [];
+    private List<long> _undoIds = [];
+    private bool _internalSelect;
 
-    public IslandViewModel(AppSettings settings, IClock clock)
+    public IslandViewModel(ITaskRepository tasks, ITodoListRepository lists, ISettingsStore settingsStore,
+        AppSettings settings, IClock clock, BackupService backup, ReactionDirector director)
     {
+        _tasksRepo = tasks;
+        _listsRepo = lists;
+        _settingsStore = settingsStore;
         _settings = settings;
         _clock = clock;
-        (_lists, _tasks) = SampleData.Create(clock.UtcNow, clock.UtcNow.ToLocalTime());
-        _nextId = _tasks.Max(t => t.Id) + 1;
+        _backup = backup;
+        _director = director;
         _filter = settings.CurrentFilter;
-        _selectedListId = _lists.Any(l => l.Id == settings.SelectedListId) ? settings.SelectedListId : 0;
-        Chips.Add(new ListChipViewModel(0, "All", AllColor));
-        foreach (var l in _lists.OrderBy(l => l.SortOrder))
-            Chips.Add(new ListChipViewModel(l.Id, l.Name, BrushCache.Parse(l.ColorHex)));
-        Refresh();
+        _selectedListId = settings.SelectedListId;
+        _quickAddListId = settings.DefaultListId;
+        Chips.Add(new ListChipViewModel(0, "All", AllColor) { IsSelected = _selectedListId == 0 });
+        _undoTimer = OneShot(UndoTime, () => _ = ExpireUndoAsync());
+        _noticeTimer = OneShot(NoticeTime, HideNotice);
     }
 
     public ObservableCollection<ListChipViewModel> Chips { get; } = [];
@@ -45,6 +72,9 @@ public sealed partial class IslandViewModel : ObservableObject
     [ObservableProperty] private long _selectedListId;
     [ObservableProperty] private string _newTitle = "";
     [ObservableProperty] private Priority _newPriority = Priority.Medium;
+    [ObservableProperty] private long _quickAddListId;
+    [ObservableProperty] private string _quickAddListName = "";
+    [ObservableProperty] private Brush _quickAddListBrush = BrushCache.Frozen(AllColor, 1);
 
     // Selected-list scope (header badge, footer, progress bar, empty state)
     [ObservableProperty] private int _scopeOutstanding;
@@ -63,16 +93,126 @@ public sealed partial class IslandViewModel : ObservableObject
     [ObservableProperty] private string _topTaskTitle = "";
     [ObservableProperty] private Brush _topTaskBrush = BrushCache.Frozen(AllColor, 1);
 
+    // Notices: Undo bar and inline messages above the footer
+    [ObservableProperty] private bool _hasUndo;
+    [ObservableProperty] private string _undoText = "";
+    [ObservableProperty] private bool _hasNotice;
+    [ObservableProperty] private string _noticeText = "";
+    [ObservableProperty] private bool _noticeIsError;
+
+    public bool ShowQuickAddList => SelectedListId == 0;
+
+    /// <summary>Dragging is allowed in the Active filter of a single list only (PLAN.md section 6.4).</summary>
+    public bool CanReorder => Filter == TaskFilter.Active && SelectedListId != 0;
+
+    /// <summary>The row whose edit form is open (only one at a time).</summary>
+    public TaskItemViewModel? Editing { get; private set; }
+
+    // ---- start-up and reload ----
+
+    /// <summary>Loads lists and tasks. Soft-deleted rows left over from a previous run are removed for good first.</summary>
+    public async Task InitializeAsync()
+    {
+        await _gate.WaitAsync();
+        try
+        {
+            await _tasksRepo.PurgeDeletedAsync();
+            await ReloadAsync();
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
+    private async Task ReloadAsync(RowLeave? leave = null, ISet<long>? enter = null)
+    {
+        _lists = (await _listsRepo.GetAllAsync()).ToList();
+        _tasks = (await _tasksRepo.GetAllAsync()).ToList();
+        _tasksById = _tasks.ToDictionary(t => t.Id);
+        if (_lists.Count > 0 && _settings.DefaultListId != 0 && _lists.All(l => l.Id != _settings.DefaultListId))
+            _settings.DefaultListId = _lists[0].Id;
+        if (SelectedListId != 0 && _lists.All(l => l.Id != SelectedListId)) SelectListInternal(0);
+        if (_lists.All(l => l.Id != QuickAddListId)) QuickAddListId = DefaultListId();
+        RebuildChips();
+        UpdateQuickAddList();
+        RefreshCounts();
+        await ReconcileAsync(leave, enter);
+    }
+
+    private long DefaultListId() =>
+        _lists.Any(l => l.Id == _settings.DefaultListId) ? _settings.DefaultListId : _lists.Count > 0 ? _lists[0].Id : 0;
+
+    /// <summary>
+    /// Runs one operation at a time. A failure is logged, shown as an inline notice with the Sad face, and the UI is
+    /// reloaded from the database, which reverts anything the failed action had changed on screen.
+    /// </summary>
+    private async Task<bool> RunAsync(string what, Func<Task> op)
+    {
+        await _gate.WaitAsync();
+        try
+        {
+            HideNotice();
+            await op();
+            return true;
+        }
+        catch (Exception ex)
+        {
+            FileLogger.Error($"{what} failed", ex);
+            ShowNotice(Friendly(ex, what), error: true);
+            _director.Request(Reaction.Sad);
+            try { await ReloadAsync(); }
+            catch (Exception ex2) { FileLogger.Error("reload after a failure also failed", ex2); }
+            return false;
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
+    /// <summary>Messages written for the user (validation in the repositories) pass through; anything else gets a plain sentence.</summary>
+    private static string Friendly(Exception ex, string what) =>
+        ex is ArgumentException or InvalidOperationException && !ex.Message.Contains("SQLite", StringComparison.OrdinalIgnoreCase)
+            ? ex.Message
+            : $"Couldn't {what}. Nothing was changed.";
+
+    // ---- filter and list selection ----
+
     partial void OnFilterChanged(TaskFilter value)
     {
         _settings.CurrentFilter = value;
-        Refresh();
+        OnPropertyChanged(nameof(CanReorder));
+        _ = PersistAsync(AppSettings.Keys.CurrentFilter, value.ToString());
+        CancelAllLingering();
+        _ = RunAsync("show that view", () => { RefreshCounts(); return ReconcileAsync(); });
     }
 
     partial void OnSelectedListIdChanged(long value)
     {
         _settings.SelectedListId = value;
-        Refresh();
+        OnPropertyChanged(nameof(ShowQuickAddList));
+        OnPropertyChanged(nameof(CanReorder));
+        foreach (var chip in Chips) chip.IsSelected = chip.Id == value;
+        if (_internalSelect) return;
+        _ = PersistAsync(AppSettings.Keys.SelectedListId, value.ToString());
+        CancelAllLingering();
+        _ = RunAsync("show that list", () => { RefreshCounts(); return ReconcileAsync(); });
+    }
+
+    /// <summary>Changes the selection from inside an operation (which already holds the gate).</summary>
+    private void SelectListInternal(long id)
+    {
+        _internalSelect = true;
+        SelectedListId = id;
+        _internalSelect = false;
+        _ = PersistAsync(AppSettings.Keys.SelectedListId, id.ToString());
+    }
+
+    private async Task PersistAsync(string key, string value)
+    {
+        try { await _settingsStore.SetAsync(key, value); }
+        catch (Exception ex) { FileLogger.Warn($"could not save setting {key}: {ex.Message}"); }
     }
 
     [RelayCommand]
@@ -81,11 +221,26 @@ public sealed partial class IslandViewModel : ObservableObject
         if (chip is not null) SelectedListId = chip.Id;
     }
 
+    /// <summary>Ctrl+1…9 / Ctrl+0 / Ctrl+Tab (PLAN.md section 6.4). Index 0 is All.</summary>
+    public void SelectChipAt(int index)
+    {
+        if (index >= 0 && index < Chips.Count) SelectedListId = Chips[index].Id;
+    }
+
+    public void SelectNextChip(int step)
+    {
+        int i = Chips.ToList().FindIndex(c => c.Id == SelectedListId);
+        if (i < 0) i = 0;
+        SelectedListId = Chips[((i + step) % Chips.Count + Chips.Count) % Chips.Count].Id;
+    }
+
     [RelayCommand]
     private void SetFilter(string? name)
     {
         if (Enum.TryParse<TaskFilter>(name, out var f)) Filter = f;
     }
+
+    // ---- quick add ----
 
     /// <summary>Quick-add chip: High → Medium → Low → High.</summary>
     [RelayCommand]
@@ -99,8 +254,27 @@ public sealed partial class IslandViewModel : ObservableObject
     [RelayCommand]
     private void SetPriority(Priority priority) => NewPriority = priority;
 
-    [RelayCommand]
-    private void Add()
+    public void SetQuickAddList(long id)
+    {
+        QuickAddListId = id;
+        UpdateQuickAddList();
+    }
+
+    private void UpdateQuickAddList()
+    {
+        var l = _lists.FirstOrDefault(x => x.Id == QuickAddListId);
+        if (l is null) return;
+        QuickAddListName = l.Name;
+        QuickAddListBrush = BrushCache.Frozen(BrushCache.Parse(l.ColorHex), 1);
+    }
+
+    partial void OnNewTitleChanged(string value)
+    {
+        if (value.Length > 0) _director.Keep(Reaction.Focused);
+    }
+
+    [RelayCommand(AllowConcurrentExecutions = true)]
+    private async Task AddAsync()
     {
         var title = NewTitle.Trim();
         if (title.Length == 0)
@@ -109,62 +283,369 @@ public sealed partial class IslandViewModel : ObservableObject
             return;
         }
         if (title.Length > TaskItem.MaxTitleLength) title = title[..TaskItem.MaxTitleLength];
-        long listId = SelectedListId != 0 ? SelectedListId : DefaultListId();
-        var now = _clock.UtcNow;
-        int order = _tasks.Where(t => t.ListId == listId && t.Priority == NewPriority).Select(t => t.SortOrder + 1)
-            .DefaultIfEmpty(0).Max();
-        _tasks.Add(new TaskItem
+        long listId = SelectedListId != 0 ? SelectedListId : QuickAddListId;
+        var priority = NewPriority;
+        await RunAsync("add the task", async () =>
         {
-            Id = _nextId++, ListId = listId, Title = title, Priority = NewPriority,
-            CreatedAt = now, UpdatedAt = now, SortOrder = order,
+            if (_lists.All(l => l.Id != listId))
+                throw new InvalidOperationException("That list no longer exists. Pick another list.");
+            var added = await _tasksRepo.AddAsync(listId, title, priority);
+            if (NewTitle.Trim() == title) NewTitle = "";
+            await ReloadAsync(enter: new HashSet<long> { added.Id });
+            _director.Request(Reaction.Wink);
         });
-        NewTitle = "";
-        Refresh();
+    }
+
+    // ---- ticking, with the 2 s slide-out ----
+
+    void ITaskRowHost.RowCompletedChanged(TaskItemViewModel row) => _ = ToggleAsync(row, row.IsCompleted);
+
+    private async Task ToggleAsync(TaskItemViewModel row, bool completed)
+    {
+        bool ok = await RunAsync(completed ? "tick the task" : "untick the task", async () =>
+        {
+            await _tasksRepo.SetCompletedAsync(row.Id, completed);
+            if (!completed) _streak.Undo();
+
+            // Does the row still belong in this view? If not it lingers for 2 s (tick + strikethrough), then slides out.
+            bool belongs = Filter == TaskFilter.All || (Filter == TaskFilter.Active) == !completed;
+            if (belongs) CancelLinger(row.Id);
+            else if (_settings.CompletedFadeOut) StartLinger(row.Id);
+            else CancelLinger(row.Id);
+
+            bool high = row.Priority == Priority.High;
+            await ReloadAsync();
+            if (completed) ReactToTick(high);
+        });
+        if (!ok) row.SetCompletedSilently(!completed);
+    }
+
+    private void ReactToTick(bool high)
+    {
+        bool streak = _streak.Record(_clock.UtcNow);
+        var reaction = ScopeOutstanding == 0 ? Reaction.Excited
+            : high || streak ? Reaction.Love
+            : Reaction.Happy;
+        _director.Request(reaction);
+    }
+
+    private bool InScope(TaskItem t) => SelectedListId == 0 || t.ListId == SelectedListId;
+
+    private void StartLinger(long id)
+    {
+        _lingering.Add(id);
+        if (_lingerTimers.TryGetValue(id, out var old)) old.Stop();
+        var timer = OneShot(SlideOutDelay, () => _ = FinishLingerAsync(id));
+        _lingerTimers[id] = timer;
+        timer.Start();
+    }
+
+    private void CancelLinger(long id)
+    {
+        _lingering.Remove(id);
+        if (_lingerTimers.Remove(id, out var t)) t.Stop();
+    }
+
+    private void CancelAllLingering()
+    {
+        foreach (var t in _lingerTimers.Values) t.Stop();
+        _lingerTimers.Clear();
+        _lingering.Clear();
+    }
+
+    private async Task FinishLingerAsync(long id)
+    {
+        await RunAsync("update the list", async () =>
+        {
+            if (!_lingering.Remove(id)) return; // cancelled meanwhile
+            _lingerTimers.Remove(id);
+            await ReconcileAsync(RowLeave.SlideOut);
+        });
+    }
+
+    // ---- delete and Undo ----
+
+    async Task ITaskRowHost.DeleteAsync(TaskItemViewModel row)
+    {
+        await RunAsync("delete the task", async () =>
+        {
+            if (Editing == row) CancelEditCore(row);
+            await _tasksRepo.SoftDeleteAsync(row.Id);
+            CancelLinger(row.Id);
+            await ReloadAsync(leave: RowLeave.Delete);
+            ShowUndo("Task deleted", [row.Id]);
+        });
+    }
+
+    private void ShowUndo(string text, List<long> ids)
+    {
+        _undoIds = ids;
+        UndoText = text;
+        HasUndo = true;
+        _undoTimer.Stop();
+        _undoTimer.Start();
+    }
+
+    [RelayCommand(AllowConcurrentExecutions = true)]
+    private async Task UndoAsync()
+    {
+        _undoTimer.Stop();
+        var ids = _undoIds;
+        _undoIds = [];
+        HasUndo = false;
+        if (ids.Count == 0) return;
+        await RunAsync("restore the tasks", async () =>
+        {
+            foreach (var id in ids) await _tasksRepo.RestoreAsync(id);
+            await ReloadAsync(enter: ids.ToHashSet());
+        });
+    }
+
+    /// <summary>The 5 s are over: the deleted tasks go for good.</summary>
+    private async Task ExpireUndoAsync()
+    {
+        HasUndo = false;
+        _undoIds = [];
+        await RunAsync("remove the deleted tasks", () => _tasksRepo.PurgeDeletedAsync());
+    }
+
+    // ---- clear completed ----
+
+    [RelayCommand]
+    private void ClearCompleted()
+    {
+        var done = _tasks.Where(t => t.IsCompleted && InScope(t)).ToList();
+        if (done.Count == 0)
+        {
+            ShowNotice("No completed tasks to clear.", error: false);
+            return;
+        }
+        string where = SelectedListId == 0 ? "in all lists" : $"in {_lists.FirstOrDefault(l => l.Id == SelectedListId)?.Name}";
+        Confirm = new ConfirmViewModel(
+            "Clear completed tasks?",
+            $"{done.Count} completed {(done.Count == 1 ? "task" : "tasks")} {where} will be removed. You can undo this for 5 seconds.",
+            "Clear", isDestructive: true, ClearCompletedCoreAsync);
+    }
+
+    private async Task ClearCompletedCoreAsync()
+    {
+        var ids = _tasks.Where(t => t.IsCompleted && InScope(t)).Select(t => t.Id).ToList();
+        await RunAsync("clear the completed tasks", async () =>
+        {
+            int n = await _tasksRepo.ClearCompletedAsync(SelectedListId == 0 ? null : SelectedListId);
+            await ReloadAsync(leave: RowLeave.SlideOut);
+            if (n > 0) ShowUndo(n == 1 ? "1 completed task cleared" : $"{n} completed tasks cleared", ids);
+        });
+    }
+
+    // ---- inline edit ----
+
+    void ITaskRowHost.BeginEdit(TaskItemViewModel row)
+    {
+        if (Editing is { } other && other != row) CancelEditCore(other);
+        Editing = row;
+        row.StartEdit(_lists);
+        _director.Keep(Reaction.Focused);
+    }
+
+    void ITaskRowHost.CancelEdit(TaskItemViewModel row) => CancelEditCore(row);
+
+    private void CancelEditCore(TaskItemViewModel row)
+    {
+        row.EndEdit();
+        if (Editing == row) Editing = null;
+    }
+
+    /// <summary>Esc / collapse: drops an open edit form and any dialog card without saving.</summary>
+    public void CancelTransientUi()
+    {
+        if (Editing is { } r) CancelEditCore(r);
+        ListEditor = null;
+        DeleteList = null;
+        Confirm = null;
+    }
+
+    async Task ITaskRowHost.SaveEditAsync(TaskItemViewModel row)
+    {
+        var title = row.EditTitle.Trim();
+        if (title.Length is < 1 or > TaskItem.MaxTitleLength)
+        {
+            row.EditError = $"The title must be 1 to {TaskItem.MaxTitleLength} characters.";
+            return;
+        }
+        var notes = row.EditNotes.Trim();
+        if (notes.Length > TaskItem.MaxDescriptionLength)
+        {
+            row.EditError = $"Notes can be at most {TaskItem.MaxDescriptionLength} characters.";
+            return;
+        }
+        var dueError = DueInput.Compose(row.EditDate, row.EditTime, out var due, out var hasTime);
+        if (dueError is not null)
+        {
+            row.EditError = dueError;
+            return;
+        }
+
+        bool saved = await RunAsync("save the task", async () =>
+        {
+            var item = row.Model.Clone();
+            bool priorityChanged = item.Priority != row.EditPriority;
+            bool listChanged = item.ListId != row.EditListId;
+            item.Title = title;
+            item.Description = notes.Length == 0 ? null : notes;
+            item.Priority = row.EditPriority;
+            item.ListId = row.EditListId;
+            item.DueDate = due;
+            item.DueHasTime = hasTime;
+            if (_lists.All(l => l.Id != item.ListId))
+                throw new InvalidOperationException("That list no longer exists. Pick another list.");
+
+            await _tasksRepo.UpdateAsync(item);
+            CancelEditCore(row);
+            // A different single list is on screen: the row slides out after saving. A new priority fades the row in at its new place.
+            if (priorityChanged && !listChanged) row.PlayEnter = true;
+            await ReloadAsync(leave: RowLeave.SlideOut);
+        });
+        if (!saved && row.IsEditing) row.EditError = NoticeText;
+    }
+
+    // ---- reorder (drag, or Alt+Up / Alt+Down) ----
+
+    /// <summary>Ids of the rows shown in this row's (list, priority) group, top to bottom.</summary>
+    public List<long> GroupIds(long listId, Priority priority) =>
+        Tasks.Where(r => r.ListId == listId && r.Priority == priority && !r.Model.IsCompleted).Select(r => r.Id).ToList();
+
+    public Task MoveAsync(TaskItemViewModel row, int insertIndex)
+    {
+        var ids = GroupIds(row.ListId, row.Priority);
+        var order = ReorderRules.Move(ids, row.Id, insertIndex);
+        return order is null ? Task.CompletedTask : ApplyOrderAsync(row.ListId, row.Priority, order);
+    }
+
+    Task ITaskRowHost.StepAsync(TaskItemViewModel row, int direction)
+    {
+        if (!CanReorder) return Task.CompletedTask;
+        var order = ReorderRules.Step(GroupIds(row.ListId, row.Priority), row.Id, direction);
+        return order is null ? Task.CompletedTask : ApplyOrderAsync(row.ListId, row.Priority, order);
+    }
+
+    private Task ApplyOrderAsync(long listId, Priority priority, IReadOnlyList<long> visibleOrder) =>
+        RunAsync("reorder the tasks", async () =>
+        {
+            // The visible tasks get the new order; the group's other tasks (done ones) follow in their old order.
+            var rest = _tasks.Where(t => t.ListId == listId && t.Priority == priority && !visibleOrder.Contains(t.Id))
+                .OrderBy(t => t.SortOrder).ThenBy(t => t.Id).Select(t => t.Id);
+            await _tasksRepo.ReorderAsync(listId, priority, visibleOrder.Concat(rest).ToList());
+            await ReloadAsync();
+        });
+
+    void ITaskRowHost.NoteTyping() => _director.Keep(Reaction.Focused);
+
+    // ---- one-shot notices ----
+
+    private void ShowNotice(string text, bool error)
+    {
+        NoticeText = text;
+        NoticeIsError = error;
+        HasNotice = true;
+        _noticeTimer.Stop();
+        _noticeTimer.Start();
+    }
+
+    private void HideNotice()
+    {
+        _noticeTimer.Stop();
+        HasNotice = false;
     }
 
     [RelayCommand]
-    private void Delete(TaskItemViewModel? item)
+    private void DismissNotice() => HideNotice();
+
+    private static DispatcherTimer OneShot(TimeSpan interval, Action tick)
     {
-        if (item is null) return;
-        _tasks.Remove(item.Model);
-        Refresh();
+        var t = new DispatcherTimer(DispatcherPriority.Normal) { Interval = interval };
+        t.Tick += (_, _) => { t.Stop(); tick(); };
+        return t;
     }
 
-    /// <summary>Ticking keeps the row where it is (the 2 s slide-out arrives in Phase 3); counters update at once.</summary>
-    private void OnCompletedChanged(TaskItemViewModel row)
-    {
-        var t = row.Model;
-        t.IsCompleted = row.IsCompleted;
-        t.CompletedAt = row.IsCompleted ? _clock.UtcNow : null;
-        t.UpdatedAt = _clock.UtcNow;
-        row.UpdateDue(_clock.UtcNow.ToLocalTime());
-        RefreshCounts();
-    }
+    // ---- reconciling the visible rows with the data ----
 
-    private long DefaultListId() =>
-        _lists.Any(l => l.Id == _settings.DefaultListId) ? _settings.DefaultListId
-        : _lists.FirstOrDefault(l => l.Name == "Personal")?.Id ?? _lists[0].Id;
-
-    private void Refresh()
+    /// <summary>The tasks to show now. A row that was just ticked (or unticked) stays for its 2 s even though it no longer matches.</summary>
+    private IReadOnlyList<TaskItem> VisibleTasks()
     {
-        var nowLocal = _clock.UtcNow.ToLocalTime();
         long? scope = SelectedListId == 0 ? null : SelectedListId;
-        var byId = _lists.ToDictionary(l => l.Id);
-        Tasks.Clear();
-        foreach (var t in TaskSorter.Apply(_tasks, Filter, scope, _lists))
-            Tasks.Add(new TaskItemViewModel(t, byId.GetValueOrDefault(t.ListId), scope is null, nowLocal, OnCompletedChanged));
-        foreach (var chip in Chips) chip.IsSelected = chip.Id == SelectedListId;
+        if (_lingering.Count == 0) return TaskSorter.Apply(_tasks, Filter, scope, _lists);
+        var projected = _tasks.Select(t =>
+        {
+            if (!_lingering.Contains(t.Id)) return t;
+            var c = t.Clone();
+            c.IsCompleted = Filter != TaskFilter.Active;
+            c.CompletedAt ??= c.UpdatedAt;
+            return c;
+        });
+        return TaskSorter.Apply(projected, Filter, scope, _lists).Select(t => _tasksById[t.Id]).ToList();
+    }
 
-        string listName = scope is { } id && byId.TryGetValue(id, out var sel) ? sel.Name : "all lists";
-        EmptyTitle = Filter == TaskFilter.Completed ? "Nothing completed yet." : $"All done in {listName}";
+    /// <summary>
+    /// Makes <see cref="Tasks"/> match the data with the fewest changes: rows that left animate out first, new rows are
+    /// inserted, moved rows are moved, the rest are updated in place (so animations on them are not interrupted).
+    /// </summary>
+    private async Task ReconcileAsync(RowLeave? leave = null, ISet<long>? enter = null)
+    {
+        var nowLocal = _clock.Now;
+        var listsById = _lists.ToDictionary(l => l.Id);
+        bool showList = SelectedListId == 0;
+        var desired = VisibleTasks();
+        var wanted = desired.Select(t => t.Id).ToHashSet();
+
+        var gone = Tasks.Where(r => !wanted.Contains(r.Id)).ToList();
+        if (gone.Count > 0)
+        {
+            if (leave is { } kind && !(MotionPolicy.Current?.IsReduced ?? true))
+                await Task.WhenAll(gone.Select(r => r.PlayLeaveAsync(kind)));
+            foreach (var r in gone) Tasks.Remove(r);
+        }
+
+        var rows = Tasks.ToDictionary(r => r.Id);
+        for (int i = 0; i < desired.Count; i++)
+        {
+            var t = desired[i];
+            listsById.TryGetValue(t.ListId, out var list);
+            if (i < Tasks.Count && Tasks[i].Id == t.Id)
+            {
+                Tasks[i].Update(t, list, showList, nowLocal);
+                continue;
+            }
+            if (rows.TryGetValue(t.Id, out var existing))
+            {
+                // A moved row gets a new view model: WPF keeps one UI Automation node per item, and that node goes stale
+                // when the same item is given a new container (screen readers would then see an empty row).
+                bool priorityChanged = existing.Priority != t.Priority;
+                Tasks.RemoveAt(Tasks.IndexOf(existing));
+                var moved = new TaskItemViewModel(t, list, showList, nowLocal, this) { PlayEnter = priorityChanged };
+                Tasks.Insert(i, moved);
+                rows[t.Id] = moved;
+            }
+            else
+            {
+                var row = new TaskItemViewModel(t, list, showList, nowLocal, this);
+                if (enter?.Contains(t.Id) == true) row.PlayEnter = true;
+                Tasks.Insert(i, row);
+                rows[t.Id] = row;
+            }
+        }
+
+        EmptyTitle = Filter == TaskFilter.Completed ? "Nothing completed yet." : $"All done in {ScopeName()}";
         EmptyHint = Filter == TaskFilter.Completed ? "" : "Add something new above.";
         IsEmpty = Tasks.Count == 0;
-        RefreshCounts();
     }
+
+    private string ScopeName() =>
+        SelectedListId != 0 && _lists.FirstOrDefault(l => l.Id == SelectedListId) is { } l ? l.Name : "all lists";
 
     private void RefreshCounts()
     {
-        var nowLocal = _clock.UtcNow.ToLocalTime();
+        var nowLocal = _clock.Now;
         long? scope = SelectedListId == 0 ? null : SelectedListId;
         var s = TaskStats.Compute(_tasks, scope);
         ScopeOutstanding = s.Outstanding;

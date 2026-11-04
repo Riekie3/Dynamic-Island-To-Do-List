@@ -2,6 +2,7 @@
 using System.Windows.Media.Animation;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Win32;
+using TaskIsland.App.Logging;
 using TaskIsland.App.Services;
 using TaskIsland.App.ViewModels;
 using TaskIsland.App.Views;
@@ -30,6 +31,7 @@ public partial class App : Application
             var root = Environment.GetEnvironmentVariable("TASKISLAND_ROOT");
             var paths = string.IsNullOrWhiteSpace(root) ? new AppPaths() : new AppPaths(root);
 
+            FileLogger.Init(paths.LogsDir);
             var db = new Database(paths);
             await db.InitializeAsync();
             var settings = await new SqliteSettingsStore(db).LoadAsync();
@@ -39,6 +41,8 @@ public partial class App : Application
             ApplyTheme(settings.Theme);
 
             _services = Build(paths, db, settings, options);
+            // Load lists and tasks before the window exists, so the first paint already shows the real data.
+            await _services.GetRequiredService<IslandViewModel>().InitializeAsync();
             var window = _services.GetRequiredService<IslandWindow>();
             window.Show();
 #if DEBUG

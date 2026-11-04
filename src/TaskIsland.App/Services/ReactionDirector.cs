@@ -99,6 +99,25 @@ public sealed class ReactionDirector
     /// <summary>An event wants a face. Returns false when a higher-priority face is showing or the mascot is off.</summary>
     public bool Request(Reaction reaction) => Show(reaction, random: false, hover: false, Hold(reaction));
 
+    /// <summary>
+    /// Typing or editing: shows the face, or just keeps it up (restarts the hold) when it is already showing, so the face
+    /// does not re-animate on every keystroke.
+    /// </summary>
+    public bool Keep(Reaction reaction)
+    {
+        if (Current == reaction && !CurrentIsRandom && !CurrentIsHover)
+        {
+#if DEBUG
+            if (HoldForever) return true;
+#endif
+            _hold.Stop();
+            _hold.Interval = Hold(reaction);
+            _hold.Start();
+            return true;
+        }
+        return Request(reaction);
+    }
+
     /// <summary>Mouse over the Mini notch: Curious for 400 ms, then the window turns it into the Info pill.</summary>
     public bool RequestHover() => Show(Reaction.Curious, random: false, hover: true, TimeSpan.FromMilliseconds(400));
 

@@ -9,184 +9,396 @@
     <!-- The expanded panel (PLAN.md section 6.4). Laid out once at its final size, revealed by the island clip. -->
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="Vis"/>
+        <!-- A card is shown only while its view model is set. -->
+        <Style x:Key="CardWhenSet" TargetType="Border">
+            <Setter Property="Background" Value="{DynamicResource SurfaceBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource StrokeBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="16"/>
+            <Setter Property="Padding" Value="16"/>
+            <Setter Property="Width" Value="348"/>
+            <Setter Property="HorizontalAlignment" Value="Center"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding}" Value="{x:Null}"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger>
+            </Style.Triggers>
+        </Style>
+        <Style x:Key="BarStyle" TargetType="Border">
+            <Setter Property="Height" Value="40"/>
+            <Setter Property="CornerRadius" Value="12"/>
+            <Setter Property="Margin" Value="0,6,0,0"/>
+            <Setter Property="Padding" Value="14,0,6,0"/>
+            <Setter Property="Background" Value="{DynamicResource SurfaceRaisedBrush}"/>
+        </Style>
+        <Style x:Key="LinkButton" TargetType="Button" BasedOn="{StaticResource TextButton}">
+            <Setter Property="Height" Value="28"/>
+            <Setter Property="Padding" Value="10,0"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+        </Style>
     </UserControl.Resources>
 
-    <Grid Margin="16,12,16,10">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
-        </Grid.RowDefinitions>
+    <Grid>
+        <Grid x:Name="Main" Margin="16,12,16,10">
+            <Grid.Style>
+                <Style TargetType="Grid">
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding HasOverlay}" Value="True"><Setter Property="IsEnabled" Value="False"/></DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Grid.Style>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
 
-        <!-- 1. Header: face (or tick) · title · count · more · close -->
-        <Grid Height="44">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="Auto"/>
-            </Grid.ColumnDefinitions>
-            <Canvas x:Name="FaceHost" Width="105" Height="28" VerticalAlignment="Center" ClipToBounds="False"/>
-            <Border x:Name="TickIcon" Width="28" Height="28" CornerRadius="14" Background="{DynamicResource AccentSoftBrush}"
-                    Visibility="Collapsed" VerticalAlignment="Center">
-                <TextBlock Text="&#xE73E;" FontFamily="{StaticResource IconFont}" FontSize="13" Foreground="{DynamicResource AccentBrush}"
-                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
-            </Border>
-            <TextBlock Grid.Column="1" Text="My To-Do List" Margin="12,0,10,1" FontFamily="{StaticResource DisplayFont}"
-                       FontSize="20" FontWeight="SemiBold" VerticalAlignment="Center"/>
-            <Border Grid.Column="2" MinWidth="22" Height="22" CornerRadius="11" Padding="7,0" Background="{DynamicResource AccentSoftBrush}"
-                    VerticalAlignment="Center">
-                <TextBlock Text="{Binding ScopeOutstanding}" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}"
-                           Typography.NumeralAlignment="Tabular" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-            </Border>
-            <Button x:Name="MoreButton" Grid.Column="4" Style="{StaticResource IconButton}" Content="&#xE712;" ToolTip="More"
-                    AutomationProperties.Name="More options" Click="More_Click">
-                <Button.ContextMenu>
-                    <ContextMenu x:Name="MoreMenu">
-                        <MenuItem Header="Exit TaskIsland" Click="Exit_Click"/>
-                    </ContextMenu>
-                </Button.ContextMenu>
-            </Button>
-            <Button Grid.Column="5" Style="{StaticResource IconButton}" Content="&#xE711;" ToolTip="Collapse (Esc)"
-                    AutomationProperties.Name="Collapse" Click="Close_Click"/>
-        </Grid>
-
-        <!-- 2. List switcher -->
-        <ScrollViewer x:Name="ChipScroller" Grid.Row="1" Margin="0,6,0,0" HorizontalScrollBarVisibility="Hidden"
-                      VerticalScrollBarVisibility="Disabled" PreviewMouseWheel="Chips_MouseWheel" Focusable="False">
-            <StackPanel Orientation="Horizontal">
-                <ItemsControl ItemsSource="{Binding Chips}" Focusable="False">
-                    <ItemsControl.ItemsPanel>
-                        <ItemsPanelTemplate><StackPanel Orientation="Horizontal"/></ItemsPanelTemplate>
-                    </ItemsControl.ItemsPanel>
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                            <Button Style="{StaticResource ListChip}" AutomationProperties.Name="{Binding Name}"
-                                    Command="{Binding DataContext.SelectListCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
-                                    CommandParameter="{Binding}">
-                                <StackPanel Orientation="Horizontal">
-                                    <Ellipse Width="6" Height="6" Fill="{Binding ColorBrush}" VerticalAlignment="Center" Margin="0,0,6,0">
-                                        <Ellipse.Style>
-                                            <Style TargetType="Ellipse">
-                                                <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding IsAll}" Value="True">
-                                                        <Setter Property="Visibility" Value="Collapsed"/>
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </Ellipse.Style>
-                                    </Ellipse>
-                                    <TextBlock Text="{Binding Name}" VerticalAlignment="Center"/>
-                                    <TextBlock Text="{Binding Count}" Margin="5,0,0,0" Foreground="{DynamicResource TextSecondaryBrush}"
-                                               Typography.NumeralAlignment="Tabular" VerticalAlignment="Center"/>
-                                </StackPanel>
-                            </Button>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
-                <!-- New list (ListEditPopup) arrives in Phase 3. -->
-                <Button Style="{StaticResource IconButton}" Width="28" Height="28" FontSize="11" Content="&#xE710;"
-                        IsEnabled="False" ToolTip="New list" AutomationProperties.Name="New list"/>
-            </StackPanel>
-        </ScrollViewer>
-
-        <!-- 3. Quick add -->
-        <Border x:Name="QuickAdd" Grid.Row="2" Margin="0,10,0,8" Height="50" CornerRadius="14" Padding="14,0,7,0"
-                Background="{DynamicResource SurfaceRaisedBrush}">
-            <Border.RenderTransform><TranslateTransform x:Name="QuickAddShake"/></Border.RenderTransform>
-            <Grid>
+            <!-- 1. Header: face (or tick) · title · count · more · close -->
+            <Grid Height="44">
                 <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
-                <TextBlock Text="&#xE710;" FontFamily="{StaticResource IconFont}" FontSize="13"
-                           Foreground="{DynamicResource TextTertiaryBrush}" VerticalAlignment="Center"/>
-                <TextBox x:Name="QuickAddBox" Grid.Column="1" Margin="10,0,8,0" Style="{StaticResource QuickAddBox}"
-                         Tag="Add a new task…" MaxLength="500" AutomationProperties.Name="Add a new task"
-                         Text="{Binding NewTitle, UpdateSourceTrigger=PropertyChanged}" KeyDown="QuickAdd_KeyDown"/>
-                <Button Grid.Column="2" Style="{StaticResource BareButton}" Margin="0,0,8,0" VerticalAlignment="Center"
-                        Command="{Binding CyclePriorityCommand}" ToolTip="Priority (click to change, right-click to pick)"
-                        AutomationProperties.Name="Priority">
-                    <c:PriorityChip Priority="{Binding NewPriority}"/>
+                <Canvas x:Name="FaceHost" Width="105" Height="28" VerticalAlignment="Center" ClipToBounds="False"/>
+                <Border x:Name="TickIcon" Width="28" Height="28" CornerRadius="14" Background="{DynamicResource AccentSoftBrush}"
+                        Visibility="Collapsed" VerticalAlignment="Center">
+                    <TextBlock Text="&#xE73E;" FontFamily="{StaticResource IconFont}" FontSize="13" Foreground="{DynamicResource AccentBrush}"
+                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </Border>
+                <TextBlock Grid.Column="1" Text="My To-Do List" Margin="12,0,10,1" FontFamily="{StaticResource DisplayFont}"
+                           FontSize="20" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                <Border Grid.Column="2" MinWidth="22" Height="22" CornerRadius="11" Padding="7,0" Background="{DynamicResource AccentSoftBrush}"
+                        VerticalAlignment="Center">
+                    <TextBlock Text="{Binding ScopeOutstanding}" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}"
+                               Typography.NumeralAlignment="Tabular" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </Border>
+                <Button x:Name="MoreButton" Grid.Column="4" Style="{StaticResource IconButton}" Content="&#xE712;" ToolTip="More"
+                        AutomationProperties.Name="More options" Click="More_Click">
                     <Button.ContextMenu>
-                        <ContextMenu>
-                            <MenuItem Header="High" Command="{Binding SetPriorityCommand}" CommandParameter="{x:Static m:Priority.High}"/>
-                            <MenuItem Header="Medium" Command="{Binding SetPriorityCommand}" CommandParameter="{x:Static m:Priority.Medium}"/>
-                            <MenuItem Header="Low" Command="{Binding SetPriorityCommand}" CommandParameter="{x:Static m:Priority.Low}"/>
+                        <ContextMenu x:Name="MoreMenu">
+                            <MenuItem Header="Clear completed…" Command="{Binding ClearCompletedCommand}"
+                                      AutomationProperties.Name="Clear completed"/>
+                            <MenuItem Header="Exit TaskIsland" Click="Exit_Click" AutomationProperties.Name="Exit TaskIsland"/>
                         </ContextMenu>
                     </Button.ContextMenu>
                 </Button>
-                <Button Grid.Column="3" Style="{StaticResource PrimaryRoundButton}" Content="&#xE72A;" ToolTip="Add (Enter)"
-                        AutomationProperties.Name="Add task" Command="{Binding AddCommand}"/>
+                <Button Grid.Column="5" Style="{StaticResource IconButton}" Content="&#xE711;" ToolTip="Collapse (Esc)"
+                        AutomationProperties.Name="Collapse" Click="Close_Click"/>
             </Grid>
-        </Border>
 
-        <!-- 4. Task list: virtualised, only visible rows get visuals -->
-        <Grid Grid.Row="3">
-            <ItemsControl x:Name="TaskList" ItemsSource="{Binding Tasks}" Focusable="False"
-                          VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling"
-                          VirtualizingPanel.ScrollUnit="Pixel" ScrollViewer.CanContentScroll="True">
-                <ItemsControl.Template>
-                    <ControlTemplate TargetType="ItemsControl">
-                        <ScrollViewer Style="{StaticResource OverlayScrollViewer}" CanContentScroll="True" Focusable="False"
-                                      VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-                            <ItemsPresenter/>
-                        </ScrollViewer>
-                    </ControlTemplate>
-                </ItemsControl.Template>
-                <ItemsControl.ItemsPanel>
-                    <ItemsPanelTemplate><VirtualizingStackPanel/></ItemsPanelTemplate>
-                </ItemsControl.ItemsPanel>
-                <ItemsControl.ItemTemplate>
-                    <DataTemplate><v:TaskRow/></DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
+            <!-- 2. List switcher -->
+            <ScrollViewer x:Name="ChipScroller" Grid.Row="1" Margin="0,6,0,0" HorizontalScrollBarVisibility="Hidden"
+                          VerticalScrollBarVisibility="Disabled" PreviewMouseWheel="Chips_MouseWheel" Focusable="False">
+                <StackPanel Orientation="Horizontal">
+                    <ItemsControl ItemsSource="{Binding Chips}" Focusable="False">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate><StackPanel Orientation="Horizontal"/></ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Button Style="{StaticResource ListChip}" AutomationProperties.Name="{Binding Name}"
+                                        Command="{Binding DataContext.SelectListCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                        CommandParameter="{Binding}" ContextMenuOpening="Chip_ContextMenuOpening">
+                                    <Button.ContextMenu>
+                                        <ContextMenu>
+                                            <MenuItem Header="Rename…" Click="ChipRename_Click" AutomationProperties.Name="Rename list"/>
+                                            <MenuItem Header="Change colour…" Click="ChipRename_Click" AutomationProperties.Name="Change list colour"/>
+                                            <MenuItem Header="Move left" Click="ChipLeft_Click" AutomationProperties.Name="Move list left"/>
+                                            <MenuItem Header="Move right" Click="ChipRight_Click" AutomationProperties.Name="Move list right"/>
+                                            <MenuItem Header="Delete list…" Click="ChipDelete_Click" AutomationProperties.Name="Delete list"/>
+                                        </ContextMenu>
+                                    </Button.ContextMenu>
+                                    <StackPanel Orientation="Horizontal">
+                                        <Ellipse Width="6" Height="6" Fill="{Binding ColorBrush}" VerticalAlignment="Center" Margin="0,0,6,0">
+                                            <Ellipse.Style>
+                                                <Style TargetType="Ellipse">
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsAll}" Value="True">
+                                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Ellipse.Style>
+                                        </Ellipse>
+                                        <TextBlock Text="{Binding Name}" VerticalAlignment="Center"/>
+                                        <TextBlock Text="{Binding Count}" Margin="5,0,0,0" Foreground="{DynamicResource TextSecondaryBrush}"
+                                                   Typography.NumeralAlignment="Tabular" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Button>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <Button x:Name="NewListButton" Style="{StaticResource IconButton}" Width="28" Height="28" FontSize="11" Content="&#xE710;"
+                            Command="{Binding NewListCommand}" ToolTip="New list" AutomationProperties.Name="New list"/>
+                </StackPanel>
+            </ScrollViewer>
 
-            <!-- 7. Empty state -->
-            <StackPanel Margin="0,22,0,24" HorizontalAlignment="Center" Visibility="{Binding IsEmpty, Converter={StaticResource Vis}}">
-                <Border Width="44" Height="44" CornerRadius="22" Background="{DynamicResource AccentSoftBrush}" HorizontalAlignment="Center">
-                    <TextBlock Text="&#xE73E;" FontFamily="{StaticResource IconFont}" FontSize="20" Foreground="{DynamicResource AccentBrush}"
-                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            <!-- 3. Quick add -->
+            <Border x:Name="QuickAdd" Grid.Row="2" Margin="0,10,0,8" Height="50" CornerRadius="14" Padding="14,0,7,0"
+                    Background="{DynamicResource SurfaceRaisedBrush}">
+                <Border.RenderTransform><TranslateTransform x:Name="QuickAddShake"/></Border.RenderTransform>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="&#xE710;" FontFamily="{StaticResource IconFont}" FontSize="13"
+                               Foreground="{DynamicResource TextTertiaryBrush}" VerticalAlignment="Center"/>
+                    <TextBox x:Name="QuickAddBox" Grid.Column="1" Margin="10,0,8,0" Style="{StaticResource QuickAddBox}"
+                             Tag="Add a new task…" MaxLength="500" AutomationProperties.Name="Add a new task"
+                             Text="{Binding NewTitle, UpdateSourceTrigger=PropertyChanged}" KeyDown="QuickAdd_KeyDown"/>
+                    <!-- In All lists: which list the new task goes to (default list unless changed). -->
+                    <Button x:Name="QuickAddListButton" Grid.Column="2" Style="{StaticResource BareButton}" Margin="0,0,8,0"
+                            VerticalAlignment="Center" Click="QuickAddList_Click" ToolTip="List for new tasks"
+                            AutomationProperties.Name="List for new tasks"
+                            Visibility="{Binding ShowQuickAddList, Converter={StaticResource Vis}}">
+                        <Border CornerRadius="12" Height="24" Padding="9,0" Background="{DynamicResource SurfacePressedBrush}">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <Ellipse Width="6" Height="6" Fill="{Binding QuickAddListBrush}" VerticalAlignment="Center"/>
+                                <TextBlock Text="{Binding QuickAddListName}" Margin="6,0,0,0" FontSize="12" MaxWidth="86"
+                                           TextTrimming="CharacterEllipsis" Foreground="{DynamicResource TextSecondaryBrush}"
+                                           VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Border>
+                    </Button>
+                    <Button Grid.Column="3" Style="{StaticResource BareButton}" Margin="0,0,8,0" VerticalAlignment="Center"
+                            Command="{Binding CyclePriorityCommand}" ToolTip="Priority (click to change, right-click to pick)"
+                            AutomationProperties.Name="Priority">
+                        <c:PriorityChip x:Name="NewPriorityChip" Priority="{Binding NewPriority}"/>
+                        <Button.ContextMenu>
+                            <ContextMenu>
+                                <MenuItem Header="High" Command="{Binding SetPriorityCommand}" CommandParameter="{x:Static m:Priority.High}"/>
+                                <MenuItem Header="Medium" Command="{Binding SetPriorityCommand}" CommandParameter="{x:Static m:Priority.Medium}"/>
+                                <MenuItem Header="Low" Command="{Binding SetPriorityCommand}" CommandParameter="{x:Static m:Priority.Low}"/>
+                            </ContextMenu>
+                        </Button.ContextMenu>
+                    </Button>
+                    <Button Grid.Column="4" Style="{StaticResource PrimaryRoundButton}" Content="&#xE72A;" ToolTip="Add (Enter)"
+                            AutomationProperties.Name="Add task" Command="{Binding AddCommand}"/>
+                </Grid>
+            </Border>
+
+            <!-- 4. Task list: virtualised, only visible rows get visuals -->
+            <Grid Grid.Row="3" x:Name="ListArea">
+                <ItemsControl x:Name="TaskList" ItemsSource="{Binding Tasks}" Focusable="False" AllowDrop="True"
+                              DragOver="TaskList_DragOver" DragLeave="TaskList_DragLeave" Drop="TaskList_Drop"
+                              VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling"
+                              VirtualizingPanel.ScrollUnit="Pixel" ScrollViewer.CanContentScroll="True">
+                    <ItemsControl.Template>
+                        <ControlTemplate TargetType="ItemsControl">
+                            <ScrollViewer x:Name="TaskScroller" Style="{StaticResource OverlayScrollViewer}" CanContentScroll="True" Focusable="False"
+                                          VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                                <ItemsPresenter/>
+                            </ScrollViewer>
+                        </ControlTemplate>
+                    </ItemsControl.Template>
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate><VirtualizingStackPanel/></ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate><v:TaskRow/></DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <!-- 7. Empty state -->
+                <StackPanel Margin="0,22,0,24" HorizontalAlignment="Center" IsHitTestVisible="False"
+                            Visibility="{Binding IsEmpty, Converter={StaticResource Vis}}">
+                    <Border Width="44" Height="44" CornerRadius="22" Background="{DynamicResource AccentSoftBrush}" HorizontalAlignment="Center">
+                        <TextBlock Text="&#xE73E;" FontFamily="{StaticResource IconFont}" FontSize="20" Foreground="{DynamicResource AccentBrush}"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    <TextBlock Text="{Binding EmptyTitle}" Margin="0,10,0,0" FontSize="14" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                    <TextBlock Text="{Binding EmptyHint}" Margin="0,2,0,0" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}"
+                               HorizontalAlignment="Center"/>
+                </StackPanel>
+            </Grid>
+
+            <!-- 5/6. Undo bar and notices, then the footer: progress bar · counts · segmented filter -->
+            <StackPanel Grid.Row="4" Margin="0,4,0,0">
+                <Border x:Name="UndoBar" Style="{StaticResource BarStyle}" Visibility="Collapsed">
+                    <Border.RenderTransform><TranslateTransform x:Name="UndoSlide"/></Border.RenderTransform>
+                    <Grid>
+                        <TextBlock Text="{Binding UndoText}" FontSize="13" VerticalAlignment="Center"/>
+                        <Button Style="{StaticResource LinkButton}" Content="Undo" HorizontalAlignment="Right"
+                                Command="{Binding UndoCommand}" AutomationProperties.Name="Undo"/>
+                    </Grid>
                 </Border>
-                <TextBlock Text="{Binding EmptyTitle}" Margin="0,10,0,0" FontSize="14" FontWeight="SemiBold" HorizontalAlignment="Center"/>
-                <TextBlock Text="{Binding EmptyHint}" Margin="0,2,0,0" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}"
-                           HorizontalAlignment="Center"/>
+                <Border x:Name="NoticeBar" Style="{StaticResource BarStyle}" Visibility="Collapsed">
+                    <Border.RenderTransform><TranslateTransform x:Name="NoticeSlide"/></Border.RenderTransform>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="{Binding NoticeText}" FontSize="13" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"
+                                   ToolTip="{Binding NoticeText}">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding NoticeIsError}" Value="True">
+                                            <Setter Property="Foreground" Value="{DynamicResource OverdueBrush}"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                        <Button Grid.Column="1" Style="{StaticResource IconButton}" Width="28" Height="28" FontSize="11" Content="&#xE711;"
+                                Command="{Binding DismissNoticeCommand}" ToolTip="Dismiss" AutomationProperties.Name="Dismiss message"/>
+                    </Grid>
+                </Border>
+                <Border Height="2" CornerRadius="1" Margin="0,8,0,0" Background="{DynamicResource SurfaceRaisedBrush}">
+                    <Border x:Name="ProgressBar" Background="{DynamicResource AccentBrush}" CornerRadius="1" RenderTransformOrigin="0,0.5">
+                        <Border.RenderTransform><ScaleTransform x:Name="ProgressScale" ScaleX="0"/></Border.RenderTransform>
+                    </Border>
+                </Border>
+                <Grid Margin="0,8,0,0">
+                    <TextBlock Text="{Binding FooterText}" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}"
+                               Typography.NumeralAlignment="Tabular" VerticalAlignment="Center"/>
+                    <Border HorizontalAlignment="Right" CornerRadius="10" Padding="2" Background="{DynamicResource SurfaceRaisedBrush}">
+                        <Grid>
+                            <Border x:Name="FilterIndicator" Width="76" HorizontalAlignment="Left" CornerRadius="8"
+                                    Background="{DynamicResource SurfacePressedBrush}">
+                                <Border.RenderTransform><TranslateTransform x:Name="FilterSlide"/></Border.RenderTransform>
+                            </Border>
+                            <UniformGrid Rows="1" Columns="3">
+                                <RadioButton x:Name="FilterActive" Style="{StaticResource SegmentButton}" Width="76" Content="Active"
+                                             GroupName="Filter" Command="{Binding SetFilterCommand}" CommandParameter="Active"/>
+                                <RadioButton x:Name="FilterCompleted" Style="{StaticResource SegmentButton}" Width="76" Content="Completed"
+                                             GroupName="Filter" Command="{Binding SetFilterCommand}" CommandParameter="Completed"/>
+                                <RadioButton x:Name="FilterAll" Style="{StaticResource SegmentButton}" Width="76" Content="All"
+                                             GroupName="Filter" Command="{Binding SetFilterCommand}" CommandParameter="All"/>
+                            </UniformGrid>
+                        </Grid>
+                    </Border>
+                </Grid>
             </StackPanel>
         </Grid>
 
-        <!-- 6. Footer: progress bar · counts · segmented filter -->
-        <StackPanel Grid.Row="4" Margin="0,4,0,0">
-            <Border Height="2" CornerRadius="1" Background="{DynamicResource SurfaceRaisedBrush}">
-                <Border x:Name="ProgressBar" Background="{DynamicResource AccentBrush}" CornerRadius="1" RenderTransformOrigin="0,0.5">
-                    <Border.RenderTransform><ScaleTransform x:Name="ProgressScale" ScaleX="0"/></Border.RenderTransform>
-                </Border>
+        <!-- ===== Cards over the panel: list editor, delete list, confirm ===== -->
+        <Grid x:Name="Overlay" Background="#8C000000" Visibility="{Binding HasOverlay, Converter={StaticResource Vis}}">
+            <!-- New list / rename list -->
+            <Border Style="{StaticResource CardWhenSet}" DataContext="{Binding ListEditor}">
+                <StackPanel>
+                    <TextBlock Text="{Binding Title}" FontFamily="{StaticResource DisplayFont}" FontSize="18" FontWeight="SemiBold"/>
+                    <TextBox x:Name="ListNameBox" Style="{StaticResource FieldBox}" Margin="0,12,0,0" MaxLength="40" Tag="List name"
+                             AutomationProperties.Name="List name" Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}"
+                             KeyDown="ListName_KeyDown"/>
+                    <ItemsControl ItemsSource="{Binding Swatches}" Margin="0,12,0,0" Focusable="False">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate><StackPanel Orientation="Horizontal"/></ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Button Style="{StaticResource SwatchButton}" Background="{Binding Brush}" Tag="{Binding IsSelected}"
+                                        AutomationProperties.Name="{Binding Hex, StringFormat=Colour {0}}"
+                                        Command="{Binding DataContext.PickSwatchCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                        CommandParameter="{Binding}"/>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <TextBlock Text="{Binding Error}" Margin="2,10,0,0" FontSize="12" TextWrapping="Wrap" Foreground="{DynamicResource OverdueBrush}">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding Error}" Value=""><Setter Property="Visibility" Value="Collapsed"/></DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
+                        <Button Style="{StaticResource TextButton}" Content="Cancel" Margin="0,0,8,0"
+                                Command="{Binding DataContext.CancelOverlayCommand, RelativeSource={RelativeSource AncestorType={x:Type v:PanelView}}}"
+                                AutomationProperties.Name="Cancel list"/>
+                        <Button Style="{StaticResource PrimaryTextButton}" Content="{Binding ConfirmText}"
+                                Command="{Binding DataContext.SaveListEditorCommand, RelativeSource={RelativeSource AncestorType={x:Type v:PanelView}}}"
+                                AutomationProperties.Name="Save list"/>
+                    </StackPanel>
+                </StackPanel>
             </Border>
-            <Grid Margin="0,8,0,0">
-                <TextBlock Text="{Binding FooterText}" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}"
-                           Typography.NumeralAlignment="Tabular" VerticalAlignment="Center"/>
-                <Border HorizontalAlignment="Right" CornerRadius="10" Padding="2" Background="{DynamicResource SurfaceRaisedBrush}">
-                    <Grid>
-                        <Border x:Name="FilterIndicator" Width="76" HorizontalAlignment="Left" CornerRadius="8"
-                                Background="{DynamicResource SurfacePressedBrush}">
-                            <Border.RenderTransform><TranslateTransform x:Name="FilterSlide"/></Border.RenderTransform>
-                        </Border>
-                        <UniformGrid Rows="1" Columns="3">
-                            <RadioButton x:Name="FilterActive" Style="{StaticResource SegmentButton}" Width="76" Content="Active"
-                                         GroupName="Filter" Command="{Binding SetFilterCommand}" CommandParameter="Active"/>
-                            <RadioButton x:Name="FilterCompleted" Style="{StaticResource SegmentButton}" Width="76" Content="Completed"
-                                         GroupName="Filter" Command="{Binding SetFilterCommand}" CommandParameter="Completed"/>
-                            <RadioButton x:Name="FilterAll" Style="{StaticResource SegmentButton}" Width="76" Content="All"
-                                         GroupName="Filter" Command="{Binding SetFilterCommand}" CommandParameter="All"/>
-                        </UniformGrid>
-                    </Grid>
-                </Border>
-            </Grid>
-        </StackPanel>
+
+            <!-- Delete list -->
+            <Border Style="{StaticResource CardWhenSet}" DataContext="{Binding DeleteList}">
+                <StackPanel>
+                    <TextBlock Text="{Binding Question}" FontFamily="{StaticResource DisplayFont}" FontSize="18" FontWeight="SemiBold"
+                               TextWrapping="Wrap"/>
+                    <TextBlock Text="This list has no tasks." Margin="0,8,0,0" FontSize="13" Foreground="{DynamicResource TextSecondaryBrush}">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding HasTasks}" Value="True"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                    <StackPanel Margin="0,12,0,0">
+                        <StackPanel.Style>
+                            <Style TargetType="StackPanel">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding HasTasks}" Value="False"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </StackPanel.Style>
+                        <Button Style="{StaticResource ChoiceChip}" Tag="{Binding MoveTasks}" Content="{Binding MoveText}" HorizontalContentAlignment="Left"
+                                Command="{Binding ChooseMoveCommand}" Margin="0,0,0,6" AutomationProperties.Name="Move the tasks to another list"/>
+                        <ItemsControl ItemsSource="{Binding Targets}" Margin="12,0,0,2" Focusable="False">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Button Style="{StaticResource ChoiceChip}" Tag="{Binding IsSelected}"
+                                            AutomationProperties.Name="{Binding Name, StringFormat=Move to {0}}"
+                                            Command="{Binding DataContext.ChooseTargetCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                            CommandParameter="{Binding}">
+                                        <StackPanel Orientation="Horizontal">
+                                            <Ellipse Width="6" Height="6" Fill="{Binding Brush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                            <TextBlock Text="{Binding Name}" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </Button>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                        <Button Style="{StaticResource ChoiceChip}" Tag="{Binding DeleteTasks}" Content="{Binding DeleteText}" HorizontalContentAlignment="Left"
+                                Command="{Binding ChooseDeleteCommand}" AutomationProperties.Name="Delete the list and its tasks"/>
+                    </StackPanel>
+                    <TextBlock Text="A backup is made first." Margin="2,6,0,0" FontSize="12" Foreground="{DynamicResource TextTertiaryBrush}"/>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,14,0,0">
+                        <Button Style="{StaticResource TextButton}" Content="Cancel" Margin="0,0,8,0"
+                                Command="{Binding DataContext.CancelOverlayCommand, RelativeSource={RelativeSource AncestorType={x:Type v:PanelView}}}"
+                                AutomationProperties.Name="Cancel delete list"/>
+                        <Button Style="{StaticResource DangerTextButton}" Content="Delete list"
+                                Command="{Binding DataContext.ConfirmDeleteListCommand, RelativeSource={RelativeSource AncestorType={x:Type v:PanelView}}}"
+                                AutomationProperties.Name="Delete list now"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- Confirm (clear completed) -->
+            <Border Style="{StaticResource CardWhenSet}" DataContext="{Binding Confirm}">
+                <StackPanel>
+                    <TextBlock Text="{Binding Title}" FontFamily="{StaticResource DisplayFont}" FontSize="18" FontWeight="SemiBold"/>
+                    <TextBlock Text="{Binding Message}" Margin="0,8,0,0" FontSize="13" TextWrapping="Wrap"
+                               Foreground="{DynamicResource TextSecondaryBrush}"/>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
+                        <Button Style="{StaticResource TextButton}" Content="Cancel" Margin="0,0,8,0"
+                                Command="{Binding DataContext.CancelOverlayCommand, RelativeSource={RelativeSource AncestorType={x:Type v:PanelView}}}"
+                                AutomationProperties.Name="Cancel"/>
+                        <Button Style="{StaticResource DangerTextButton}" Content="{Binding ConfirmText}"
+                                Command="{Binding DataContext.ConfirmYesCommand, RelativeSource={RelativeSource AncestorType={x:Type v:PanelView}}}"
+                                AutomationProperties.Name="Confirm"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </Grid>
     </Grid>
 </UserControl>

@@ -1,0 +1,23 @@
+<UserControl x:Class="TaskIsland.App.Controls.MiniCalendar"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Focusable="False" FontFamily="{StaticResource TextFont}">
+    <!-- A small month calendar in the app's own look (the stock WPF calendar cannot follow the dark theme). -->
+    <StackPanel Width="250">
+        <Grid Margin="0,0,0,6">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <Button Style="{StaticResource IconButton}" Width="28" Height="28" Content="&#xE76B;" ToolTip="Previous month"
+                    AutomationProperties.Name="Previous month" Click="Prev_Click"/>
+            <TextBlock x:Name="MonthText" Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center"
+                       FontWeight="SemiBold" FontSize="13" Foreground="{DynamicResource TextPrimaryBrush}"/>
+            <Button Grid.Column="2" Style="{StaticResource IconButton}" Width="28" Height="28" Content="&#xE76C;" ToolTip="Next month"
+                    AutomationProperties.Name="Next month" Click="Next_Click"/>
+        </Grid>
+        <UniformGrid x:Name="WeekdayRow" Rows="1" Columns="7"/>
+        <UniformGrid x:Name="DayGrid" Rows="6" Columns="7"/>
+    </StackPanel>
+</UserControl>

@@ -8,6 +8,7 @@
                 <!-- Index 0 is the theme; App swaps it at runtime (Dark.xaml / Light.xaml share the same keys). -->
                 <ResourceDictionary Source="Themes/Dark.xaml"/>
                 <ResourceDictionary Source="Themes/Controls.xaml"/>
+                <ResourceDictionary Source="Themes/FormControls.xaml"/>
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
     </Application.Resources>

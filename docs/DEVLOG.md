@@ -11,7 +11,7 @@ Newest entry at the bottom. Each phase appends one entry using the template belo
 | 0 Planning | ✅ done 2026-11-01 | plan + checklist |
 | 1 Skeleton & data layer | ✅ done 2026-11-01 | 8537510 |
 | 2 Island UI | ✅ done 2026-11-03 (open: memory budget, first-expand hitch) | see Phase 2 entry |
-| 3 To-Do functionality | ⏳ | |
+| 3 To-Do functionality | ✅ done 2026-11-04 (open: mouse-only tests, memory budget) | see Phase 3 entry |
 | 4 Windows integration | ⏳ | |
 | 5 Settings & data | ⏳ | |
 | 6 Testing & optimisation | ⏳ | |
@@ -308,3 +308,58 @@ default settings on this PC (Animation effects off): notch pixels show blinks at
 the companion and face animations now play without any Debug override.
 **Note:** all full-motion paths had never run on this PC before; one crash (`TaskRow` tick) was found and fixed on 2026-11-03,
 and a 6-cycle expand/collapse ran clean. Other panel animations (filter slide, row actions, progress) were not clicked through.
+
+### Phase 3 — To-Do functionality (2026-11-04, Sonnet 5.5)
+**Implemented:** everything in PLAN §8 Phase 3 against the real database; no sample data any more.
+- Add (button and Enter), toggle with a 2 s linger then slide-out, delete with a 5 s Undo bar, Clear completed with a confirm card,
+  inline edit (title, priority, notes, due date + time, list) with Save/Cancel, priority cycling, sort High → Medium → Low,
+  filters Active / Completed / All (remembered), counters, empty states, reorder within a priority group (drag and Alt+Up/Down).
+- Lists: switcher chips with counts, create / rename / recolour / move / delete (move or delete tasks, auto backup `pre-delete-`
+  first, last list protected), quick-add list chip in All lists, Ctrl+0…9 / Ctrl+Tab, chip context menu (also Shift+F10).
+- Every action is awaited against the repositories; a failure is logged, shows an inline notice and the Sad face, and reloads the UI
+  from the database. Mascot triggers for tasks: tick Happy, High tick / 5 in 30 min Love, last task Excited, add Wink,
+  typing/editing Focused, failure Sad.
+- Deviations from the PLAN are listed in PLAN.md under "Phase 3 as built".
+
+**Files created:** Core `Services/DueInput.cs`, `Services/ReorderRules.cs`, `Mascot/TickStreak.cs`; tests `Phase3RulesTests.cs` (39);
+App `Logging/FileLogger.cs`, `ViewModels/IslandViewModel.Lists.cs`, `Controls/MiniCalendar.xaml(.cs)`, `Themes/FormControls.xaml`;
+`tools/ui-tests/` (the UI Automation scripts used below). **Modified:** `IslandViewModel`, `TaskItemViewModel`, `ListChipViewModel`,
+`TaskRow`, `PanelView`, `IslandWindow.xaml.cs`, `ReactionDirector` (`Keep`), `App.xaml(.cs)`. **Deleted:** `SampleData.cs`.
+
+**Tests performed:** Release + Debug build 0 warnings / 0 errors; **324 tests pass** (207 Core, 117 Data). The §7.11 grep found no
+banned APIs. UI Automation scripts (Debug build, fresh temp data folder, no mouse): T1–T9, T12–T14, L1–L10, L12, D1–D3 pass; T10 / T11
+by keyboard only; mascot triggers via the debug log; a failure path (list deleted behind the app's back) shows the notice, saves nothing,
+refreshes the chips and logs it. Screenshots: `docs/screenshots/phase3-*.png` (panel dark/light, edit, new list, delete list).
+Performance (Release, collapsed, seeded data, 60 s): Companion Off 0 ms CPU; Calm 1,672 ms (2.8 % of one core); with 500 tasks only 7 rows
+are realised (virtualised) and idle CPU stays near zero after the start-up burst. Private memory 62–64 MB, working set 114–119 MB.
+
+**Bugs found and fixed on the way:** a moved row left a stale UI Automation node (moved rows now get a new view model); a selection
+trigger on `Tag` inside a ControlTemplate did not fire (now a Style-level DataTrigger); the edit form was too tall (labels now sit beside
+the fields, and the row scrolls into view); a stray `AutomationProperties.Name` hid the notice text.
+
+**Remaining defects / not tested:**
+- **Not tested, needs the real mouse (ask the user first):** mouse drag-reorder with the insertion line (T10), the "No" cursor (T11),
+  hover row actions, right-click menus, clicking days in the calendar popup, scroll smoothness with 500 tasks (P9), the frame-by-frame
+  look of the row animations, and any Release run of the functional flows (the demo options are Debug-only).
+- Memory is still over the §6.7 budget (Phase 2 issue, unchanged); the companion costs about 2.8 % of a core in Calm.
+- Not built here by design: reminders (T15, Phase 4), export/import (L13, Phase 5), Settings → Lists (Phase 5), Surprised / Thinking
+  faces, Sleepy and click-face Laughing (M4).
+
+**Commit:** "Implement task CRUD, priorities, sorting, filters and persistence" (hash in `git log`) · **Pushed:** yes
+
+**Handoff (for Phase 4, survives /compact):**
+- *What exists:* the island works end to end on SQLite. `IslandViewModel` (+ `.Lists.cs`) holds the data: operations go through
+  `RunAsync` (a `SemaphoreSlim` gate, so they run one at a time), then the in-memory copy is reloaded and the `Tasks`
+  collection is reconciled in place (removed rows animate out, new rows animate in, a moved row gets a NEW `TaskItemViewModel`).
+  `TaskItemViewModel` talks back through `ITaskRowHost`. A "lingering" set keeps a just-ticked row for 2 s.
+  `FileLogger` (`Logs\taskisland-yyyyMMdd.log`, 14-day prune) already exists, so Phase 4 step 9 only needs the global exception
+  handlers and the DB-failure dialog. `ReactionDirector.Keep(reaction)` extends a hold without re-animating.
+- *Phase 4 must know:* reminders should read due tasks through the same repository and request `Reaction.Surprised` through
+  `ReactionDirector.Request`; the ⋯ menu already has "Exit". `CancelTransientUi()` runs on collapse. The stock WPF DatePicker and
+  ComboBox are not used (dark theme): use `MiniCalendar` and the chips. Dialog cards are overlays inside the panel, so no extra
+  window triggers click-outside collapse.
+- *Testing tools:* `tools/ui-tests/uia.ps1` (helpers) + `t1`–`t6.ps1`; Debug build with `TASKISLAND_ROOT=<temp>` and
+  `--demo panel --full-motion --pop-seconds 3600`; read the DB with `python -I`. A RadioButton needs SetFocus + SendKeys Space.
+  Real mouse tests move the user's pointer: ask first.
+- *Open issues:* the mouse-only checks above, the memory budget, the first-expand hitch, the companion CPU cost.
+- *Exact next step:* start Phase 4 (Opus recommended): `dotnet build` + `dotnet test` (expect 324 green), then PLAN §8 Phase 4 step 1.

@@ -11,7 +11,7 @@ survives sleep / wake. Organise tasks into lists such as Office Work, Personal o
 
 ## Status
 
-🚧 In development: Phase 1 (project structure and database layer) is done. See [docs/PLAN.md](docs/PLAN.md) (build guide), [docs/TESTING.md](docs/TESTING.md) and [docs/DEVLOG.md](docs/DEVLOG.md).
+🚧 In development: Phases 1-3 are done (database layer, the island interface, and the working to-do features). See [docs/PLAN.md](docs/PLAN.md) (build guide), [docs/TESTING.md](docs/TESTING.md) and [docs/DEVLOG.md](docs/DEVLOG.md).
 
 ## Tech
 
