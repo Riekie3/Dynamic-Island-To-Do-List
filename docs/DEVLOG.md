@@ -498,3 +498,8 @@ p5c 22 checks pass. TESTING.md: T15b, T15c, T15d, L4, L11, L13, W5, W16, D5, D7,
   Kill TaskIsland.exe before building. No hooks, no shell spawn except explorer.exe for the data folder and the two About links on click.
 - *Open issues:* memory over budget (idle 88 MB private seeded Release), first-expand hitch, companion CPU, the 👤 lists above.
 - *Exact next step:* start Phase 6: `dotnet build` + `dotnet test` (expect 419 green), then PLAN §8 Phase 6 step 1.
+
+### Fix after Phase 5 — panel opacity slider had no visible effect (2026-11-04)
+- Cause: the cached shadow layer under the panel (`IslandHost._shadow`) is a solid SurfaceBrush border, so it stayed 100 % opaque below the panel body and hid the opacity setting.
+- Fix: the shadow is now hosted in a Grid whose Clip cuts out the panel rectangle (CombinedGeometry Exclude), so only the soft shadow outside the panel remains.
+- Verified: `tools/ui-tests/op.ps1` (Release, screenshots at 100 % and 70 %): at 70 % the text behind the panel shows through, at 100 % it is solid. 419 unit tests green.

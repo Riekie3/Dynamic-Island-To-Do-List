@@ -39,6 +39,7 @@ public sealed class IslandHost : Grid
     private readonly Path _glow, _body, _panelBody, _gloss, _outline;
     private Path? _pulse;
     private readonly Border _shadow;
+    private readonly Grid _shadowHost = new() { IsHitTestVisible = false };
     private readonly DropShadowEffect _shadowEffect;
     private readonly Grid _clipLayer;
     private readonly TranslateTransform _panelSlide = new();
@@ -83,7 +84,8 @@ public sealed class IslandHost : Grid
         _outline = new Path { Data = _geo, StrokeThickness = 2 * CompactScale, IsHitTestVisible = false };
         _outline.SetResourceReference(Shape.StrokeProperty, "MascotOutlineBrush");
 
-        foreach (var e in new UIElement[] { _glow, _shadow, _body, _panelBody, _gloss, _clipLayer, _outline }) Children.Add(e);
+        _shadowHost.Children.Add(_shadow);
+        foreach (var e in new UIElement[] { _glow, _shadowHost, _body, _panelBody, _gloss, _clipLayer, _outline }) Children.Add(e);
         _now = Target(IslandState.Mini, 120, 32);
         Render(_now);
     }
@@ -271,6 +273,11 @@ public sealed class IslandHost : Grid
         if (TryFindResource("ShadowOpacity") is double o && Math.Abs(_shadowEffect.Opacity - o) > 0.001) _shadowEffect.Opacity = o;
         _shadow.Width = _to.W;
         _shadow.Height = _to.H;
+        // The shadow layer is solid, so it is cut out under the panel; otherwise it would hide the panel opacity setting.
+        double sx = (HostWidth - _to.W) / 2, up = _flush ? 24 : 0;
+        _shadowHost.Clip = new CombinedGeometry(GeometryCombineMode.Exclude,
+            new RectangleGeometry(new Rect(-100, -100, HostWidth + 200, _to.H + 300)),
+            new RectangleGeometry(new Rect(sx, -up, _to.W, _to.H + up), 24, 24));
         _shadow.Visibility = Visibility.Visible;
         Anim.To(_shadow, OpacityProperty, 1, fade);
     }
