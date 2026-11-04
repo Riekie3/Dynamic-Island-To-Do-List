@@ -595,6 +595,9 @@ So this entry covers PLAN §8 Phase 7 steps 1, 2, 3, 4c (scan of the portable fi
 - **Docs:** `docs/RELEASE_NOTES.md` (what it is, how to run, SmartScreen "More info, Run anyway", honest known limits), README (download section, status, publish command),
   `docs/PORTABLE.txt`, `LICENSE` (only "Copyright (c) 2026 RieSources, all rights reserved"; **the user has not chosen a licence yet**), `THIRD-PARTY-NOTICES.txt`.
   Credit RieSources: About page, exe properties, README footer, LICENSE, release notes, PORTABLE.txt. The installer's publisher/welcome text comes with the installer.
+- **Released (portable, pre-release):** tag `v1.0.0-rc.1` on commit 0953be9, GitHub pre-release
+  https://github.com/Riekie3/Dynamic-Island-To-Do-List/releases/tag/v1.0.0-rc.1 with `TaskIsland-1.0.0-rc.1-win-x64-portable.zip` (66.6 MB, SHA-256
+  5A6B00BC67FF804C73DE89B770057ABD4C185A26C2CCE32BC5BBEFA0BE55B7C1, re-downloaded from GitHub and the hash matched). Marked pre-release so the later `v1.0.0` installer release is the "latest".
 - **Mistakes this phase (so they are not repeated):** a background chain started with `&` inside a subshell kept running after the tool call "ended", so the second
   chain collided with it on the same data folder (the same trap as in Phase 6); both were killed by process path and the three runs repeated once, cleanly.
 - **Open for the installer phase:** PLAN steps 4 (Inno Setup script; check `winget`/Inno Setup 6 is installed), 4b (ask the user: sign or not), 5 (install, upgrade,
