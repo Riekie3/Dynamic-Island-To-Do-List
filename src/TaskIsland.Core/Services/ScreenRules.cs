@@ -46,6 +46,25 @@ public static class IslandPlacement
         int y = monitor.Top + (int)Math.Round(topMarginDip * scale);
         return new PixelRect(x, y, x + w, y + h);
     }
+
+    /// <summary>
+    /// On-screen width (DIPs) of the reminder pill: <paramref name="percent"/> of the monitor width, kept on the monitor
+    /// around the island's centre (the same centre and clamp as <see cref="Compute"/>, with an 8 DIP gap to each edge) and
+    /// never narrower than <paramref name="minDip"/>. Percent 0 (or less) means <paramref name="minDip"/>.
+    /// </summary>
+    public static double AlertWidthDip(PixelRect monitor, double scale, int percent, int horizontalOffsetDip,
+        double panelWidthDip, double minDip)
+    {
+        if (percent <= 0) return minDip;
+        if (scale <= 0 || double.IsNaN(scale)) scale = 1;
+        double width = monitor.Width / scale;
+        double half = panelWidthDip / 2;
+        double centre = width / 2 + horizontalOffsetDip;
+        centre = half <= width - half ? Math.Clamp(centre, half, width - half) : width / 2;
+        double room = 2 * Math.Min(centre, width - centre) - 16;
+        double wanted = width * Math.Min(percent, 100) / 100.0;
+        return Math.Max(minDip, Math.Min(wanted, room));
+    }
 }
 
 /// <summary>Values of <c>SHQueryUserNotificationState</c>.</summary>

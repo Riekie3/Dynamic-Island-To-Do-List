@@ -45,6 +45,8 @@ public sealed class AppSettings
         public const string RemindersEnabled = nameof(RemindersEnabled);
         public const string ReminderLeadMinutes = nameof(ReminderLeadMinutes);
         public const string ReminderPillAlert = nameof(ReminderPillAlert);
+        public const string ReminderAlertWidthPercent = nameof(ReminderAlertWidthPercent);
+        public const string ReminderBlink = nameof(ReminderBlink);
         public const string AccentSource = nameof(AccentSource);
         public const string ToggleHotkey = nameof(ToggleHotkey);
         public const string DailyBackupEnabled = nameof(DailyBackupEnabled);
@@ -94,6 +96,12 @@ public sealed class AppSettings
     public int ReminderLeadMinutes { get; set; } = 0;
     /// <summary>The island widens and shows the task title when a reminder fires (PLAN.md section 7.9).</summary>
     public bool ReminderPillAlert { get; set; } = true;
+    /// <summary>The widths offered for the reminder pill, in percent of the screen width (0 = compact, the old fixed width).</summary>
+    public static readonly IReadOnlyList<int> ReminderAlertWidthChoices = [0, 30, 40, 50, 60, 75, 100];
+    /// <summary>How wide the reminder pill grows, in percent of the screen width. 0 = compact. Anything else in the database falls back to 50.</summary>
+    public int ReminderAlertWidthPercent { get; set; } = 50;
+    /// <summary>A red border blinks around the reminder pill while it shows (steady when animations are reduced).</summary>
+    public bool ReminderBlink { get; set; } = true;
     public string ToggleHotkey { get; set; } = "Ctrl+Alt+T";
     public bool CompletedFadeOut { get; set; } = true;
 
@@ -154,6 +162,9 @@ public sealed class AppSettings
         s.ReminderLeadMinutes = int.TryParse(Get(Keys.ReminderLeadMinutes), NumberStyles.Integer, CultureInfo.InvariantCulture, out var lead)
             && ReminderLeadChoices.Contains(lead) ? lead : 0;
         s.ReminderPillAlert = B(Keys.ReminderPillAlert, s.ReminderPillAlert);
+        s.ReminderAlertWidthPercent = int.TryParse(Get(Keys.ReminderAlertWidthPercent), NumberStyles.Integer, CultureInfo.InvariantCulture, out var pct)
+            && ReminderAlertWidthChoices.Contains(pct) ? pct : s.ReminderAlertWidthPercent;
+        s.ReminderBlink = B(Keys.ReminderBlink, s.ReminderBlink);
         var hotkey = Get(Keys.ToggleHotkey);
         s.ToggleHotkey = string.IsNullOrWhiteSpace(hotkey) ? s.ToggleHotkey : hotkey.Trim();
         s.CompletedFadeOut = B(Keys.CompletedFadeOut, s.CompletedFadeOut);
@@ -208,6 +219,8 @@ public sealed class AppSettings
             [Keys.RemindersEnabled] = B(RemindersEnabled),
             [Keys.ReminderLeadMinutes] = (ReminderLeadChoices.Contains(ReminderLeadMinutes) ? ReminderLeadMinutes : 0).ToString(CultureInfo.InvariantCulture),
             [Keys.ReminderPillAlert] = B(ReminderPillAlert),
+            [Keys.ReminderAlertWidthPercent] = (ReminderAlertWidthChoices.Contains(ReminderAlertWidthPercent) ? ReminderAlertWidthPercent : 50).ToString(CultureInfo.InvariantCulture),
+            [Keys.ReminderBlink] = B(ReminderBlink),
             [Keys.ToggleHotkey] = ToggleHotkey,
             [Keys.CompletedFadeOut] = B(CompletedFadeOut),
             [Keys.DailyBackupEnabled] = B(DailyBackupEnabled),

@@ -608,3 +608,34 @@ So this entry covers PLAN §8 Phase 7 steps 1, 2, 3, 4c (scan of the portable fi
 - *Exact next step:* get the user's test findings (defects first). Fix them, bump to `1.0.0-rc.2` if needed and re-run `tools/publish.ps1`. When the user says the testing is done:
   install Inno Setup 6, write `installer/TaskIsland.iss` per PLAN step 4, ask the signing question (4b), scan, run the step 5 tests, set Version `1.0.0`, then tag and release.
 - *Perf scripts:* `tools/ui-tests/perf.ps1` takes `TI_EXE` (env var) to measure any exe; never run two chains against the same `%TEMP%\TaskIslandP6<mode>` folder.
+
+### Change — wide reminder pill with a blinking red border (2026-11-04, Opus 5.5)
+
+User request (while testing rc.1): "for the reminder, can you make it blinking red light colour on the border and the width expand
+for 50% of the screen or maybe we can set it".
+
+- **Width:** new setting `ReminderAlertWidthPercent` (Settings > Behaviour > Reminders > "Reminder width": Compact, 30, 40, **50**,
+  60, 75 % or Full width; default 50). `IslandPlacement.AlertWidthDip` (Core, unit-tested) turns it into DIPs for the island's
+  monitor and keeps the pill on the screen around the island's centre (offset included, 8 DIP gap to each edge). The island host and
+  window were a fixed 452 DIPs, so `IslandHost` got a live width (`SetHostWidth`) and `IslandPositioner.Apply` a width argument.
+  The window widens only for the alert (growing: window first, then host; narrowing: host first) and goes back to 452 once the
+  island has rested, or after the expand animation when the alert is clicked. The alert text gets 15 px instead of 13 px when the
+  pill is 600 design units or wider.
+- **Red border:** new setting `ReminderBlink` (default on, "Blink a red border"). `IslandHost.StartAlertBorder` adds a red line
+  (#FF3B30, 2.5 px) with a soft red glow (8 px, 40 %) on the island's own geometry, so it follows the morph. Opacity 1 -> 0.12 and
+  back, 450 ms each way (about 1.1 blinks a second, under the 3 a second flashing limit), sine ease. Steady in reduced motion. With
+  the blink on, the accent pulse is skipped (it would compete and needs 12 % extra window width). The ring is removed when the alert
+  ends, so no animation runs afterwards.
+- **Debug:** `--snap-delay <ms>` for `--snap`; the snapshot logs the border state. `tools/ui-tests/alert_snap.ps1` seeds a due task
+  and snapshots the pill. `p5a.ps1`/`p5c.ps1` no longer expect the fixed width 400.
+
+**Measured (Debug, 1920x1080 at 125 %):** pill 960 px = 50 % of the screen, window 990 px, back to 565 px 0.17 s after the alert
+ended; panel opened during the alert from the 990 px window and narrowed after the expand. Border opacity 0.99 at one moment and
+0.17 half a blink later. Settings: rows present, 50 % shown, disabled with "Widen the island" off, 75 % saved.
+Tests: 438 green (315 + 123, 19 new in `ReminderAlertTests`).
+
+**Mistakes:** the first snapshots of the blink always landed on its dim moment (the snapshot fires 2.2 s after start, which is
+about 0.4 s into a blink cycle), so the border looked missing; a steady (reduced motion) snapshot and logged opacities showed it
+works. `-Extra '--snap-delay',1750` through `powershell -File` arrived as one string, so the delay first had no effect.
+
+**Not done:** not in the released rc.1 portable zip; needs a new build (rc.2) for the user to see it in the copy they run.

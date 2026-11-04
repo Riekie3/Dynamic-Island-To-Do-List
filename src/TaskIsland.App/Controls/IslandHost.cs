@@ -18,6 +18,7 @@ public enum IslandState { Mini, Reaction, Info, Panel }
 /// </summary>
 public sealed class IslandHost : Grid
 {
+    /// <summary>The usual host (and window) width. A wide reminder pill widens it for a few seconds (<see cref="SetHostWidth"/>).</summary>
     public const double HostWidth = 452;
 
     /// <summary>
@@ -38,6 +39,8 @@ public sealed class IslandHost : Grid
     private readonly RectangleGeometry _geo = new(), _glossGeo = new();
     private readonly Path _glow, _body, _panelBody, _gloss, _outline;
     private Path? _pulse;
+    private Grid? _alertBorder;
+    private double _hostW = HostWidth;
     private readonly Border _shadow;
     private readonly Grid _shadowHost = new() { IsHitTestVisible = false };
     private readonly DropShadowEffect _shadowEffect;
@@ -101,7 +104,7 @@ public sealed class IslandHost : Grid
         if (_pulse is not null) return;
         var geo = _geo.Clone();
         geo.Freeze();
-        var scale = new ScaleTransform(1, 1, HostWidth / 2, 0);
+        var scale = new ScaleTransform(1, 1, _hostW / 2, 0);
         var ring = new Path { Data = geo, StrokeThickness = 2, IsHitTestVisible = false, RenderTransform = scale };
         ring.SetResourceReference(Shape.StrokeProperty, "AccentBrush");
         _pulse = ring;
@@ -129,7 +132,61 @@ public sealed class IslandHost : Grid
     public IslandState State { get; private set; } = IslandState.Mini;
     public bool IsAnimating { get; private set; }
     /// <summary>Current visible island rectangle in host coordinates.</summary>
-    public Rect IslandRect => new((HostWidth - _now.W) / 2, 0, _now.W, _now.H);
+    public Rect IslandRect => new((_hostW - _now.W) / 2, 0, _now.W, _now.H);
+
+    /// <summary>Current host width in DIPs (<see cref="HostWidth"/> except while a wide reminder pill shows).</summary>
+    public double CurrentHostWidth => _hostW;
+
+    /// <summary>
+    /// Widens or narrows the host. The island stays centred, and the window is resized by the same amount around the
+    /// same centre, so nothing moves on screen.
+    /// </summary>
+    public void SetHostWidth(double width)
+    {
+        if (Math.Abs(width - _hostW) < 0.5) return;
+        _hostW = width;
+        Width = width;
+        Render(_now);
+    }
+
+    private static readonly SolidColorBrush AlertRed = Frozen(new SolidColorBrush(Color.FromRgb(0xFF, 0x3B, 0x30)));
+
+    /// <summary>
+    /// Reminder alert border: a red line with a soft red glow on the island's own shape (it follows the morph). With
+    /// <paramref name="blink"/> it fades between full and dim about once a second (well under the 3 flashes a second
+    /// limit for flashing content); otherwise it stays steady. Removed again by <see cref="StopAlertBorder"/>, so no
+    /// animation runs after the alert.
+    /// </summary>
+    public void StartAlertBorder(bool blink)
+    {
+        StopAlertBorder();
+        var glow = new Path { Data = _geo, Stroke = AlertRed, StrokeThickness = 8, Opacity = 0.4, IsHitTestVisible = false };
+        var line = new Path { Data = _geo, Stroke = AlertRed, StrokeThickness = 2.5, IsHitTestVisible = false };
+        var ring = new Grid { IsHitTestVisible = false, Background = null };
+        ring.Children.Add(glow);
+        ring.Children.Add(line);
+        _alertBorder = ring;
+        Children.Add(ring);
+        if (!blink) return;
+        var a = new DoubleAnimation(1, 0.12, TimeSpan.FromMilliseconds(450))
+        {
+            AutoReverse = true,
+            RepeatBehavior = RepeatBehavior.Forever,
+            EasingFunction = new SineEase { EasingMode = EasingMode.EaseInOut },
+        };
+        ring.BeginAnimation(OpacityProperty, a);
+    }
+
+    public bool HasAlertBorder => _alertBorder is not null;
+    public double AlertBorderOpacity => _alertBorder?.Opacity ?? 0;
+
+    public void StopAlertBorder()
+    {
+        if (_alertBorder is null) return;
+        _alertBorder.BeginAnimation(OpacityProperty, null);
+        Children.Remove(_alertBorder);
+        _alertBorder = null;
+    }
 
     /// <summary>
     /// Flush with the top of the screen (TopMargin 0): flat top, rounded bottom corners. The shared geometry is simply
@@ -274,9 +331,9 @@ public sealed class IslandHost : Grid
         _shadow.Width = _to.W;
         _shadow.Height = _to.H;
         // The shadow layer is solid, so it is cut out under the panel; otherwise it would hide the panel opacity setting.
-        double sx = (HostWidth - _to.W) / 2, up = _flush ? 24 : 0;
+        double sx = (_hostW - _to.W) / 2, up = _flush ? 24 : 0;
         _shadowHost.Clip = new CombinedGeometry(GeometryCombineMode.Exclude,
-            new RectangleGeometry(new Rect(-100, -100, HostWidth + 200, _to.H + 300)),
+            new RectangleGeometry(new Rect(-100, -100, _hostW + 200, _to.H + 300)),
             new RectangleGeometry(new Rect(sx, -up, _to.W, _to.H + up), 24, 24));
         _shadow.Visibility = Visibility.Visible;
         Anim.To(_shadow, OpacityProperty, 1, fade);
@@ -312,7 +369,7 @@ public sealed class IslandHost : Grid
     private void Render(Look l)
     {
         _now = l;
-        double x = (HostWidth - l.W) / 2;
+        double x = (_hostW - l.W) / 2;
         double up = _flush ? l.R : 0;
         _geo.Rect = new Rect(x, -up, l.W, l.H + up);
         _geo.RadiusX = _geo.RadiusY = l.R;

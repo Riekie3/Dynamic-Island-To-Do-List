@@ -142,7 +142,7 @@ public partial class App : Application
             if (!options.Startup && !settings.StartCollapsed) window.OpenFromOutside();
 #if DEBUG
             if (options.Demo is { } demo) window.RunDemo(demo);
-            if (options.Snap is { } snap) window.SnapAndExit(snap, TimeSpan.FromSeconds(2.2));
+            if (options.Snap is { } snap) window.SnapAndExit(snap, TimeSpan.FromMilliseconds(options.SnapDelayMs));
             if (options.SettingsPage is { } page)
             {
                 var launcher = _services.GetRequiredService<SettingsLauncher>();
@@ -427,6 +427,8 @@ public sealed class LaunchOptions
     public int? PopSeconds { get; private set; }
     public string? Filter { get; private set; }
     public string? Snap { get; private set; }
+    /// <summary>Debug: milliseconds before --snap saves the PNG (default 2200).</summary>
+    public int SnapDelayMs { get; private set; } = 2200;
     public string? Companion { get; private set; }
     /// <summary>Debug: open the Settings window at start (optionally on a page: general, appearance, behaviour, lists, data, about).</summary>
     public string? SettingsPage { get; private set; }
@@ -450,6 +452,7 @@ public sealed class LaunchOptions
             else if (a == "--no-mascot") o.NoMascot = true;
             else if (a == "--filter") o.Filter = Next();
             else if (a == "--snap") o.Snap = Next();
+            else if (a == "--snap-delay" && int.TryParse(Next(), out var sd)) o.SnapDelayMs = sd;
             else if (a == "--companion") o.Companion = Next();
             else if (a == "--settings") o.SettingsPage = Next();
             else if (a == "--snap-settings") o.SnapSettings = Next();

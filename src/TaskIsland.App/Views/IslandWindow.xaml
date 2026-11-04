@@ -17,7 +17,7 @@
         <c:IslandHost x:Name="Host" AutomationProperties.Name="TaskIsland">
             <c:IslandHost.Info>
                 <!-- Info pill (section 6.3): ring + count + chevron; on a longer hover the top task (peek). -->
-                <Grid Width="420" Height="36">
+                <Grid x:Name="InfoGrid" Width="420" Height="36">
                     <StackPanel x:Name="InfoCount" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
                         <Grid Width="20" Height="20" VerticalAlignment="Center">
                             <c:ProgressRing Fraction="{Binding PillFraction}" ArcBrush="{DynamicResource AccentBrush}"

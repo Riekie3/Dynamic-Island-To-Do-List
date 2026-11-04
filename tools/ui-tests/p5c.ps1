@@ -66,7 +66,7 @@ $p = Start-TI $root @('--full-motion','--pop-seconds','3600') $Config
 # A: pill on (default)
 WaitUntil $seed.AddSeconds(37)
 $log = Log
-Check 'A: pill alert shown for a task due now' ($log -match 'reminder pill alert: ".*Task A" width 400')
+Check 'A: pill alert shown for a task due now' ($log -match 'reminder pill alert: ".*Task A" width \d+')
 Check 'A: the pill text is just the title (list colour dot, no "Due now")' (-not ($log -match 'reminder pill alert: ".*Due now'))
 Check 'A: notification still shown' ($log -match 'balloon: Personal / .*Due now: Task A')
 Start-Sleep -Seconds 6

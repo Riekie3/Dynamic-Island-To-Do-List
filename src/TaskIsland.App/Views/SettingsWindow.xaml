@@ -206,6 +206,15 @@
                             <c:SettingRow Title="Widen the island when a reminder fires" Description="Shows the task title for 5 seconds. Off: just the pulse, the face and the notification.">
                                 <CheckBox Style="{StaticResource ToggleSwitch}" IsChecked="{Binding ReminderPillAlert}"/>
                             </c:SettingRow>
+                            <Rectangle Style="{StaticResource CardDivider}"/>
+                            <c:SettingRow Title="Reminder width" Description="How wide the island grows for a reminder. Compact is the small pill.">
+                                <ComboBox Style="{StaticResource SettingsCombo}" ItemsSource="{Binding AlertWidthOptions}" SelectedIndex="{Binding AlertWidthIndex}"
+                                          IsEnabled="{Binding AlertOptionsEnabled}" x:Name="AlertWidthBox"/>
+                            </c:SettingRow>
+                            <Rectangle Style="{StaticResource CardDivider}"/>
+                            <c:SettingRow Title="Blink a red border" Description="A red light blinks around the island while the reminder shows. Steady when animations are off.">
+                                <CheckBox Style="{StaticResource ToggleSwitch}" IsChecked="{Binding ReminderBlink}" IsEnabled="{Binding AlertOptionsEnabled}"/>
+                            </c:SettingRow>
                         </StackPanel>
                     </Border>
                 </StackPanel>

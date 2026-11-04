@@ -24,7 +24,8 @@ public sealed class IslandPositioner(AppSettings settings)
 
     public PixelRect? LastRect { get; private set; }
 
-    public void Apply(IntPtr hwnd, bool expanded)
+    /// <summary><paramref name="widthDip"/>: wider than <see cref="WidthDip"/> only while a wide reminder pill shows.</summary>
+    public void Apply(IntPtr hwnd, bool expanded, double widthDip = WidthDip)
     {
         MonitorInfo m;
         try
@@ -40,7 +41,7 @@ public sealed class IslandPositioner(AppSettings settings)
             FileLogger.Warn($"positioning skipped: {ex.Message}");
             return;
         }
-        var rect = IslandPlacement.Compute(Bounds(m), m.Scale, WidthDip, expanded ? ExpandedHeightDip : CollapsedHeightDip,
+        var rect = IslandPlacement.Compute(Bounds(m), m.Scale, widthDip, expanded ? ExpandedHeightDip : CollapsedHeightDip,
             PanelWidthDip, settings.HorizontalOffset, settings.TopMargin);
         if (Monitor != m || LastRect != rect)
             FileLogger.Info($"island placed on {m.DeviceName} ({m.Width}x{m.Height} at {m.Left},{m.Top}, scale {m.Scale:0.##}) " +

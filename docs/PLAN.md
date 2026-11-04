@@ -370,6 +370,8 @@ Rules (unit-tested):
 | `RemindersEnabled` | `true` | Behaviour | |
 | `ReminderLeadMinutes` | `0` | Behaviour | Early reminder before the due time: `0` = off, else 5 / 15 / 30 / **60** / 120 / 1440 minutes. Only for tasks with a due time (date-only tasks have none). New key, Phase 5 |
 | `ReminderPillAlert` | `true` | Behaviour | The island widens and shows the task title when a reminder fires (§7.9). Off = pulse, face and notification only. New key, Phase 5 |
+| `ReminderAlertWidthPercent` | `50` | Behaviour | "Reminder width": how wide the reminder pill grows, in % of the screen width: `0` = Compact (the old `min(NotchWidth + 200, 420)`), 30 / 40 / **50** / 60 / 75 / 100. Anything else falls back to 50. Added after rc.1 at the user's request |
+| `ReminderBlink` | `true` | Behaviour | "Blink a red border": a red border blinks around the reminder pill (about once a second) instead of the accent pulse; steady in reduced motion. Added after rc.1 |
 | `ToggleHotkey` | `Ctrl+Alt+T` | Behaviour | capture box. Shows "in use by another app" if RegisterHotKey fails |
 | `DailyBackupEnabled` | `true` | Data | |
 | `CompletedFadeOut` | `true` | Behaviour | the 2-second slide-out |
@@ -487,8 +489,9 @@ hidden instantly before collapsing. The collapsed pill has no shadow (a real isl
 - Count change: the number slides 6 px up while crossfading (`fast`), once per change.
 - Reminder pulse: an accent ring scales 1 → 1.12 and fades out, **2 cycles of 600 ms, then the animation is removed**.
   In reduced motion: no ring, the overdue/accent dot appears instead.
-- Reminder pill alert (Phase 5, §7.9): clip width tween to `min(NotchWidth + 200, 420)` in `normal`, text crossfade, hold 5 s,
-  tween back. One-shot timer, no loop.
+- Reminder pill alert (Phase 5, §7.9): clip width tween to the `ReminderAlertWidthPercent` width in `normal`, text crossfade,
+  hold 5 s, tween back. One-shot timer; the only repeating animation is the red border blink, which exists only while the
+  alert shows.
 
 **Rules for every animation** (enforced in code review, §6.7): finite duration, `FillBehavior=Stop` with the final value
 set as the local value (so no animation clock stays alive), only `Opacity`, `RenderTransform`, `Clip` geometry or a brush
@@ -837,8 +840,13 @@ pulse the pill, `MarkReminderShownAsync`. Tasks already overdue at startup → o
 
 **Alert style (decided 2026-11-04, built in Phase 5).** A due reminder always does all of: Windows notification, accent pulse
 ring, Surprised face. Phase 5 adds the **widening pill alert** (`ReminderPillAlert`, default on):
-- The collapsed island widens (same width tween as the hover peek, to `min(NotchWidth + 200, 420)` px) and shows
-  "⏰ <task title>" with the list-colour dot, holds **5 s**, then shrinks back. The height does not change and the panel does
+- The collapsed island widens (same width tween as the hover peek) and shows
+  "⏰ <task title>" with the list-colour dot, holds **5 s**, then shrinks back. Width (changed after rc.1 at the user's
+  request): `ReminderAlertWidthPercent` of the screen, default **50 %** (Compact = the old `min(NotchWidth + 200, 420)`),
+  kept on the screen around the island's centre (`IslandPlacement.AlertWidthDip`). The window widens for the alert and
+  narrows again once the island has rested (or once the panel has opened). With `ReminderBlink` (default on) a **red border
+  blinks** around the island (about once a second, well under the 3-flashes-a-second limit) instead of the accent pulse;
+  steady red in reduced motion; removed when the alert ends. The height does not change and the panel does
   not open. Mouse hover keeps it open until the mouse leaves. Clicking it opens the panel on that task's list.
 - Several tasks at once: "⏰ 3 tasks due". An overdue-at-start notice shows "⏰ 2 tasks overdue".
 - Skipped (notification still shows) when the panel is expanded, the island is hidden (Pause, user Hide, full screen), or the

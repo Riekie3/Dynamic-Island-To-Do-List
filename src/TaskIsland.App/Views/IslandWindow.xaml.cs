@@ -41,6 +41,7 @@ public partial class IslandWindow : Window
     private IntPtr _hwnd;
     private bool _hovering, _expanded, _peeking, _allowClose;
     private bool _windowLarge;                    // the window currently has the expanded size
+    private double _windowWidth = IslandPositioner.WidthDip; // wider only while a wide reminder pill shows
     private bool _userHidden, _paused, _fullScreen; // reasons the notch is hidden (PLAN.md sections 7.4 and 7.5)
     private DateTime _lastAutoCollapse = DateTime.MinValue;
     private ReminderNotice? _alert;                // the widening reminder pill is showing (PLAN.md section 7.9)
@@ -210,7 +211,7 @@ public partial class IslandWindow : Window
     public void Reposition()
     {
         if (_hwnd == IntPtr.Zero) return;
-        _positioner.Apply(_hwnd, _windowLarge);
+        _positioner.Apply(_hwnd, _windowLarge, _windowWidth);
     }
 
     /// <summary>After wake, display change or an Explorer restart: our window styles and topmost again.</summary>
@@ -308,6 +309,9 @@ public partial class IslandWindow : Window
     /// The collapsed island widens to show "⏰ title" with the list colour dot, holds 5 s (longer while the mouse is on it)
     /// and shrinks back; a click opens the task's list. Returns false (the caller then falls back to the face) when the setting
     /// is off, the panel is open or the island is hidden. Reduced motion: no tween, the text swaps in place.
+    /// Width: <see cref="AppSettings.ReminderAlertWidthPercent"/> of the screen (the window widens for the alert and narrows
+    /// again once the island has rested). With <see cref="AppSettings.ReminderBlink"/> a red border blinks around it
+    /// (steady in reduced motion) instead of the accent pulse.
     /// </summary>
     public bool ShowReminderAlert(ReminderNotice notice)
     {
@@ -319,19 +323,26 @@ public partial class IslandWindow : Window
         _director.End();
         _alert = notice;
         _alertHeld = false;
-        double w = Math.Min(_settings.NotchWidth + 200, 420);
+        double w = AlertDesignWidth();
+        SetWindowWidth(w * IslandHost.CompactScale);
+        InfoGrid.Width = Math.Max(420, w);
         AlertText.Text = notice.PillText;
         AlertText.MaxWidth = w - 40;
+        AlertText.FontSize = w >= 600 ? 15 : 13;
+        bool blink = _settings.ReminderBlink;
+        if (blink) Host.StartAlertBorder(blink: !_motion.IsReduced);
         AlertDot.Fill = _vm.ReminderDotBrush(notice.ListId);
         InfoAlert.Visibility = Visibility.Visible;
         InfoAlert.Opacity = 1;
         Anim.Stop(InfoCount, OpacityProperty, 0);
         InfoCount.Opacity = 0;
         var morph = _motion.IsReduced ? TimeSpan.Zero : _motion.MorphExpand;
-        FileLogger.Info($"reminder pill alert: \"{notice.PillText}\" width {w:0}");
+        string border = !blink ? "" : _motion.IsReduced ? ", red border steady" : ", red border blinking";
+        FileLogger.Info($"reminder pill alert: \"{notice.PillText}\" width {w:0}" +
+            $" ({_settings.ReminderAlertWidthPercent}% setting, window {_windowWidth:0}){border}");
         Host.AnimateTo(IslandState.Info, w, 36, morph, FluentEase.Decelerate, () =>
         {
-            if (_alert == notice) PulseReminder();
+            if (_alert == notice && !blink) PulseReminder();
         });
         AutomationProperties.SetName(Host, "TaskIsland reminder: " + notice.PillText);
         _alertTimer.Stop();
@@ -350,8 +361,47 @@ public partial class IslandWindow : Window
         InfoAlert.Opacity = 0;
         Anim.Stop(InfoCount, OpacityProperty, 1);
         InfoCount.Opacity = 1;
+        InfoGrid.Width = 420;
+        Host.StopAlertBorder();
         FileLogger.Info("reminder pill alert ended");
         if (settle && !_expanded) GoResting(animate: true);
+    }
+
+    /// <summary>Reminder pill width in design units (the island draws them at <see cref="IslandHost.CompactScale"/>).</summary>
+    private double AlertDesignWidth()
+    {
+        double compact = Math.Min(_settings.NotchWidth + 200, 420);
+        var m = _positioner.Monitor;
+        if (m is null || _settings.ReminderAlertWidthPercent <= 0) return compact;
+        double dip = IslandPlacement.AlertWidthDip(IslandPositioner.Bounds(m), m.Scale, _settings.ReminderAlertWidthPercent,
+            _settings.HorizontalOffset, IslandPositioner.PanelWidthDip, compact * IslandHost.CompactScale);
+        return Math.Round(dip / IslandHost.CompactScale);
+    }
+
+    /// <summary>
+    /// Window (and host) width for an island this wide on screen: the usual width, or more for a wide reminder pill, with
+    /// room for the red glow (or for the accent pulse, which grows the ring by 12 %), at most the monitor width.
+    /// </summary>
+    private void SetWindowWidth(double islandDip)
+    {
+        double need = _settings.ReminderBlink ? islandDip + 24 : islandDip * 1.12 + 24;
+        double w = Math.Max(IslandPositioner.WidthDip, Math.Ceiling(need));
+        if (_positioner.Monitor is { } m && m.Scale > 0)
+            w = Math.Max(IslandPositioner.WidthDip, Math.Min(w, Math.Floor(m.Width / m.Scale)));
+        if (Math.Abs(w - _windowWidth) < 0.5) return;
+        bool growing = w > _windowWidth;
+        _windowWidth = w;
+        // Growing: window first, so the island never draws past it. Narrowing: island host first.
+        if (!growing) Host.SetHostWidth(w);
+        if (_hwnd != IntPtr.Zero) _positioner.Apply(_hwnd, _windowLarge, w);
+        if (growing) Host.SetHostWidth(w);
+        FileLogger.Info($"window width {w:0}");
+    }
+
+    /// <summary>Back to the usual width once nothing wide is on screen.</summary>
+    private void RestoreWindowWidth()
+    {
+        if (_alert is null) SetWindowWidth(0);
     }
 
     /// <summary>Reminder: an accent ring pulses twice around the island (none in reduced motion: the overdue dot shows).</summary>
@@ -400,6 +450,7 @@ public partial class IslandWindow : Window
 
     private void Rested()
     {
+        if (!_expanded) RestoreWindowWidth();
         RefreshTuck();
         if (!_hovering && !_expanded) _efficiency.ScheduleOn();
         if (_panel is null)
@@ -603,7 +654,7 @@ public partial class IslandWindow : Window
         DebugLog($"expand: EnsurePanel {sw.ElapsedMilliseconds} ms");
 
         _windowLarge = true;
-        _positioner.Apply(_hwnd, expanded: true); // grow first, while nothing moves
+        _positioner.Apply(_hwnd, expanded: true, _windowWidth); // grow first, while nothing moves (still wide after a reminder pill)
         WindowStyler.SetNoActivate(_hwnd, false);
         Activate();
         WindowStyler.BringToForeground(_hwnd);
@@ -611,7 +662,7 @@ public partial class IslandWindow : Window
         double h = Host.MeasurePanel(MaxPanelHeight);
         DebugLog($"expand: measured {sw.ElapsedMilliseconds} ms");
         Host.AnimateTo(IslandState.Panel, IslandPositioner.PanelWidthDip, h, _motion.MorphExpand, FluentEase.Decelerate,
-            () => Host.ShowShadow(true, _motion.Fast));
+            () => { RestoreWindowWidth(); Host.ShowShadow(true, _motion.Fast); });
         _panel!.FocusQuickAdd();
         AutomationProperties.SetName(Host, "TaskIsland: to-do panel");
     }
@@ -629,7 +680,7 @@ public partial class IslandWindow : Window
         {
             if (_expanded) return; // re-expanded during the collapse
             _windowLarge = false;
-            _positioner.Apply(_hwnd, expanded: false); // shrink after, while nothing moves
+            _positioner.Apply(_hwnd, expanded: false, _windowWidth); // shrink after, while nothing moves
             WindowStyler.SetNoActivate(_hwnd, true);
             _director.SetSuppressed(Suppression.PanelOpen, false);
             ApplyVisibility(); // hidden again if Hide, Pause or a full-screen app is still in effect
@@ -827,6 +878,7 @@ public partial class IslandWindow : Window
         t.Tick += (_, _) =>
         {
             t.Stop();
+            FileLogger.Info($"snap: alert border {Host.HasAlertBorder}, opacity {Host.AlertBorderOpacity:0.00}");
             double scale = _positioner.Monitor?.Scale ?? 1;
             var root = (FrameworkElement)Content;
             int w = (int)Math.Round(root.ActualWidth * scale), h = (int)Math.Round(root.ActualHeight * scale);

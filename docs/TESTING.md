@@ -234,6 +234,17 @@ Use the installed or Release build with your real data. After each step, the log
 6. **Monitors (if you have two):** Settings > General > Monitor: pick the second display; the notch moves at once.
 7. **Memory:** close Settings and watch Task Manager: memory should settle back near where it was before you opened it.
 
+## Change after rc.1 — wide reminder with a blinking red border (👤)
+
+Checked by the agent (2026-11-04, Debug build, test data folder): 50 % of a 1920 px screen at 125 % = a 960 px pill in a 990 px
+window; the window goes back to 565 px (452 DIPs) after 5 s; opening the panel during the alert works and the window narrows after;
+the red border is at full strength (opacity 0.99) and dim (0.17) half a blink apart, steady in reduced motion; the Settings rows
+exist, default to 50 %, grey out with "Widen the island" off, and 75 % is saved. Still for you:
+
+1. Add a task due in 2 minutes. When it fires: the island grows to about half the screen with a red blinking border for 5 seconds.
+2. Settings > Behaviour > Reminders: try "Reminder width" = 75 % and Compact, and "Blink a red border" off (you get the old blue pulse).
+3. Tell me if the blink is too fast, too slow, too bright or not bright enough.
+
 ## Phase 6 — steps for the user (👤)
 
 Everything the agent could measure or script is ticked above with its numbers (see DEVLOG "Phase 6"). What is left needs your hands,
