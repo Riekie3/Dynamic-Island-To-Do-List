@@ -1,5 +1,9 @@
 # TaskIsland
 
+<p align="center">
+  <img src="docs/design-reference-2.png" width="100%" alt="TaskIsland: island buddy, to-do lists, red-blink reminders, installer, MIT licence">
+</p>
+
 A Dynamic Island-style to-do list for Windows 11, by **RieSources** (https://rie-sources.com).
 
 A small notch with a friendly face sits at the top centre of your screen. Click it and it stretches into a full to-do
