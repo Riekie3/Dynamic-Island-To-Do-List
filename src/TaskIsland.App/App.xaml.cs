@@ -1,4 +1,4 @@
-﻿using System.Windows;
+using System.Windows;
 using System.Windows.Media.Animation;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Win32;
@@ -104,8 +104,13 @@ public partial class App : Application
                     vm.ShowList(notice.ListId);
                     window.OpenFromOutside();
                 });
-                window.PulseReminder();
-                director.Request(Reaction.Surprised);
+                // The widening pill (setting on) takes the notch for 5 s and pulses once it is wide; otherwise the pulse ring
+                // and, for "due now", the Surprised face. The early reminder keeps the face unchanged (PLAN.md section 7.9).
+                if (!window.ShowReminderAlert(notice))
+                {
+                    window.PulseReminder();
+                    if (!notice.Early) director.Request(Reaction.Surprised);
+                }
             };
             vm.DataChanged += reminders.OnDataChanged;
             reminders.Start(vm.AllTasks);

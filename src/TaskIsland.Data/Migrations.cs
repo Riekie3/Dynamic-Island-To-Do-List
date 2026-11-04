@@ -49,6 +49,7 @@ internal static class Migrations
             INSERT INTO Settings (SettingKey, SettingValue)
               SELECT 'DefaultListId', CAST(Id AS TEXT) FROM Lists WHERE Name = 'Personal';
             """),
+        (2, "ALTER TABLE Tasks ADD COLUMN EarlyReminderShownAt TEXT;"),
     ];
 
     public static int Latest => All[^1].Version;

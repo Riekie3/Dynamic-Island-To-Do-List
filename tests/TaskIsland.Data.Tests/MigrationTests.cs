@@ -7,11 +7,11 @@ namespace TaskIsland.Data.Tests;
 public class MigrationTests
 {
     [Fact]
-    public async Task Fresh_database_is_at_schema_version_1()
+    public async Task Fresh_database_is_at_the_latest_schema_version()
     {
         using var t = await TestDb.CreateAsync();
-        Assert.Equal(1, await t.ScalarAsync<int>("PRAGMA user_version"));
-        Assert.Equal(1, Migrations.Latest);
+        Assert.Equal(2, await t.ScalarAsync<int>("PRAGMA user_version"));
+        Assert.Equal(2, Migrations.Latest);
     }
 
     [Fact]
@@ -103,5 +103,40 @@ public class MigrationTests
             "INSERT INTO Tasks (ListId, Title, Priority, CreatedAt, UpdatedAt) VALUES (1, 'x', 7, 'a', 'a')"));
         await Assert.ThrowsAsync<SqliteException>(() => Database.ExecAsync(conn,
             "INSERT INTO Tasks (ListId, Title, CreatedAt, UpdatedAt) VALUES (999, 'x', 'a', 'a')"));
+    }
+
+    [Fact]
+    public async Task A_version_1_database_is_upgraded_and_keeps_its_tasks()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "TaskIsland-mig-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            var paths = new AppPaths(root);
+            paths.EnsureCreated();
+            // Build a version 1 database by hand (the original schema), with one task.
+            var v1 = Migrations.All.Single(m => m.Version == 1).Sql;
+            await using (var conn = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = paths.DatabasePath, Pooling = false }.ToString()))
+            {
+                await conn.OpenAsync();
+                await Database.ExecAsync(conn, v1);
+                await Database.ExecAsync(conn, "INSERT INTO Tasks (ListId, Title, CreatedAt, UpdatedAt, DueDate, DueHasTime, ReminderShownAt) " +
+                    "VALUES (1, 'old task', '2026-11-01T08:00:00.000Z', '2026-11-01T08:00:00.000Z', '2026-11-02T09:00:00', 1, '2026-11-02T09:00:01.000Z');" +
+                    "PRAGMA user_version = 1;");
+            }
+            var db = new Database(paths);
+            await db.InitializeAsync();
+            var tasks = new SqliteTaskRepository(db, new FakeClock());
+            var task = (await tasks.GetAllAsync()).Single();
+            Assert.Equal("old task", task.Title);
+            Assert.NotNull(task.ReminderShownAt);
+            Assert.Null(task.EarlyReminderShownAt);
+            await using var conn2 = await db.OpenAsync();
+            Assert.Equal(Migrations.Latest, await Database.GetUserVersionAsync(conn2));
+        }
+        finally
+        {
+            SqliteConnection.ClearAllPools();
+            try { Directory.Delete(root, true); } catch (IOException) { }
+        }
     }
 }

@@ -17,7 +17,7 @@
         <c:IslandHost x:Name="Host" AutomationProperties.Name="TaskIsland">
             <c:IslandHost.Info>
                 <!-- Info pill (section 6.3): ring + count + chevron; on a longer hover the top task (peek). -->
-                <Grid Width="360" Height="36">
+                <Grid Width="420" Height="36">
                     <StackPanel x:Name="InfoCount" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
                         <Grid Width="20" Height="20" VerticalAlignment="Center">
                             <c:ProgressRing Fraction="{Binding PillFraction}" ArcBrush="{DynamicResource AccentBrush}"
@@ -42,6 +42,13 @@
                                 Opacity="0" Visibility="Collapsed">
                         <Ellipse Width="7" Height="7" Fill="{Binding TopTaskBrush}" VerticalAlignment="Center"/>
                         <TextBlock Text="{Binding TopTaskTitle}" Margin="8,0,0,0" MaxWidth="290" FontSize="13" FontWeight="SemiBold"
+                                   TextTrimming="CharacterEllipsis" Foreground="{StaticResource IslandTextBrush}" VerticalAlignment="Center"/>
+                    </StackPanel>
+                    <!-- Reminder pill alert (section 7.9): shown for 5 s in place of the count. -->
+                    <StackPanel x:Name="InfoAlert" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                Opacity="0" Visibility="Collapsed">
+                        <Ellipse x:Name="AlertDot" Width="7" Height="7" Fill="{StaticResource IslandTextBrush}" VerticalAlignment="Center"/>
+                        <TextBlock x:Name="AlertText" Margin="8,0,0,0" MaxWidth="340" FontSize="13" FontWeight="SemiBold"
                                    TextTrimming="CharacterEllipsis" Foreground="{StaticResource IslandTextBrush}" VerticalAlignment="Center"/>
                     </StackPanel>
                 </Grid>

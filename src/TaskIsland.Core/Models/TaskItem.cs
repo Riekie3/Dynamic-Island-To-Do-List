@@ -26,6 +26,9 @@ public sealed class TaskItem
     /// <summary>UTC. Set once the reminder for the current due date has been shown.</summary>
     public DateTime? ReminderShownAt { get; set; }
 
+    /// <summary>UTC. Set once the early reminder (ReminderLeadMinutes before the due time) was shown or skipped for this due time.</summary>
+    public DateTime? EarlyReminderShownAt { get; set; }
+
     /// <summary>Order within (ListId, Priority).</summary>
     public int SortOrder { get; set; }
 

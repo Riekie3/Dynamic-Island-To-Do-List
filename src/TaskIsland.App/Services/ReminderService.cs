@@ -9,7 +9,9 @@ namespace TaskIsland.App.Services;
 /// Due-date reminders (PLAN.md section 7.9). One one-shot <see cref="DispatcherTimer"/> set to the next due moment (at most
 /// 24 h ahead), recomputed after every task change, wake and clock change. Never polls. Each reminder fires once: it is
 /// marked in the database (<c>ReminderShownAt</c>) and remembered here with its due moment, so a changed due date can
-/// remind again.
+/// remind again. With <c>ReminderLeadMinutes</c> set, tasks with a due time also get one early reminder
+/// (<c>EarlyReminderShownAt</c>); an early moment found already past (start-up, wake, a task saved inside the window) is
+/// marked without a notification.
 /// </summary>
 public sealed class ReminderService : IDisposable
 {
@@ -21,6 +23,7 @@ public sealed class ReminderService : IDisposable
     private readonly IClock _clock;
     private readonly DispatcherTimer _timer;
     private readonly Dictionary<long, DateTime> _notified = [];
+    private readonly Dictionary<long, DateTime> _earlyNotified = [];
     private IReadOnlyList<TaskItem> _tasks = [];
     private bool _started;
 
@@ -57,10 +60,29 @@ public sealed class ReminderService : IDisposable
         if (_started) Run(Check.DataChanged);
     }
 
-    /// <summary>Wake, unlock, clock change or the Reminders setting changed.</summary>
+    /// <summary>Wake, unlock, clock change or a reminder setting (on/off, lead) changed.</summary>
     public void Recompute()
     {
         if (_started) Run(Check.Wake);
+    }
+
+    /// <summary>The tasks as the scheduler should see them: reminders already shown in this run count as shown, even before the next reload.</summary>
+    private List<TaskItem> View()
+    {
+        int lead = _settings.ReminderLeadMinutes;
+        var view = new List<TaskItem>(_tasks.Count);
+        foreach (var t in _tasks)
+        {
+            var due = ReminderScheduler.GetDueMoment(t);
+            bool dueDone = due is not null && _notified.TryGetValue(t.Id, out var dm) && dm == due;
+            bool earlyDone = due is not null && lead > 0 && _earlyNotified.TryGetValue(t.Id, out var em) && em == due;
+            if (!dueDone && !earlyDone) { view.Add(t); continue; }
+            var c = t.Clone();
+            if (dueDone) c.ReminderShownAt ??= DateTime.UtcNow;
+            if (earlyDone) c.EarlyReminderShownAt ??= DateTime.UtcNow;
+            view.Add(c);
+        }
+        return view;
     }
 
     private void Run(Check kind)
@@ -69,7 +91,34 @@ public sealed class ReminderService : IDisposable
         NextCheck = null;
         if (!_settings.RemindersEnabled) return;
         var now = _clock.Now;
-        var pending = ReminderScheduler.GetOverdue(_tasks, now).Where(r => !AlreadyNotified(r)).ToList();
+        int lead = _settings.ReminderLeadMinutes;
+        var view = View();
+
+        // Early reminders (before the due time). Only the timer firing on time notifies; anything found already past is
+        // marked quietly, so a task saved or found inside the window does not announce itself.
+        var early = ReminderScheduler.GetEarlyDue(view, now, lead).ToList();
+        if (early.Count > 0)
+        {
+            var quietEarly = kind != Check.Timer ? early : early.Where(r => ReminderText.IsLate(r, now)).ToList();
+            if (quietEarly.Count > 0)
+            {
+                MarkEarly(quietEarly);
+                FileLogger.Info($"early reminders ({kind}): {quietEarly.Count} already inside the {lead}-minute window, marked without a notification");
+            }
+            var fire = early.Except(quietEarly).ToList();
+            if (fire.Count > 0)
+            {
+                MarkEarly(fire);
+                if (ReminderText.DescribeEarly(fire, lead, ListName) is { } notice)
+                {
+                    FileLogger.Info($"early reminder ({kind}): {fire.Count} task(s), \"{notice.Text}\"");
+                    Notify?.Invoke(notice);
+                }
+            }
+            view = View();
+        }
+
+        var pending = ReminderScheduler.GetOverdue(view, now).Where(r => !AlreadyNotified(r)).ToList();
 
         if (kind == Check.DataChanged && pending.Count > 0)
         {
@@ -94,13 +143,16 @@ public sealed class ReminderService : IDisposable
             }
         }
 
-        var next = ReminderScheduler.GetNextUpcoming(_tasks.Where(t => !_notified.ContainsKey(t.Id)
-            || ReminderScheduler.GetDueMoment(t) != _notified[t.Id]), now);
+        var next = ReminderScheduler.GetNextUpcoming(View(), now, lead);
         if (next is null) return;
         _timer.Interval = ReminderText.Wait(next.Moment, now) + Slack;
         _timer.Start();
         NextCheck = now + _timer.Interval;
+        NextIsEarly = next.Early;
     }
+
+    /// <summary>The armed timer is for an early reminder (tests and the log).</summary>
+    public bool NextIsEarly { get; private set; }
 
     private bool AlreadyNotified(DueReminder r) => _notified.TryGetValue(r.Task.Id, out var m) && m == r.Moment;
 
@@ -113,6 +165,26 @@ public sealed class ReminderService : IDisposable
             ids.Add(r.Task.Id);
         }
         _ = SaveAsync(ids);
+    }
+
+    private void MarkEarly(IEnumerable<DueReminder> reminders)
+    {
+        var ids = new List<long>();
+        foreach (var r in reminders)
+        {
+            _earlyNotified[r.Task.Id] = ReminderScheduler.GetDueMoment(r.Task) ?? r.Moment;
+            ids.Add(r.Task.Id);
+        }
+        _ = SaveEarlyAsync(ids);
+    }
+
+    private async Task SaveEarlyAsync(List<long> ids)
+    {
+        foreach (var id in ids)
+        {
+            try { await _repo.MarkEarlyReminderShownAsync(id); }
+            catch (Exception ex) { FileLogger.Error($"reminders: could not mark task {id} as early-reminded", ex); }
+        }
     }
 
     private async Task SaveAsync(List<long> ids)

@@ -209,6 +209,46 @@ public class TaskRepositoryTests
         Assert.Null((await t.Tasks.GetAllAsync()).Single().ReminderShownAt);
     }
 
+    [Fact]
+    public async Task Early_reminder_mark_is_stored_and_survives_other_edits()
+    {
+        using var t = await TestDb.CreateAsync();
+        var task = await t.Tasks.AddAsync(P, "x", Priority.High, new DateTime(2026, 11, 2, 9, 0, 0), true);
+        Assert.Null((await t.Tasks.GetAllAsync()).Single().EarlyReminderShownAt);
+        await t.Tasks.MarkEarlyReminderShownAsync(task.Id);
+        Assert.Equal(t.Clock.UtcNow, (await t.Tasks.GetAllAsync()).Single().EarlyReminderShownAt);
+
+        task.Title = "renamed only";
+        await t.Tasks.UpdateAsync(task);
+        Assert.NotNull((await t.Tasks.GetAllAsync()).Single().EarlyReminderShownAt);
+    }
+
+    [Fact]
+    public async Task Changing_the_due_time_clears_both_reminder_marks()
+    {
+        using var t = await TestDb.CreateAsync();
+        var task = await t.Tasks.AddAsync(P, "x", Priority.High, new DateTime(2026, 11, 2, 9, 0, 0), true);
+        await t.Tasks.MarkEarlyReminderShownAsync(task.Id);
+        await t.Tasks.MarkReminderShownAsync(task.Id);
+
+        task.DueDate = new DateTime(2026, 11, 2, 10, 0, 0);
+        await t.Tasks.UpdateAsync(task);
+        var back = (await t.Tasks.GetAllAsync()).Single();
+        Assert.Null(back.ReminderShownAt);
+        Assert.Null(back.EarlyReminderShownAt);
+    }
+
+    [Fact]
+    public async Task Removing_the_due_date_clears_both_reminder_marks()
+    {
+        using var t = await TestDb.CreateAsync();
+        var task = await t.Tasks.AddAsync(P, "x", Priority.High, new DateTime(2026, 11, 2, 9, 0, 0), true);
+        await t.Tasks.MarkEarlyReminderShownAsync(task.Id);
+        task.DueDate = null;
+        await t.Tasks.UpdateAsync(task);
+        Assert.Null((await t.Tasks.GetAllAsync()).Single().EarlyReminderShownAt);
+    }
+
     // ---- complete ----
 
     [Fact]

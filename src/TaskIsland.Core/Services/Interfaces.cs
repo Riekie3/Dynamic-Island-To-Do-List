@@ -20,7 +20,7 @@ public interface ITaskRepository
 
     /// <summary>
     /// Saves title, description, priority, due date and list. A changed priority or list moves the task to the end of
-    /// its new group; a changed due date clears the "reminder shown" mark. Completion is not changed here.
+    /// its new group; a changed due date clears both "reminder shown" marks. Completion is not changed here.
     /// </summary>
     Task UpdateAsync(TaskItem item);
 
@@ -38,6 +38,9 @@ public interface ITaskRepository
     Task<int> ClearCompletedAsync(long? listId = null);
 
     Task MarkReminderShownAsync(long id);
+
+    /// <summary>Marks the early reminder as shown (or deliberately skipped) so it never fires twice, also after a restart.</summary>
+    Task MarkEarlyReminderShownAsync(long id);
 
     /// <summary>Replaces every list and task with the imported data in one transaction (JSON import "Replace").</summary>
     Task ReplaceAllAsync(TransferData data);

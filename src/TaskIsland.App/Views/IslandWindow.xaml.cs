@@ -1,4 +1,4 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using System.Windows;
 using System.Windows.Automation;
 using System.Windows.Input;
@@ -11,6 +11,7 @@ using TaskIsland.App.Services;
 using TaskIsland.App.ViewModels;
 using TaskIsland.Core.Mascot;
 using TaskIsland.Core.Models;
+using TaskIsland.Core.Services;
 using TaskIsland.Windows;
 
 namespace TaskIsland.App.Views;
@@ -33,13 +34,16 @@ public partial class IslandWindow : Window
     private readonly EfficiencyMode _efficiency;
     private readonly IslandPositioner _positioner;
     private readonly FaceRig _face = new();
-    private readonly DispatcherTimer _peekTimer;
+    private readonly DispatcherTimer _peekTimer, _alertTimer;
     private PanelView? _panel;
     private IntPtr _hwnd;
     private bool _hovering, _expanded, _peeking, _allowClose;
     private bool _windowLarge;                    // the window currently has the expanded size
     private bool _userHidden, _paused, _fullScreen; // reasons the notch is hidden (PLAN.md sections 7.4 and 7.5)
     private DateTime _lastAutoCollapse = DateTime.MinValue;
+    private ReminderNotice? _alert;                // the widening reminder pill is showing (PLAN.md section 7.9)
+    private bool _alertHeld;                       // 5 s are over but the mouse is on it
+    private static readonly TimeSpan AlertTime = TimeSpan.FromSeconds(5);
 
     public IslandWindow(IslandViewModel vm, AppSettings settings, MotionPolicy motion, ReactionDirector director,
         EfficiencyMode efficiency, IslandPositioner positioner)
@@ -63,6 +67,14 @@ public partial class IslandWindow : Window
 
         _peekTimer = new DispatcherTimer(DispatcherPriority.Normal);
         _peekTimer.Tick += (_, _) => { _peekTimer.Stop(); StartPeek(); };
+
+        _alertTimer = new DispatcherTimer(DispatcherPriority.Normal) { Interval = AlertTime };
+        _alertTimer.Tick += (_, _) =>
+        {
+            _alertTimer.Stop();
+            if (_hovering) _alertHeld = true; // hover keeps it open until the mouse leaves
+            else EndAlert();
+        };
 
         director.ReactionStarted += OnReactionStarted;
         director.ReactionEnded += OnReactionEnded;
@@ -198,6 +210,61 @@ public partial class IslandWindow : Window
         WindowStyler.ReassertTopmost(_hwnd);
     }
 
+    // ---- reminder pill alert (PLAN.md section 7.9) ----
+
+    public bool IsAlerting => _alert is not null;
+    public string? AlertContent => _alert?.PillText;
+    /// <summary>Current island width in design units (tests read it from the log).</summary>
+    public double IslandWidth => Host.IslandRect.Width / IslandHost.CompactScale;
+
+    /// <summary>
+    /// The collapsed island widens to show "⏰ title" with the list colour dot, holds 5 s (longer while the mouse is on it)
+    /// and shrinks back; a click opens the task's list. Returns false (the caller then falls back to the face) when the setting
+    /// is off, the panel is open or the island is hidden. Reduced motion: no tween, the text swaps in place.
+    /// </summary>
+    public bool ShowReminderAlert(ReminderNotice notice)
+    {
+        if (!_settings.ReminderPillAlert || _expanded || !IsVisible || _userHidden || _paused || _fullScreen) return false;
+        _peekTimer.Stop();
+        EndPeekVisual();
+        _director.End();
+        _alert = notice;
+        _alertHeld = false;
+        double w = Math.Min(_settings.NotchWidth + 200, 420);
+        AlertText.Text = notice.PillText;
+        AlertText.MaxWidth = w - 40;
+        AlertDot.Fill = _vm.ReminderDotBrush(notice.ListId);
+        InfoAlert.Visibility = Visibility.Visible;
+        InfoAlert.Opacity = 1;
+        Anim.Stop(InfoCount, OpacityProperty, 0);
+        InfoCount.Opacity = 0;
+        var morph = _motion.IsReduced ? TimeSpan.Zero : _motion.MorphExpand;
+        FileLogger.Info($"reminder pill alert: \"{notice.PillText}\" width {w:0}");
+        Host.AnimateTo(IslandState.Info, w, 36, morph, FluentEase.Decelerate, () =>
+        {
+            if (_alert == notice) PulseReminder();
+        });
+        AutomationProperties.SetName(Host, "TaskIsland reminder: " + notice.PillText);
+        _alertTimer.Stop();
+        _alertTimer.Start();
+        return true;
+    }
+
+    /// <summary>Back to the resting notch. <paramref name="settle"/> false: the panel is about to open, so nothing animates here.</summary>
+    private void EndAlert(bool settle = true)
+    {
+        if (_alert is null) return;
+        _alert = null;
+        _alertHeld = false;
+        _alertTimer.Stop();
+        InfoAlert.Visibility = Visibility.Collapsed;
+        InfoAlert.Opacity = 0;
+        Anim.Stop(InfoCount, OpacityProperty, 1);
+        InfoCount.Opacity = 1;
+        FileLogger.Info("reminder pill alert ended");
+        if (settle && !_expanded) GoResting(animate: true);
+    }
+
     /// <summary>Reminder: an accent ring pulses twice around the island (none in reduced motion: the overdue dot shows).</summary>
     public void PulseReminder()
     {
@@ -278,6 +345,7 @@ public partial class IslandWindow : Window
     private void OnReactionStarted(Reaction r, bool onPanel)
     {
         DebugLog($"reaction {r} onPanel={onPanel}");
+        if (_alert is not null && !onPanel) return; // the reminder pill has the notch for its 5 seconds
         if (onPanel)
         {
             _panel?.Face.Show(r, animate: true);
@@ -296,6 +364,7 @@ public partial class IslandWindow : Window
     private void OnReactionEnded(bool onPanel)
     {
         DebugLog($"reaction ended onPanel={onPanel} hovering={_hovering}");
+        if (_alert is not null && !onPanel) return;
         if (onPanel)
         {
             _panel?.Face.Show(Reaction.Neutral, animate: true);
@@ -333,6 +402,7 @@ public partial class IslandWindow : Window
         _hovering = true;
         _efficiency.Off();
         _director.NoteInteraction();
+        if (_alert is not null) return; // hover keeps the reminder pill open
         if (!Mascot)
         {
             Host.SetHover(true);
@@ -349,6 +419,11 @@ public partial class IslandWindow : Window
         if (_expanded) return;
         _hovering = false;
         _peekTimer.Stop();
+        if (_alert is not null)
+        {
+            if (_alertHeld) EndAlert();
+            return;
+        }
         if (!Mascot)
         {
             Host.SetHover(false);
@@ -365,6 +440,14 @@ public partial class IslandWindow : Window
         if (_expanded) return;
         e.Handled = true;
         _director.NoteInteraction();
+        if (_alert is { } alert)
+        {
+            // A click on the reminder opens the panel on that task's list.
+            EndAlert(settle: false);
+            _vm.ShowList(alert.ListId);
+            Expand();
+            return;
+        }
         // Clicking a face that popped up by itself makes it laugh; a second click (or any hover state) opens the panel.
         if (Mascot && Host.State == IslandState.Reaction && _director.Current is { } cur
             && !_director.CurrentIsHover && cur != Reaction.Laughing)
@@ -411,6 +494,7 @@ public partial class IslandWindow : Window
     public void Expand()
     {
         if (_expanded) return;
+        EndAlert(settle: false);
         _expanded = true;
         _peekTimer.Stop();
         _efficiency.Off();

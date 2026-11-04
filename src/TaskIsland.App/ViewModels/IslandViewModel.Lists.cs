@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Windows.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using TaskIsland.App.Logging;
@@ -110,6 +111,12 @@ public sealed partial class IslandViewModel
 
     /// <summary>The lists in switcher order (without "All"), for Settings and menus.</summary>
     public IReadOnlyList<TodoList> Lists => _lists;
+
+    /// <summary>The list colour dot for a reminder pill (accent blue when the list is unknown or the notice covers several lists).</summary>
+    public Brush ReminderDotBrush(long? listId) =>
+        listId is { } id && _lists.FirstOrDefault(l => l.Id == id) is { } l
+            ? BrushCache.Frozen(BrushCache.Parse(l.ColorHex), 1)
+            : BrushCache.Frozen(AllColor, 1);
 
     /// <summary>One chip per list in order; chips of unchanged lists are kept so their bindings are not disturbed.</summary>
     private void RebuildChips()

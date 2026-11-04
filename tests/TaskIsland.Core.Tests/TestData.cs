@@ -8,7 +8,7 @@ internal static class TestData
 
     public static TaskItem Task(long id, string title = "Task", Priority priority = Priority.Medium, long listId = 1,
         int sortOrder = 0, bool done = false, DateTime? created = null, DateTime? completedAt = null,
-        DateTime? deletedAt = null, DateTime? due = null, bool hasTime = false, DateTime? reminderShown = null) => new()
+        DateTime? deletedAt = null, DateTime? due = null, bool hasTime = false, DateTime? reminderShown = null, DateTime? earlyShown = null) => new()
     {
         Id = id,
         ListId = listId,
@@ -23,6 +23,7 @@ internal static class TestData
         DueDate = due,
         DueHasTime = hasTime,
         ReminderShownAt = reminderShown,
+        EarlyReminderShownAt = earlyShown,
     };
 
     public static TodoList List(long id, string name, int sortOrder, string color = "#1E90FF") =>

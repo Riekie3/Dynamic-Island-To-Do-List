@@ -98,7 +98,8 @@ public sealed class SqliteTaskRepository(Database db, IClock clock) : ITaskRepos
         await conn.ExecAsync(tx, """
             UPDATE Tasks SET ListId = @list, Title = @title, Description = @desc, Priority = @prio,
                              DueDate = @due, DueHasTime = @hasTime, SortOrder = @order, UpdatedAt = @now,
-                             ReminderShownAt = CASE WHEN @dueChanged = 1 THEN NULL ELSE ReminderShownAt END
+                             ReminderShownAt = CASE WHEN @dueChanged = 1 THEN NULL ELSE ReminderShownAt END,
+                             EarlyReminderShownAt = CASE WHEN @dueChanged = 1 THEN NULL ELSE EarlyReminderShownAt END
             WHERE Id = @id
             """,
             ("@list", item.ListId), ("@title", title), ("@desc", description), ("@prio", (int)item.Priority),
@@ -171,6 +172,13 @@ public sealed class SqliteTaskRepository(Database db, IClock clock) : ITaskRepos
     {
         await using var conn = await db.OpenAsync();
         await conn.ExecAsync(null, "UPDATE Tasks SET ReminderShownAt = @now WHERE Id = @id",
+            ("@now", IsoDate.ToUtcString(clock.UtcNow)), ("@id", id));
+    }
+
+    public async Task MarkEarlyReminderShownAsync(long id)
+    {
+        await using var conn = await db.OpenAsync();
+        await conn.ExecAsync(null, "UPDATE Tasks SET EarlyReminderShownAt = @now WHERE Id = @id",
             ("@now", IsoDate.ToUtcString(clock.UtcNow)), ("@id", id));
     }
 

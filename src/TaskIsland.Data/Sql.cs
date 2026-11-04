@@ -37,7 +37,7 @@ internal static class Sql
         (SqliteTransaction)await conn.BeginTransactionAsync();
 
     public const string TaskColumns =
-        "Id, ListId, Title, Description, Priority, IsCompleted, CreatedAt, UpdatedAt, CompletedAt, DueDate, DueHasTime, ReminderShownAt, SortOrder, DeletedAt";
+        "Id, ListId, Title, Description, Priority, IsCompleted, CreatedAt, UpdatedAt, CompletedAt, DueDate, DueHasTime, ReminderShownAt, SortOrder, DeletedAt, EarlyReminderShownAt";
 
     public static TaskItem ReadTask(SqliteDataReader r) => new()
     {
@@ -55,6 +55,7 @@ internal static class Sql
         ReminderShownAt = r.IsDBNull(11) ? null : Utc(r.GetString(11)),
         SortOrder = r.GetInt32(12),
         DeletedAt = r.IsDBNull(13) ? null : Utc(r.GetString(13)),
+        EarlyReminderShownAt = r.IsDBNull(14) ? null : Utc(r.GetString(14)),
     };
 
     public static TodoList ReadList(SqliteDataReader r) => new()

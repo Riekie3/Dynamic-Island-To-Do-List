@@ -10,6 +10,8 @@ public enum PillCountScope { AllLists, SelectedList }
 public enum IdleReactions { Off, Rare, Normal, Lively }
 /// <summary>Small idle movements of the face between reactions: blinks, glances, breathing (PLAN.md section 6.8).</summary>
 public enum CompanionLevel { Off, Calm, Lively }
+/// <summary>Where the accent colour comes from (PLAN.md section 5).</summary>
+public enum AccentSource { Default, Windows }
 
 /// <summary>
 /// Strongly typed view of the key/value Settings table (PLAN.md section 5). Unknown, missing or invalid
@@ -41,6 +43,9 @@ public sealed class AppSettings
         public const string RestoreAfterWake = nameof(RestoreAfterWake);
         public const string PeekOnHover = nameof(PeekOnHover);
         public const string RemindersEnabled = nameof(RemindersEnabled);
+        public const string ReminderLeadMinutes = nameof(ReminderLeadMinutes);
+        public const string ReminderPillAlert = nameof(ReminderPillAlert);
+        public const string AccentSource = nameof(AccentSource);
         public const string ToggleHotkey = nameof(ToggleHotkey);
         public const string DailyBackupEnabled = nameof(DailyBackupEnabled);
         public const string CompletedFadeOut = nameof(CompletedFadeOut);
@@ -73,6 +78,7 @@ public sealed class AppSettings
     public IdleReactions IdleReactions { get; set; } = IdleReactions.Normal;
     public CompanionLevel Companion { get; set; } = CompanionLevel.Calm;
     public DensityMode Density { get; set; } = DensityMode.Comfortable;
+    public AccentSource AccentSource { get; set; } = AccentSource.Default;
 
     // Behaviour
     public bool HideInFullScreen { get; set; } = true;
@@ -82,6 +88,12 @@ public sealed class AppSettings
     public bool RestoreAfterWake { get; set; } = true;
     public bool PeekOnHover { get; set; } = true;
     public bool RemindersEnabled { get; set; } = true;
+    /// <summary>The minutes offered for the early reminder (0 = off). Anything else in the database falls back to off.</summary>
+    public static readonly IReadOnlyList<int> ReminderLeadChoices = [0, 5, 15, 30, 60, 120, 1440];
+    /// <summary>Early reminder this many minutes before the due time (tasks with a due time only). 0 = off.</summary>
+    public int ReminderLeadMinutes { get; set; } = 0;
+    /// <summary>The island widens and shows the task title when a reminder fires (PLAN.md section 7.9).</summary>
+    public bool ReminderPillAlert { get; set; } = true;
     public string ToggleHotkey { get; set; } = "Ctrl+Alt+T";
     public bool CompletedFadeOut { get; set; } = true;
 
@@ -131,12 +143,17 @@ public sealed class AppSettings
         s.IdleReactions = E(Keys.IdleReactions, s.IdleReactions);
         s.Companion = E(Keys.Companion, s.Companion);
         s.Density = E(Keys.Density, s.Density);
+        s.AccentSource = E(Keys.AccentSource, s.AccentSource);
         s.HideInFullScreen = B(Keys.HideInFullScreen, s.HideInFullScreen);
         s.MonitorDeviceName = Get(Keys.MonitorDeviceName) ?? s.MonitorDeviceName;
         s.AutoCollapseSeconds = I(Keys.AutoCollapseSeconds, s.AutoCollapseSeconds, 0, 3600);
         s.RestoreAfterWake = B(Keys.RestoreAfterWake, s.RestoreAfterWake);
         s.PeekOnHover = B(Keys.PeekOnHover, s.PeekOnHover);
         s.RemindersEnabled = B(Keys.RemindersEnabled, s.RemindersEnabled);
+        // Only the offered values count; anything else (also out-of-range numbers) means off, it is not clamped to 1 day.
+        s.ReminderLeadMinutes = int.TryParse(Get(Keys.ReminderLeadMinutes), NumberStyles.Integer, CultureInfo.InvariantCulture, out var lead)
+            && ReminderLeadChoices.Contains(lead) ? lead : 0;
+        s.ReminderPillAlert = B(Keys.ReminderPillAlert, s.ReminderPillAlert);
         var hotkey = Get(Keys.ToggleHotkey);
         s.ToggleHotkey = string.IsNullOrWhiteSpace(hotkey) ? s.ToggleHotkey : hotkey.Trim();
         s.CompletedFadeOut = B(Keys.CompletedFadeOut, s.CompletedFadeOut);
@@ -172,12 +189,15 @@ public sealed class AppSettings
             [Keys.IdleReactions] = IdleReactions.ToString(),
             [Keys.Companion] = Companion.ToString(),
             [Keys.Density] = Density.ToString(),
+            [Keys.AccentSource] = AccentSource.ToString(),
             [Keys.HideInFullScreen] = B(HideInFullScreen),
             [Keys.MonitorDeviceName] = MonitorDeviceName ?? "",
             [Keys.AutoCollapseSeconds] = AutoCollapseSeconds.ToString(CultureInfo.InvariantCulture),
             [Keys.RestoreAfterWake] = B(RestoreAfterWake),
             [Keys.PeekOnHover] = B(PeekOnHover),
             [Keys.RemindersEnabled] = B(RemindersEnabled),
+            [Keys.ReminderLeadMinutes] = (ReminderLeadChoices.Contains(ReminderLeadMinutes) ? ReminderLeadMinutes : 0).ToString(CultureInfo.InvariantCulture),
+            [Keys.ReminderPillAlert] = B(ReminderPillAlert),
             [Keys.ToggleHotkey] = ToggleHotkey,
             [Keys.CompletedFadeOut] = B(CompletedFadeOut),
             [Keys.DailyBackupEnabled] = B(DailyBackupEnabled),
