@@ -45,6 +45,16 @@ Latest test release **1.0.0-rc.2** on the [Releases page](https://github.com/Rie
 
 Requirements: Windows 11 (or Windows 10 version 1809 or newer), 64-bit. Nothing else: the .NET runtime is included.
 
+**Check the files yourself.** Both files were scanned on VirusTotal, and you can compare their SHA-256 hashes (also in
+the [release notes](docs/RELEASE_NOTES.md)):
+
+| File | SHA-256 | VirusTotal |
+|---|---|---|
+| `TaskIsland-Setup-1.0.0-rc.2-x64.exe` | `E3CE55F9137A4A019E42BEE2241E837DC53D5CF6BFB6808CD734E30929B771C1` | [scan report](https://www.virustotal.com/gui/file/e3ce55f9137a4a019e42bee2241e837dc53d5cf6bfb6808cd734e30929b771c1) |
+| `TaskIsland-1.0.0-rc.2-win-x64-portable.zip` | `8ACE638D1D6BE2010B817149A21C9D1C7E183893E9DE883800D1C96A108FB5EA` | [scan report](https://www.virustotal.com/gui/file/8ace638d1d6be2010b817149a21c9d1c7e183893e9de883800d1c96a108fb5ea) |
+
+In PowerShell: `Get-FileHash .\TaskIsland-Setup-1.0.0-rc.2-x64.exe` shows the hash of your download.
+
 ## Install
 
 ### Installer
