@@ -15,7 +15,7 @@ Newest entry at the bottom. Each phase appends one entry using the template belo
 | 4 Windows integration | ✅ done 2026-11-04 (open: user tests sleep/reboot/monitors/scaling, memory budget) | see Phase 4 entry |
 | 5 Settings & data | ✅ done 2026-11-04 (open: user tests of mouse hover/sliver/System theme, memory budget) | see Phase 5 entry |
 | 6 Testing & optimisation | ✅ done 2026-11-04 (open: memory over budget, M10 CPU, user tests) | see Phase 6 entry |
-| 7 Release | 🟡 portable 1.0.0-rc.1 released 2026-11-04; installer (steps 4, 4b, 5) waits for the user's few days of testing | see Phase 7 entry |
+| 7 Release | 🟡 rc.1 (portable) and rc.2 (installer + portable) released 2026-11-04; 1.0.0 waits for the user's testing, the signing answer and a licence | see Phase 7 entries |
 
 ## Entry template
 
@@ -639,3 +639,50 @@ about 0.4 s into a blink cycle), so the border looked missing; a steady (reduced
 works. `-Extra '--snap-delay',1750` through `powershell -File` arrived as one string, so the delay first had no effect.
 
 **Not done:** not in the released rc.1 portable zip; needs a new build (rc.2) for the user to see it in the copy they run.
+
+### Phase 7b — Installer and release 1.0.0-rc.2 (2026-11-04, Opus 5.5)
+
+User: "yes, release rc.2 and also proceed with 7b phase for this release". So rc.2 ships the installer next to the portable
+zip; 1.0.0 itself still waits for the user's days of testing, the code-signing answer (4b) and a licence.
+
+**Implemented:**
+- Version `1.0.0-rc.2` (commit 1d71a31); `tools/publish.ps1` → `TaskIsland-1.0.0-rc.2-win-x64-portable.zip` (66.6 MB).
+- `installer/TaskIsland.iss` (Inno Setup 6.7.3, already installed per-user in Phase 0; winget: no newer version) per PLAN
+  step 4: AppId `{39F89B18-992E-4E46-8881-1E8CCC6F1D16}` (fixed, never change), publisher RieSources, per-user
+  (`PrivilegesRequired=lowest`, `{localappdata}\Programs\TaskIsland`), x64 only, Windows 10 1809+, `AppMutex` = the app's
+  real lock, `CloseApplications`, modern wizard, LZMA2, version info, Start menu entry, optional desktop icon, "Launch
+  TaskIsland" at the end. No plugins, no `Exec` of cmd/PowerShell. Uninstall asks "Also delete your tasks and backups?"
+  (default No; silent uninstall keeps them). Output `TaskIsland-Setup-1.0.0-rc.2-x64.exe` (50.8 MB).
+- **Deviation:** no Run value from Setup and no "Start with Windows" task (PLAN step 4 updated with the reason): the app owns
+  the entry; the uninstaller removes it only when it points into the install folder.
+- Test switches: AppId, title, app lock, Run key, data folder and output name are ISCC defines that default to the release
+  values. `tools/build-installer.ps1` builds; `tools/ui-tests/installer-test.ps1` builds a TEST installer with its own values.
+- Code signing (4b): not asked before this release; rc.2 is **unsigned** (the plan's default). The question goes to the user
+  before 1.0.0.
+
+**Tests performed:**
+- `tools/ui-tests/installer-test.ps1`: **31 checks, all pass** (install without admin mode, files, Start menu, Apps entry,
+  app runs and registers Start with Windows; upgrade refused while running, then over the top with tasks kept; uninstall
+  keeps data by default and removes program, Start menu, Apps entry and its Run value; reinstall finds the tasks; uninstall
+  with Yes deletes the data and leaves a foreign Run value alone; the RELEASE installer refuses while the real app lock is
+  held — held by the test itself because the user had exited rc.1 at 18:03:48 — and installs nothing; the user's real Run
+  value unchanged). Nothing left behind (no test folder, Apps entry or registry key).
+- Defender: signatures 1.463.119.0; installer, `publish\win-x64` and zip: no threats. 10-minute run of the rc.2 build in a
+  test data folder: see the result line below.
+- TESTING.md: S2, S4, R3, R4, R5 ✅. S5 (Task Manager startup toggle), S6 (Controlled Folder Access), S8 (signed only),
+  S9 (VirusTotal, needs the user's OK) and R6 (second PC) stay open.
+
+**Mistakes:** Python's deprecation warning on stderr stopped the PowerShell test (`ErrorActionPreference Stop`): run with
+`-W ignore`. The uninstaller removes its folder a moment after its Apps entry, so the clean-up check ran too early. The
+"delete data?" message box buttons expose no UI Automation pattern, and the uninstaller's second phase is named `_unins.tmp`
+(ProcessName includes `.tmp`): the test now finds the dialog by that process and the folder name in its text and sends
+BM_CLICK to that one button. A message box left open by an aborted run kept its log locked until answered.
+
+**Release:** see the line below.
+
+**Handoff (for 1.0.0, survives /compact):**
+- *What exists:* rc.2 installer + portable on GitHub (pre-release). `installer/TaskIsland.iss`, `tools/build-installer.ps1`,
+  `tools/ui-tests/installer-test.ps1` (re-run it for every installer change; about 2 minutes).
+- *Waiting on the user:* testing findings, code signing yes/no (PLAN 4b), licence choice, optional VirusTotal OK.
+- *Exact next step:* fix findings; then Version `1.0.0`, `tools/publish.ps1`, `tools/build-installer.ps1`, scans, installer
+  test, tag `v1.0.0`, `gh release create v1.0.0` with both files (not a pre-release).

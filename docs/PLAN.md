@@ -1188,6 +1188,11 @@ Commit: `Fix defects and optimise performance` (may be several commits).
    - Start-menu shortcut. Optional desktop shortcut task (unchecked).
    - `[Registry]` HKCU Run value `TaskIsland` = `"{app}\TaskIsland.exe" --startup`, `Flags: uninsdeletevalue`,
      created only if task "Start with Windows" (checked by default).
+     **Changed when built (rc.2, 2026-11-04):** Setup writes **no** Run value and has no "Start with Windows" task. The app
+     already owns that entry (first start writes it, the Settings toggle removes it, a moved exe is re-pointed); a Setup
+     value would switch it back on at every upgrade after the user turned it off, and an unticked task would be overridden
+     by the app's first start anyway. The uninstaller removes the value in `[Code]`, but only when it points into `{app}`,
+     so a portable copy's entry stays.
    - `[Run]` "Launch TaskIsland" postinstall checkbox.
    - Uninstall: `[UninstallRun]` none needed (AppMutex prompts to close). In `CurUninstallStepChanged` ask
      "Also delete your tasks and backups?" default **No**. Only on Yes delete `{localappdata}\TaskIsland`.
@@ -1195,7 +1200,8 @@ Commit: `Fix defects and optimise performance` (may be several commits).
    - Security-software friendly (§7.11): use the latest Inno Setup 6 release (`winget upgrade JRSoftware.InnoSetup`
      first), default LZMA2 compression, no third-party Inno plugins/DLLs, no `Exec` of cmd/PowerShell in `[Code]`,
      `VersionInfoCompany=RieSources`, `VersionInfoDescription=TaskIsland Setup`, `VersionInfoVersion` = app version.
-   Build: `& "$env:LOCALAPPDATA\Programs\Inno Setup 6\ISCC.exe" /DAppVersion=1.0.0 installer\TaskIsland.iss`.
+   Build: `& "$env:LOCALAPPDATA\Programs\Inno Setup 6\ISCC.exe" /DAppVersion=1.0.0 installer\TaskIsland.iss`
+   (or `tools\build-installer.ps1`, which reads the version from the published exe).
 4b. **Code signing: ask the user** (it costs money, so it is their decision; record the answer in DEVLOG):
    - *Sign* (recommended for no SmartScreen warning and no Smart App Control block): Microsoft **Azure Trusted Signing**
      (about US$10/month, needs an Azure account and identity validation, done by the user) or a purchased OV/EV

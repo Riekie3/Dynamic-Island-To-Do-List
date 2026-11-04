@@ -178,9 +178,9 @@ Targets from PLAN §6.7. Record the measured number in Notes, every phase from P
 | # | Test | Who | Result | Notes |
 |---|---|---|---|---|
 | S1 | Code search finds no banned APIs (hooks, process access, shells, network, `Assembly.Load(byte[])`) | A | ✅ | 2026-11-03 Phase 2: grep over src/ for hooks, OpenProcess/memory/remote thread, Assembly.Load(, shells, network APIs, Process.Start: no hits. 2026-11-04 Phase 4: grep again: no banned APIs. The only Process.Start is explorer.exe on the data folder after a click in the start-up error dialog; the only registry writes are the HKCU Run value. New native calls: SetWinEventHook (foreground, out of context), SHAppBarMessage (full-screen notice), RegisterPowerSettingNotification, RegisterHotKey, AllowSetForegroundWindow (second launch). 2026-11-04 Phase 6: full grep again (SetWindowsHookEx, OpenProcess, Read/WriteProcessMemory, CreateRemoteThread, Assembly.Load(, powershell, cmd.exe, schtasks, reg.exe, HttpClient, Socket, WebRequest): no hits. Process.Start: explorer.exe for the data folder and the two About links (on click only). Registry writes: only HKCU Run via StartupRegistration. Reads: Themes\Personalize and DWM colours. |
-| S2 | Defender custom scan of `publish\win-x64` and the installer → no threats (signatures updated first) | A | ⏳ | 2026-11-04 Phase 6: MpCmdRun custom scan of the Release build folder (176 MB, signatures from 2026-11-04 03:19): "found no threats", exit code 0. The publish folder and installer are scanned in Phase 7. | 2026-11-04 Phase 7 (portable): signatures 1.463.119.0 (updated first); custom scan of `publish\win-x64` and of `TaskIsland-1.0.0-rc.1-win-x64-portable.zip`, `-DisableRemediation`: "found no threats" for both; no Defender detection history for TaskIsland. Stays ⏳ until the installer exists and is scanned. |
+| S2 | Defender custom scan of `publish\win-x64` and the installer → no threats (signatures updated first) | A | ✅ | 2026-11-04 Phase 6: MpCmdRun custom scan of the Release build folder (176 MB, signatures from 2026-11-04 03:19): "found no threats", exit code 0. The publish folder and installer are scanned in Phase 7. | 2026-11-04 Phase 7 (portable): signatures 1.463.119.0 (updated first); custom scan of `publish\win-x64` and of `TaskIsland-1.0.0-rc.1-win-x64-portable.zip`, `-DisableRemediation`: "found no threats" for both; no Defender detection history for TaskIsland. Stays ⏳ until the installer exists and is scanned. | 2026-11-04 rc.2: signatures 1.463.119.0 (no newer available); `TaskIsland-Setup-1.0.0-rc.2-x64.exe`, `publish\win-x64` and the rc.2 zip: "found no threats" for all three. The 11 entries in the Defender history are from 2026-08-26 to 2026-10-22 and none involves TaskIsland. |
 | S3 | 10 min of use with Defender on → nothing in Windows Security → Protection history | A | ✅ | 2026-11-04 Phase 6: about 2 hours of runs with real-time protection on: Get-MpThreatDetection has no entry for TaskIsland. The Windows Security history page itself was not opened. |
-| S4 | Install, run, uninstall → no UAC prompt, no firewall prompt | A | ⏳ | |
+| S4 | Install, run, uninstall → no UAC prompt, no firewall prompt | A | ✅ | 2026-11-04 rc.2 (`tools/ui-tests/installer-test.ps1`, test build of the same script): Setup log "Non administrative install mode"; installs, upgrades and uninstalls ran unattended to the end, which a UAC prompt would have stopped. The app opens no network connections (S1), so there is nothing for the firewall to ask about; no prompt appeared. |
 | S5 | Startup entry visible and switchable in Task Manager → Startup apps; turned off there → TaskIsland doesn't re-add it | A | ⏳ | |
 | S6 | Controlled Folder Access on → app runs normally; export to Documents shows the friendly message; Downloads works | A | ⏳ | |
 | S7 | All exe/dll files show Company "RieSources", product, version and description in file Properties | A | ✅ | 2026-11-04 Phase 6: our five files (TaskIsland.exe and the four TaskIsland.*.dll) show Company RieSources, Product TaskIsland, Version 0.1.0.0. Third-party DLLs keep their own properties; the publish folder is checked in Phase 7. | 2026-11-04 Phase 7: in `publish\win-x64` TaskIsland.exe and the four TaskIsland.*.dll show Company RieSources, Product TaskIsland, Version 1.0.0-rc.1+hash and their own description (`tools/ui-tests/fileprops.ps1`). Third-party DLLs keep their own properties. |
@@ -193,9 +193,9 @@ Targets from PLAN §6.7. Record the measured number in Notes, every phase from P
 |---|---|---|---|---|
 | R1 | `dotnet build` + `dotnet test` green | A | ✅ | Phase 1, 2026-11-01: 218 tests. Phase 2, 2026-11-03: Release + Debug 0 warnings / 0 errors, **249 pass** (132 Core + 117 Data). Re-run after every phase. Phase 3, 2026-11-04: Release + Debug 0 warnings / 0 errors, **324 pass** (207 Core + 117 Data). Phase 4, 2026-11-04: Release + Debug 0 warnings / 0 errors, **368 pass** (249 Core + 119 Data). Phase 5, 2026-11-04: Release + Debug 0 warnings / 0 errors, **419 pass** (296 Core + 123 Data). |
 | R2 | Self-contained publish runs on its own | A | ✅ | 2026-11-04 Phase 7: ReadyToRun win-x64 folder (264 files, 160 MB; zip 66.6 MB) unzipped into a fresh folder starts, creates its data, shows the island and tray icon (log). Cold start 0.78-0.86 s, 62-63 MB private, CPU 0, disk writes 0, network 0 (`perf-results/publish_idle_off.txt`). This PC has .NET installed; a PC without it is R6. |
-| R3 | Installer installs without admin | A | ⏳ | |
-| R4 | Upgrade install keeps tasks | A | ⏳ | |
-| R5 | Uninstall removes app, Start menu entry and Run value; asks about data (default keep) | A | ⏳ | |
+| R3 | Installer installs without admin | A | ✅ | 2026-11-04 rc.2: per-user install to `%LOCALAPPDATA%\Programs\<name>`, Start menu entry, Apps list entry (version, publisher RieSources), LICENSE in, portable README.txt out; the installed app runs, creates its data and registers Start with Windows for the installed exe on first start. Tested with a TEST build (own AppId, title, folder, data folder, Run key and app lock) so the real setup on this PC was not touched. |
+| R4 | Upgrade install keeps tasks | A | ✅ | 2026-11-04 rc.2: with the app running, Setup refuses (AppMutex; also checked with the RELEASE installer against the real app lock: "Setup has detected that TaskIsland is currently running", nothing installed). Closed: install over the top, exit 0, one Apps entry, both seeded tasks kept. |
+| R5 | Uninstall removes app, Start menu entry and Run value; asks about data (default keep) | A | ✅ | 2026-11-04 rc.2: silent uninstall removes the program folder, Start menu entry, Apps entry and the Run value pointing into the install folder; data kept (default No). Reinstall: the app runs on the same 2 tasks. Uninstall with the question answered Yes: data folder deleted; a Run value pointing to another folder (a portable copy) is left alone. |
 | R6 | **Install on a 2nd Windows 11 PC (optional)** | U | 👤 | |
 
 ## Phase 4 — steps for the user (👤)
@@ -233,6 +233,15 @@ Use the installed or Release build with your real data. After each step, the log
 5. **Look of the Settings window:** check Mica (translucent title area) in light and dark, the six pages, and Compact vs Comfortable rows.
 6. **Monitors (if you have two):** Settings > General > Monitor: pick the second display; the notch moves at once.
 7. **Memory:** close Settings and watch Task Manager: memory should settle back near where it was before you opened it.
+
+## rc.2 — steps for the user (👤)
+
+1. **Install over your rc.1:** Exit the rc.1 portable from the tray, run `TaskIsland-Setup-1.0.0-rc.2-x64.exe` (SmartScreen:
+   More info > Run anyway). Expected: no UAC prompt; TaskIsland starts at the end with all your tasks.
+2. **Start menu:** TaskIsland is in the Start menu and in Settings > Apps > Installed apps (publisher RieSources).
+3. **Start with Windows:** restart the PC: the installed TaskIsland starts (Task Manager > Startup apps shows it). Then you can
+   delete the old portable folder.
+4. **Reminders:** the steps in the next section.
 
 ## Change after rc.1 — wide reminder with a blinking red border (👤)
 

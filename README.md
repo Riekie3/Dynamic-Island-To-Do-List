@@ -9,18 +9,22 @@ survives sleep / wake. Organise tasks into lists such as Office Work, Personal o
 
 ![TaskIsland design preview](docs/design-reference-1.webp)
 
-## Download (portable test release)
+## Download (test release 1.0.0-rc.2)
 
-Get `TaskIsland-1.0.0-rc.1-win-x64-portable.zip` from the
-[Releases page](https://github.com/Riekie3/Dynamic-Island-To-Do-List/releases), unzip it somewhere permanent and run
-`TaskIsland.exe`. No installer, no administrator rights, no .NET install needed. The file is not code-signed, so
-Windows SmartScreen may warn: click **More info**, then **Run anyway**. An installer follows after a few days of testing.
-See [docs/RELEASE_NOTES.md](docs/RELEASE_NOTES.md) for what is known to be rough.
+From the [Releases page](https://github.com/Riekie3/Dynamic-Island-To-Do-List/releases):
+
+- **Installer** `TaskIsland-Setup-1.0.0-rc.2-x64.exe` (recommended): installs for your user only, no administrator rights.
+  Uninstall from Windows Settings > Apps.
+- **Portable** `TaskIsland-1.0.0-rc.2-win-x64-portable.zip`: unzip somewhere permanent and run `TaskIsland.exe`.
+
+No .NET install needed. The files are not code-signed, so Windows SmartScreen may warn: click **More info**, then
+**Run anyway**. See [docs/RELEASE_NOTES.md](docs/RELEASE_NOTES.md) for what's new and what is known to be rough.
 
 ## Status
 
-Phases 1-7 are done for the portable build (database, island interface, to-do features, Windows integration, Settings,
-testing and optimisation, publish). The installer and the user's own sleep/hibernate/multi-monitor tests are still open.
+Phases 1-7 are done up to the test release 1.0.0-rc.2 (database, island interface, to-do features, Windows integration,
+Settings, testing and optimisation, portable build and installer). Still open before 1.0.0: the user's own
+sleep/hibernate/multi-monitor tests, the code-signing decision and a licence.
 See [docs/PLAN.md](docs/PLAN.md) (build guide), [docs/TESTING.md](docs/TESTING.md) and [docs/DEVLOG.md](docs/DEVLOG.md).
 
 ## Tech
@@ -34,7 +38,8 @@ Needs the .NET 10 SDK. `nuget.config` points at nuget.org only.
 ```
 dotnet build TaskIsland.sln
 dotnet test
-powershell -File tools\publish.ps1     # portable folder + zip in the publish folder
+powershell -File tools\publish.ps1           # portable folder + zip in the publish folder
+powershell -File tools\build-installer.ps1   # installer in installer\Output (needs Inno Setup 6)
 ```
 
 ---

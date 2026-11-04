@@ -1,26 +1,55 @@
-# TaskIsland 1.0.0-rc.1 (portable test release)
+# TaskIsland 1.0.0-rc.2 (test release: installer + portable)
 
 A Dynamic Island-style to-do list for Windows 11 (x64), by **RieSources** (https://rie-sources.com).
 
-This is a **portable test release**: unzip and run, no installer. The installer comes after a few days of real-world
-testing (it will be 1.0.0).
+This is the second test release and the first one with an **installer**. Version 1.0.0 follows once it has been used for
+a few days.
 
-## Run it
+## What's new since rc.1
 
-1. Download `TaskIsland-1.0.0-rc.1-win-x64-portable.zip` and unzip it somewhere permanent.
-2. Double-click `TaskIsland.exe` ("Start with Windows" is on by default and points at that folder, so do not move it afterwards). A small pill appears at the top centre of the screen and a tray icon is added.
-3. The file is **not code-signed**, so Windows SmartScreen may say "Windows protected your PC": click **More info**, then
-   **Run anyway**. (Smart App Control, if turned on, can block unsigned apps; code signing is a paid certificate.)
+- **Bigger, louder reminders.** When a reminder fires, the island now grows to **half the screen width** and a **red
+  border blinks** around it for 5 seconds (about once a second; steady red if Windows animations are off).
+  Settings > Behaviour > Reminders: **Reminder width** (Compact, 30 %, 40 %, 50 %, 60 %, 75 % or Full width) and
+  **Blink a red border** (off brings back the blue pulse).
+- **Installer** `TaskIsland-Setup-1.0.0-rc.2-x64.exe`: installs for your user only, no administrator rights, no UAC prompt.
 
-No administrator rights, no internet connection, no .NET install needed (the runtime is inside the folder).
+## Install (recommended)
+
+1. **If you run the rc.1 portable copy:** Exit it from the tray menu first (the installer asks you to close it anyway).
+2. Run `TaskIsland-Setup-1.0.0-rc.2-x64.exe`. It is **not code-signed**, so SmartScreen may say "Windows protected your
+   PC": click **More info**, then **Run anyway**. (Smart App Control, if turned on, can block unsigned apps.)
+3. It installs to `%LocalAppData%\Programs\TaskIsland`, adds a Start menu entry (desktop icon optional) and starts
+   TaskIsland at the end. Your tasks from rc.1 are found again: the data folder is the same (`%LocalAppData%\TaskIsland`).
+4. "Start with Windows" moves over to the installed copy on its first start. You can then delete the old portable
+   folder (if you run the portable copy again, it takes "Start with Windows" back).
+
+Upgrading later: run a newer installer over the top; tasks and settings stay.
+
+## Or portable
+
+Unzip `TaskIsland-1.0.0-rc.2-win-x64-portable.zip` somewhere permanent and run `TaskIsland.exe` (same SmartScreen note).
+"Start with Windows" is on by default and points at that folder, so do not move it afterwards.
+
+No administrator rights, no internet connection, no .NET install needed (the runtime is included) either way.
 
 ## What it does
 
 - A pill/notch with a little face; click it and it stretches into a to-do list, then folds back.
 - Lists (Personal, Office Work, your own), priorities, due dates with reminders, drag to reorder, undo for deletes.
 - Tray icon, global hotkey Ctrl+Alt+T, start with Windows (optional), one instance only.
-- Settings: themes, accent colour, panel opacity, companion face on/off, JSON export/import, daily backups.
+- Settings: themes, accent colour, panel opacity, companion face on/off, reminder width and blink, JSON export/import,
+  daily backups.
 - Data stays on your PC in `%LocalAppData%\TaskIsland`. The app makes no network connections.
+
+## Checks done for this release
+
+- 438 automated tests green. Defender (signatures 1.463.119.0) found no threats in the installer, the program folder or
+  the zip; 10 minutes of running with Defender on raised nothing.
+- Installer tested on this PC with a separate test build (own folder, data folder and registry key): per-user install with
+  no administrator mode, Start menu entry, Apps list entry (publisher RieSources); upgrade is refused while TaskIsland
+  runs and works over the top once it is closed, tasks kept; uninstall removes the program, the Start menu entry and its
+  "Start with Windows" entry and asks "Also delete your tasks and backups?" (default **No**: kept; **Yes**: deleted);
+  reinstall finds the tasks. The release installer itself refuses to run while TaskIsland is running.
 
 ## Known limits (please tell us what you see)
 
@@ -29,12 +58,19 @@ No administrator rights, no internet connection, no .NET install needed (the run
 - The random face "pops" use a little CPU each time (about 0.13 % of one core on average over 30 minutes).
 - Sleep, hibernate, reboot auto-start, multi-monitor and display-scaling behaviour is being verified in real use.
   If something goes wrong, check `%LocalAppData%\TaskIsland\Logs`.
-- Not code-signed (see above).
+- Not code-signed (see above). No licence has been chosen yet: personal use only for now (see LICENSE).
 
 ## Remove it
 
-Settings, General, untick **Start with Windows**; Exit from the tray menu; delete the folder. To also delete your tasks
-and backups, delete `%LocalAppData%\TaskIsland`.
+- **Installed:** Windows Settings > Apps > Installed apps > TaskIsland > Uninstall. It asks whether to delete your tasks
+  and backups too (default No).
+- **Portable:** Settings > General, untick **Start with Windows**; Exit from the tray menu; delete the folder. To also
+  delete your tasks and backups, delete `%LocalAppData%\TaskIsland`.
+
+## SHA-256
+
+- `TaskIsland-Setup-1.0.0-rc.2-x64.exe`: `2EEF828B73934D5CCFB37B84447EBB466E433F1A9E536860DBD5CA480618719A`
+- `TaskIsland-1.0.0-rc.2-win-x64-portable.zip`: `DF0204B01B76BC5C2235F4E1092595C422BB8007444B2F1EBBC1C290D0F3A429`
 
 ---
 
