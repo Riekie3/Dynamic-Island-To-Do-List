@@ -445,3 +445,8 @@ in 30 s. Two other runs were thrown away because the panel was opened during the
   PowerShell 5.1: avoid non-ASCII literals or save with a BOM.
 - *Open issues:* the user tests listed above, memory budget, the first-expand hitch, the companion CPU cost.
 - *Exact next step:* start Phase 5: `dotnet build` + `dotnet test` (expect 368 green), then PLAN §8 Phase 5 step 1.
+- *Added to Phase 5 on 2026-11-04 (user decision after Phase 4):* keep pulse + Surprised face + notification for due reminders, and add
+  (1) the **widening pill alert** with the task title (`ReminderPillAlert`) and (2) an **early reminder** setting (`ReminderLeadMinutes`,
+  e.g. 1 hour before, new column `EarlyReminderShownAt`). Spec: PLAN §7.9 "Alert style" and "Early reminder", Phase 5 step 10;
+  tests T15b-T15d. `ReminderService` / `ReminderScheduler` / `IslandHost` (peek width tween) are the places to extend.
+

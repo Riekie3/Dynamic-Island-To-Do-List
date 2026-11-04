@@ -368,6 +368,8 @@ Rules (unit-tested):
 | `RestoreAfterWake` | `true` | Behaviour | |
 | `PeekOnHover` | `true` | Behaviour | |
 | `RemindersEnabled` | `true` | Behaviour | |
+| `ReminderLeadMinutes` | `0` | Behaviour | Early reminder before the due time: `0` = off, else 5 / 15 / 30 / **60** / 120 / 1440 minutes. Only for tasks with a due time (date-only tasks have none). New key, Phase 5 |
+| `ReminderPillAlert` | `true` | Behaviour | The island widens and shows the task title when a reminder fires (§7.9). Off = pulse, face and notification only. New key, Phase 5 |
 | `ToggleHotkey` | `Ctrl+Alt+T` | Behaviour | capture box. Shows "in use by another app" if RegisterHotKey fails |
 | `DailyBackupEnabled` | `true` | Data | |
 | `CompletedFadeOut` | `true` | Behaviour | the 2-second slide-out |
@@ -485,6 +487,8 @@ hidden instantly before collapsing. The collapsed pill has no shadow (a real isl
 - Count change: the number slides 6 px up while crossfading (`fast`), once per change.
 - Reminder pulse: an accent ring scales 1 → 1.12 and fades out, **2 cycles of 600 ms, then the animation is removed**.
   In reduced motion: no ring, the overdue/accent dot appears instead.
+- Reminder pill alert (Phase 5, §7.9): clip width tween to `min(NotchWidth + 200, 420)` in `normal`, text crossfade, hold 5 s,
+  tween back. One-shot timer, no loop.
 
 **Rules for every animation** (enforced in code review, §6.7): finite duration, `FillBehavior=Stop` with the final value
 set as the local value (so no animation clock stays alive), only `Opacity`, `RenderTransform`, `Clip` geometry or a brush
@@ -830,6 +834,27 @@ balloon title (click → expand with that task's list selected),
 pulse the pill, `MarkReminderShownAsync`. Tasks already overdue at startup → one combined balloon
 "2 tasks overdue". Editing a task's due date clears `ReminderShownAt`.
 
+**Alert style (decided 2026-11-04, built in Phase 5).** A due reminder always does all of: Windows notification, accent pulse
+ring, Surprised face. Phase 5 adds the **widening pill alert** (`ReminderPillAlert`, default on):
+- The collapsed island widens (same width tween as the hover peek, to `min(NotchWidth + 200, 420)` px) and shows
+  "⏰ <task title>" with the list-colour dot, holds **5 s**, then shrinks back. The height does not change and the panel does
+  not open. Mouse hover keeps it open until the mouse leaves. Clicking it opens the panel on that task's list.
+- Several tasks at once: "⏰ 3 tasks due". An overdue-at-start notice shows "⏰ 2 tasks overdue".
+- Skipped (notification still shows) when the panel is expanded, the island is hidden (Pause, user Hide, full screen), or the
+  face notch is off (MascotEnabled=false uses the classic pill, which widens the same way). Reduced motion: no tween, the text
+  swaps in place for 5 s. Implemented with one-shot timers only; nothing runs after the alert ends (§6.7).
+
+**Early reminder (`ReminderLeadMinutes`, default off; 60 = "1 hour before").** For tasks with a due *time*, a second, gentler
+reminder fires that many minutes before the due moment: notification "⏰ In 1 hour: <title>" (list name as heading), the
+pill alert and one pulse; the face stays unchanged. The normal "Due now" reminder still fires at the due time.
+- Stored per task as a new column `EarlyReminderShownAt` (migration v+1, nullable), so it fires once and survives a restart.
+  Editing the due date or time clears both `ReminderShownAt` and `EarlyReminderShownAt`.
+- A task created, edited or found already inside the window (due in 30 min with a 60-min lead) gets no early reminder; it is
+  marked quietly and only the "Due now" reminder fires. Date-only tasks get no early reminder.
+- `ReminderScheduler` gets `GetNextUpcoming` over both moments (due − lead, due); lead changes in Settings call
+  `ReminderService.Recompute()`. Unit tests: lead off, lead 60 with due in 2 h / in 30 min / in the past, date-only, completed,
+  deleted, due date edited, lead changed after the early one fired.
+
 ### 7.10 Logging & errors
 
 `FileLogger` → `Logs\taskisland-yyyyMMdd.log`, keep 14 days, thread-safe append, levels Info/Warn/Error.
@@ -1093,8 +1118,16 @@ Steps:
 8. About page (§6.6).
 9. Modern Settings look (§6.6): pill nav, setting cards, toggle switches, Mica on Windows 11 with solid fallback.
    `AccentSource` setting (add the key to `AppSettings` with clamping/default tests). Window released on close.
+10. **Reminder settings (Behaviour page):** Reminders on/off, "Remind me before due time" dropdown (Off / 5 min / 15 min /
+    30 min / **1 hour** / 2 hours / 1 day) = `ReminderLeadMinutes`, and "Widen the island when a reminder fires" toggle =
+    `ReminderPillAlert`. Implement the pill alert, the early reminder and the `EarlyReminderShownAt` column per §7.9 (the
+    pulse, face and notification from Phase 4 stay as they are). Add both keys to `AppSettings` with clamping/default tests.
+    Tests: scheduler unit tests (§7.9), a UI script that seeds a task due in 3 min with a 2-min lead (use the test-only
+    `TASKISLAND_ROOT` and a short custom lead via the settings table) and checks the log lines, the widened pill width and that
+    it shrinks after 5 s, and the quiet-skip cases.
 
 Acceptance: change every setting → effect visible immediately → restart app → setting kept.
+Reminders: with lead = 60 a task due in 2 h gets the early notification at 1 h before and "Due now" at the due time (each once, also after a restart); the pill widens with the title for 5 s and shrinks back.
 Settings window closed → memory drops back near the idle baseline (§6.7). Re-measure and log in DEVLOG.
 Export → clear → import → identical tasks. Backup → delete tasks → restore → tasks back.
 Commit: `Add settings window, themes, JSON import/export and backup/restore`.

@@ -83,6 +83,9 @@ These cover the logic behind T1–T15, L2–L10, L13, D1–D3 and D5–D10, but 
 | T13 | Counters (pill, header, footer, %) update instantly | A | ✅ | 2026-11-04 Phase 3: footer, list chip, header badge and pill ("1 task", "2 tasks", "All done", read from rendered --snap images) update at once on add / tick / delete / undo. |
 | T14 | Clear completed → confirm → Undo works | A | ✅ | 2026-11-04 Phase 3: Clear completed shows a confirm card (with the count), Cancel keeps everything, Confirm removes and the Undo bar restores them. |
 | T15 | Due reminder fires once at due time (balloon + pulse); overdue shown red | A | ✅ | 2026-11-04 Phase 4: reminders run in the app (Debug, temp data): a task due in 45 s fired once on time ("⏰ Due now: Soon task", list name as heading), the island pulse played and the Surprised face showed (logs); two tasks already overdue at start gave one combined "⏰ 2 tasks overdue"; each is marked once in the DB; a task due tomorrow was left alone. Clicking the balloon opened the panel on that task's list. I did not watch the toast or the pulse on screen (checked from the logs). Overdue red label: Phase 3. |
+| T15b | Pill alert (Phase 5): when a reminder fires the collapsed island widens and shows the task title for 5 s, then shrinks; hover keeps it open; click opens that task's list; not shown while the panel is open or the island is hidden; toggle in Settings turns it off | A | ⏳ | planned 2026-11-04 (user decision) |
+| T15c | Early reminder (Phase 5): "Remind me before due time" = 1 hour → task due in 2 h gets "In 1 hour: <title>" once at 1 h before, plus "Due now" at the due time; none for date-only tasks or tasks already inside the window; editing the due time re-arms both; survives a restart | A | ⏳ | planned 2026-11-04 (user decision) |
+| T15d | Reminder lead and pill settings persist after restart and apply live | A | ⏳ | |
 
 ## Lists (groups)
 
