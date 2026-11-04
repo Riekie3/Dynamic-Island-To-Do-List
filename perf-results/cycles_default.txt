@@ -1,0 +1,12 @@
+cold start to visible window: 1126 ms
+Mode=cycles Companion=Off
+after 4 s                   :    78.2 MB private,   142.8 MB WS, 22 threads, 632 handles
+after 60 s                  :    78.0 MB private,   144.8 MB WS, 15 threads, 623 handles
+start of cycles            :    78.0 MB private,   144.8 MB WS, 15 threads, 623 handles
+cycle 10 :   143.1 MB private,   160.3 MB WS, 17 threads, 625 handles
+cycle 20 :   142.4 MB private,   159.2 MB WS, 15 threads, 624 handles
+cycle 30 :   143.7 MB private,   163.8 MB WS, 17 threads, 647 handles
+cycle 40 :   146.8 MB private,   162.5 MB WS, 18 threads, 651 handles
+cycle 50 :   152.4 MB private,   164.0 MB WS, 14 threads, 654 handles
+after 50 cycles + 20 s    :   152.3 MB private,   164.0 MB WS, 13 threads, 651 handles   (delta private 74.4 MB)
+panel collapsed at the end: True

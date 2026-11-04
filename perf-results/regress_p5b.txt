@@ -1,0 +1,116 @@
+PASS  tray menu has Settings and opens the window
+PASS  settings window is open
+PASS  window opened (backdrop logged)
+PASS  a second Settings click does not open a second window
+PASS  CollapseOnEscape saved as false
+PASS  CollapseOnEscape saved as true
+PASS  CollapseOnClickOutside saved
+PASS  Open expanded -> StartCollapsed=false
+PASS  Start with Windows off removes the Run entry (test key)
+PASS  Start with Windows on writes the Run entry (test key)
+PASS  Always show off: the notch tucks into a sliver
+PASS  Always show on: the notch comes back
+PASS  Theme Light applies at once
+PASS  Theme saved
+PASS  Theme System applies
+PASS  Accent Windows applies
+PASS  AccentSource saved
+PASS  Density Compact applies
+PASS  Density saved
+PASS  Position slider moves the notch live
+PASS  Position saved (debounced)
+PASS  Gap slider moves the notch down
+PASS  Gap saved
+PASS  Notch width applies
+PASS  Notch width saved
+PASS  Panel opacity saved
+PASS  Mascot off applies
+PASS  IdleReactions saved
+PASS  Companion saved
+PASS  Animations saved
+PASS  FollowWindowsAnimations saved
+PASS  monitor list has the primary default and display 1
+PASS  monitor entry shows the resolution
+PASS  choosing a display re-places the notch
+PASS  MonitorDeviceName saved
+PASS  MonitorDeviceName back to empty
+PASS  HideInFullScreen off stops the watchers
+PASS  HideInFullScreen on starts them again
+PASS  RestoreAfterWake saved
+PASS  PeekOnHover saved
+PASS  CompletedFadeOut saved
+PASS  lead picker is enabled while reminders are on
+PASS  lead choices: Off, 5, 15, 30, 1 hour, 2 hours, 1 day
+PASS  ReminderLeadMinutes saved as 60
+PASS  lead change recomputes reminders
+PASS  ReminderPillAlert saved
+PASS  RemindersEnabled saved
+PASS  lead picker is disabled while reminders are off
+PASS  shortcut box found
+PASS  one modifier is refused with a message
+PASS  Ctrl+Alt+Y registered
+PASS  ToggleHotkey saved
+PASS  the new shortcut really toggles the island
+PASS  AutoCollapseSeconds saved as 10
+PASS  two starter lists shown
+PASS  new-list dialog opens
+PASS  duplicate name is refused (case-insensitive) and the dialog stays
+PASS  new list is created
+PASS  move-up buttons are enabled for lists 2 and 3
+PASS  moving a list up changes the order
+PASS  default list saved
+PASS  pill count scope saved
+PASS  delete dialog opens
+PASS  empty list deleted
+PASS  a pre-delete backup was made first
+PASS  delete dialog offers to move the tasks
+PASS  tasks of the deleted list moved, none lost
+PASS  the last list cannot be deleted (button disabled)
+PASS  default list follows the deletion
+PASS  clear completed asks first
+PASS  completed tasks cleared (soft-deleted)
+PASS  Undo bar appears in Settings
+PASS  Undo brings them back
+PASS  export dialog appeared and saved
+PASS  export file written
+PASS  export file holds every task
+PASS  import dialog appeared
+PASS  merge or replace is asked
+PASS  import summary shown
+PASS  export -> clear -> import gives identical tasks
+PASS  importing the same file again skips duplicates
+PASS  an invalid file is rejected with a message
+PASS  nothing changed after the rejected import
+PASS  backup dialog appeared and saved
+PASS  backup file written
+PASS  restore dialog appeared
+PASS  restore asks for confirmation
+PASS  restore brings the tasks back
+PASS  a pre-restore copy was made
+PASS  restore status shown
+PASS  tasks identical after restore
+PASS  an invalid backup is rejected with a message
+PASS  data unchanged after the rejected restore
+PASS  open data folder runs Explorer on our folder
+PASS  About: version, runtime, credit and privacy lines
+PASS  About: links are buttons that wait for a click
+PASS  closing the window releases it
+INFO  private memory before opening Settings: 54.8 MB, after closing it: 107.3 MB
+PASS  test helper holds Ctrl+Alt+Y
+PASS  restart: a shortcut held by another app is logged (error 1409)
+PASS  restart: AutoCollapseSeconds loaded
+PASS  restart: Notch width slider shows 240
+PASS  restart: Panel opacity slider shows 0.8
+PASS  restart: Theme Dark selected
+PASS  restart: Row size Comfortable selected
+PASS  restart: lead picker shows 1 hour
+PASS  restart: auto collapse picker shows 10 seconds
+PASS  restart: Settings warns that the shortcut is in use by another app
+PASS  restart: Slide out ticked tasks on
+PASS  restart: only the remaining list shown
+PASS  panel opened from the tray
+PASS  auto-collapse (10 s) closed the panel with the mouse away
+PASS  auto-collapse waits while text is typed in the box
+PASS  auto-collapse closes once the box is empty
+PASS  no unhandled exception in the log
+p5b done: 0 failure(s)

@@ -1,0 +1,23 @@
+PASS  L1 database has the starter lists
+PASS  L1 no tasks
+PASS  L1 panel opens (tray double-click)
+PASS  L1 both list chips shown
+PASS  L1 no task rows
+PASS  UI4 offset -400: collapsed window inside the screen
+PASS  UI4 offset -400: panel open
+PASS  UI4 offset -400: expanded window inside the screen
+      (offset -400 DIP, collapsed centre x = 460.5, expanded rect 178..743, screen width 1920)
+PASS  UI4 offset 400: collapsed window inside the screen
+PASS  UI4 offset 400: panel open
+PASS  UI4 offset 400: expanded window inside the screen
+      (offset 400 DIP, collapsed centre x = 1460.5, expanded rect 1178..1743, screen width 1920)
+PASS  UI4 offset 0: collapsed window inside the screen
+PASS  UI4 offset 0: panel open
+PASS  UI4 offset 0: expanded window inside the screen
+      (offset 0 DIP, collapsed centre x = 960.5, expanded rect 678..1243, screen width 1920)
+PASS  D9 a new backup was written today
+PASS  D9 exactly 7 automatic backups kept
+PASS  D9 the oldest ones were removed
+PASS  D9 manual backup untouched
+PASS  D9 a second start within 24 h writes no new backup
+p6a done: 0 failure(s)

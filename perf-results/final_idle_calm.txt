@@ -1,0 +1,8 @@
+cold start to visible window: 1166 ms
+Mode=idle Companion=Calm
+after 4 s                   :    61.3 MB private,   117.9 MB WS, 21 threads, 619 handles
+after 60 s                  :    69.8 MB private,   130.5 MB WS, 15 threads, 613 handles
+idle 60 s: CPU time 1,500 ms = 2.500 % of one core; disk write ops 0, bytes 0
+after idle                  :    69.8 MB private,   130.5 MB WS, 15 threads, 613 handles
+GPU (30 s window, raw): 0.218174266838535|0.458884975580168
+network: 0 TCP, 0 UDP

@@ -14,7 +14,7 @@ Newest entry at the bottom. Each phase appends one entry using the template belo
 | 3 To-Do functionality | ✅ done 2026-11-04 (open: mouse-only tests, memory budget) | see Phase 3 entry |
 | 4 Windows integration | ✅ done 2026-11-04 (open: user tests sleep/reboot/monitors/scaling, memory budget) | see Phase 4 entry |
 | 5 Settings & data | ✅ done 2026-11-04 (open: user tests of mouse hover/sliver/System theme, memory budget) | see Phase 5 entry |
-| 6 Testing & optimisation | ⏳ | |
+| 6 Testing & optimisation | ✅ done 2026-11-04 (open: memory over budget, M10 CPU, user tests) | see Phase 6 entry |
 | 7 Release | ⏳ | |
 
 ## Entry template
@@ -503,3 +503,72 @@ p5c 22 checks pass. TESTING.md: T15b, T15c, T15d, L4, L11, L13, W5, W16, D5, D7,
 - Cause: the cached shadow layer under the panel (`IslandHost._shadow`) is a solid SurfaceBrush border, so it stayed 100 % opaque below the panel body and hid the opacity setting.
 - Fix: the shadow is now hosted in a Grid whose Clip cuts out the panel rectangle (CombinedGeometry Exclude), so only the soft shadow outside the panel remains.
 - Verified: `tools/ui-tests/op.ps1` (Release, screenshots at 100 % and 70 %): at 70 % the text behind the panel shows through, at 100 % it is solid. 419 unit tests green.
+
+
+### Phase 6 — Testing & optimisation (2026-11-04, Sonnet 5.5)
+**Implemented:** PLAN §8 Phase 6 steps 1-5. One code/config change: `TieredCompilation=false` and `TieredPGO=false` in `TaskIsland.App.csproj`
+(PLAN §6.7 rule 9 updated). No other behaviour changed.
+**Files created/modified:** `TaskIsland.App.csproj`, `docs/PLAN.md` (rule 9), `docs/TESTING.md` (results + "Phase 6 — steps for the user"), new test tools
+`tools/ui-tests/perf.ps1` (measurements), `p6a.ps1` / `p6b.ps1` (first run, ±400 offset, daily backup), `exp1.ps1` / `exp2.ps1` (memory experiments),
+`memtry.ps1` (runtime-setting experiments), `setkey.py`. `perf-results/` holds the raw output of the runs below.
+
+**Measurements (§6.7 table, Release, this laptop 1920×1080 @125 %, empty data unless noted; "now" = tiered compilation off):**
+
+| Metric | Phase 2 baseline | Phase 6 before change | Phase 6 now | Target |
+|---|---|---|---|---|
+| CPU idle, 60 s, Companion Off | 0.0 ms | 0 ms | **0 ms** (3 runs) | 0.0 % ✅ |
+| CPU idle, 60 s, Calm companion | - | (Phase 4: 1.9 %) | 1,500 ms = **2.5 % of one core** | measured cost is the budget |
+| CPU 30 min, 500 tasks, Off, IdleReactions Normal | - | **2,297 ms = 0.128 % of one core** (= 0.008 % of the 16-thread CPU) | not re-run | < 0.05 % ❌ |
+| GPU idle (GPU Engine counter, 30 s) | 0 % | 0 % | **0 %** (Calm: 0.22 % max sample) | 0 % ✅ |
+| Private memory idle (60 s) | 52-56 (no panel) / 72-73 | 77.6 MB | **64.1 / 64.5 / 65.1 MB** | ≤ 50 MB ❌ |
+| Working set idle | 98-102 | 143.9 MB | **125.7-126.0 MB** | ≤ 70 MB ❌ |
+| Private after the panel was opened once | 129 MB | 143-152 MB | **129-140 MB** | - |
+| Cold start to visible window | 0.84-0.93 s | 0.82 s | **0.99 / 1.06 / 1.13 s** | < 1.2 s ✅ (little room) |
+| Threads | 11 | 15 | 15 idle (13-18 after use) | none of ours besides the pipe server ✅ |
+| Disk writes while idle (process I/O counters, 60 s) | - | 0 | **0 ops / 0 bytes** | none ✅ |
+| Network (TCP + UDP endpoints of the process) | - | 0 | **0 + 0** in every run | empty ✅ |
+| Efficiency mode | on after 16 s | - | not re-checked (code unchanged) | ✅ |
+
+- **Leak checks.** 30 min idle with 500 tasks (Companion Off, tiered compilation on): private memory 82 → 74 MB (not growing), working set 143-153 MB flat.
+  200 expand/collapse cycles (tiered compilation off): 128.7 MB after cycle 10, 137.6 MB at cycle 110, 139.9 MB at cycle 200 (+11 MB over 190 cycles,
+  flattening; with tiered compilation on: 143 → 152 MB over 50 cycles). Against the *start* (64.9 MB) the cycles end +75 MB, because the first expand adds
+  ~64 MB once (panel rendering, `textinputframework.dll`, `UIAutomationCore.dll`, `CoreUIComponents.dll`, `CoreMessaging.dll`, ... measured with `exp1.ps1`) and
+  that memory is not given back (after one cycle it can drop to ~94 MB, after three it stays at ~132 MB). **P8 therefore fails its 5 MB criterion**; I saw no
+  runaway growth. Handle count in the 30 min run rises ~12 per minute and falls back to 639 when the GC runs (639 → 807 → 639): bounded, cause not found.
+- **500 tasks:** idle numbers within about 4-15 MB of the empty database; the list is virtualised (7 rows). Smooth scrolling is not judged (user step).
+- **CPU of the random face pops (M10).** The 30 min run shows a ~0.2 s start-up burst, 0 ms in quiet minutes, and 0.4-0.7 s per pop (6 pops).
+  Average 0.128 % of one core vs the 0.05 % target. The cost is WPF layered-window rendering while the face animates (~3 ms/frame), as measured in Phase 2/3.
+  Halving it would need a 30 fps cap for the face, which I did not do without your say (it would change how the morph looks).
+- **What was tried for memory (honest list):** `DOTNET_TieredPGO=0` -1 MB; `GCgen0size`, `GCConserveMemory`, `GCgen0MaxBudget`, `TC_BackgroundWorkerTimeoutMs` 0-2 MB (noise);
+  `TC_QuickJit=0` and `ReadyToRun=0` no gain; **`TieredCompilation=0` -13 MB private / -18 MB working set** → adopted. A forced compacting GC after 10 s at rest
+  freed only ~4 MB, so the rest is not managed garbage; reverted (extra code for nothing). Not tried: dropping the auto-focus of the quick-add box (the
+  text-input DLLs load on first focus; it would cost the "start typing at once" behaviour), a 30 fps cap. No working-set trimming was used (§6.7).
+- **Code review (§6.7 rules 1-8 as a grep checklist):** no `RepeatBehavior`/`Forever`/GIF/spinner anywhere; all `DispatcherTimer`s are one-shot (every Tick stops
+  itself or is re-armed by the event that needs it; the companion `_life` timer is the documented Calm/Lively cost); only the Morph property is animated
+  (render-time, no Width/Height animations); the only `Effect` is the one cached `DropShadowEffect`; no Blur/OpacityMask; all theme brushes carry `po:Freeze`,
+  brushes made in code are frozen (the one unfrozen gradient is in the debug `--snap` path); the 60 fps frame cap is set in `OnStartup`. `async void`: only
+  `OnStartup` (inside try/catch with the exception handlers hooked). Static event subscriptions (`SystemEvents`, `SystemParameters`) are unhooked in
+  `Dispose`/`OnExit` except `MotionPolicy` and `ReactionDirector`, which live as long as the process. Build: 0 warnings, so no nullable warnings.
+- **Security-software pass (§7.11):** grep of all of `src/` for `SetWindowsHookEx`, `OpenProcess`, `ReadProcessMemory`, `WriteProcessMemory`, `CreateRemoteThread`,
+  `Assembly.Load(`, `powershell`, `cmd.exe`, `schtasks`, `reg.exe`, `HttpClient`, `Socket`, `WebRequest`: **no hits**. `Process.Start`: `explorer.exe` for the data folder
+  (`App.xaml.cs`, UseShellExecute false) and the two About links (`SettingsViewModel.Data.cs`, only on click). Registry writes: only the HKCU Run key
+  (`StartupRegistration`); reads: `Themes\Personalize` and the DWM colours. Defender custom scan of the Release folder (176 MB, signatures of 2026-11-04 03:19,
+  `-DisableRemediation`): "found no threats". No Defender detection for TaskIsland during about 2 hours of runs.
+- **TESTING.md ticked this phase:** L1, UI4, D9, P7, P11, S3 ✅; P2, P2b, P8, M10 ❌ with numbers; notes added to P1, P3, P9, P10, S1, S2, S7, W18.
+  Scripted checks: `p6a.ps1` 19/19 (L1 5, UI4 9, D9 5), run with the final build; regression run of `p5b.ps1` (Settings window, Debug build with tiered compilation off): 114 PASS, 0 FAIL (the memory line is informational). `dotnet test` 419 green.
+- **Not done / honest limits:** the first-expand hitch (~100 ms of dropped frames) was not looked at again (needs frame capture; user step 1 asks for your eyes);
+  UI2, UI10-UI14, M3-M9, T10, T11, W2, W3, W10, W12, W13, W15, W17, D6, D10 stay ⏳ (mouse, Windows settings, scaling or real sleep needed); P4 needs your eyes;
+  P10 hidden-by-full-screen GPU not measured; installer, publish, signing and S2/S4-S9 are Phase 7.
+**Remaining defects:** memory over the budget (64 MB fresh, 130-140 MB once the panel was opened; target 50 MB); random pops give 0.128 % CPU (target 0.05 %);
+first-expand hitch; slow handle creep that the GC clears; the 👤 lists in TESTING.md (Phase 4, 5 and now 6 steps).
+**Commit:** "Fix defects and optimise performance" (tiered compilation off + Phase 6 results; hash in `git log`) · **Pushed:** see below
+
+**Handoff (for Phase 7, survives /compact):**
+- *What exists:* the full app through Phase 6, 419 unit tests green, Release build 0 warnings. Runtime config now has `TieredCompilation=false`.
+- *Phase 7 must know:* cold start is 0.99-1.13 s with tiered compilation off (limit 1.2 s): measure it again after the ReadyToRun publish; if it is still near
+  1.2 s consider turning tiering back on for the published build only. Trim the `runtimes/` folder (SQLite native files for other platforms) in the publish.
+  Checks that need an installer: S2 (scan publish + installer), S4-S9, R2-R6. The credit text for LICENSE, installer publisher and welcome text is in PLAN
+  "Credit: RieSources" (About page, exe properties and README already have it). Test scripts: `tools/ui-tests/perf.ps1 -Mode idle|cycles|big` (Release build, own
+  temp data folder; a second TaskIsland with the same data folder just asks the first to expand, so never run two against the same root).
+- *Open issues:* see "Remaining defects"; the user's results for the Phase 4/5/6 steps in TESTING.md are not in yet.
+- *Exact next step:* get the user's results for the 👤 steps (or their go-ahead), then start Phase 7: `dotnet build` + `dotnet test` (expect 419 green), then PLAN §8 Phase 7 step 1.

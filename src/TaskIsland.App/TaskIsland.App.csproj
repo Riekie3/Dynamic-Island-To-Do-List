@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
@@ -12,9 +12,12 @@
     <AssemblyName>TaskIsland</AssemblyName>
     <RootNamespace>TaskIsland.App</RootNamespace>
     <ApplicationManifest>app.manifest</ApplicationManifest>
-    <!-- PLAN.md section 6.7 rule 9: no background GC thread (the heap is tiny), profile-guided tiering. -->
+    <!-- PLAN.md section 6.7 rule 9: no background GC thread (the heap is tiny). Tiered compilation is off (Phase 6): it keeps
+         both the quick and the optimised copy of hot code and the call-counting data; measured -13 MB private and -18 MB
+         working set at idle for about +0.25 s cold start (DEVLOG Phase 6). TieredPGO needs tiering, so it is off too. -->
     <ConcurrentGarbageCollection>false</ConcurrentGarbageCollection>
-    <TieredPGO>true</TieredPGO>
+    <TieredCompilation>false</TieredCompilation>
+    <TieredPGO>false</TieredPGO>
     <Deterministic>true</Deterministic>
   </PropertyGroup>
 

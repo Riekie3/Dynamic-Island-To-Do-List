@@ -1,0 +1,37 @@
+D:\Rie\Claude\TaskIsland\tools\ui-tests\seed500.py:3: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+  now = dt.datetime.utcnow()
+500 tasks
+cold start to visible window: 1007 ms
+Mode=big Companion=Off
+after 4 s                   :    82.0 MB private,   146.4 MB WS, 22 threads, 629 handles
+after 60 s                  :    82.0 MB private,   152.6 MB WS, 17 threads, 647 handles
+minute 1 : cpu delta 47 ms total,    83.0 MB private,   152.7 MB WS, 16 threads, 644 handles
+minute 2 : cpu delta 94 ms total,    83.0 MB private,   152.9 MB WS, 14 threads, 642 handles
+minute 3 : cpu delta 141 ms total,    67.3 MB private,   138.3 MB WS, 18 threads, 654 handles
+minute 4 : cpu delta 188 ms total,    68.7 MB private,   139.9 MB WS, 18 threads, 666 handles
+minute 5 : cpu delta 875 ms total,    78.1 MB private,   149.4 MB WS, 18 threads, 678 handles
+minute 6 : cpu delta 891 ms total,    78.1 MB private,   149.5 MB WS, 18 threads, 694 handles
+minute 7 : cpu delta 891 ms total,    78.0 MB private,   149.6 MB WS, 17 threads, 688 handles
+minute 8 : cpu delta 891 ms total,    78.0 MB private,   149.6 MB WS, 17 threads, 700 handles
+minute 9 : cpu delta 891 ms total,    78.0 MB private,   149.6 MB WS, 17 threads, 709 handles
+minute 10 : cpu delta 1,344 ms total,    79.0 MB private,   150.3 MB WS, 17 threads, 721 handles
+minute 11 : cpu delta 1,359 ms total,    79.0 MB private,   150.4 MB WS, 17 threads, 734 handles
+minute 12 : cpu delta 1,359 ms total,    79.0 MB private,   150.4 MB WS, 17 threads, 746 handles
+minute 13 : cpu delta 1,359 ms total,    79.0 MB private,   150.4 MB WS, 16 threads, 755 handles
+minute 14 : cpu delta 1,359 ms total,    79.0 MB private,   150.4 MB WS, 16 threads, 765 handles
+minute 15 : cpu delta 1,359 ms total,    79.0 MB private,   150.4 MB WS, 16 threads, 777 handles
+minute 16 : cpu delta 1,609 ms total,    75.7 MB private,   143.4 MB WS, 16 threads, 639 handles
+minute 17 : cpu delta 1,656 ms total,    76.0 MB private,   143.7 MB WS, 17 threads, 654 handles
+minute 18 : cpu delta 1,688 ms total,    77.1 MB private,   144.7 MB WS, 16 threads, 666 handles
+minute 19 : cpu delta 1,688 ms total,    72.4 MB private,   143.2 MB WS, 16 threads, 677 handles
+minute 20 : cpu delta 1,703 ms total,    72.4 MB private,   143.2 MB WS, 16 threads, 689 handles
+minute 21 : cpu delta 1,703 ms total,    72.4 MB private,   143.2 MB WS, 16 threads, 701 handles
+minute 22 : cpu delta 1,703 ms total,    72.6 MB private,   143.3 MB WS, 17 threads, 716 handles
+minute 23 : cpu delta 1,875 ms total,    73.8 MB private,   143.3 MB WS, 16 threads, 723 handles
+minute 24 : cpu delta 1,875 ms total,    73.8 MB private,   143.3 MB WS, 16 threads, 735 handles
+minute 25 : cpu delta 1,875 ms total,    74.4 MB private,   143.9 MB WS, 16 threads, 749 handles
+minute 26 : cpu delta 1,891 ms total,    74.5 MB private,   144.0 MB WS, 17 threads, 764 handles
+minute 27 : cpu delta 1,891 ms total,    74.4 MB private,   143.9 MB WS, 15 threads, 771 handles
+minute 28 : cpu delta 2,297 ms total,    74.8 MB private,   144.4 MB WS, 16 threads, 783 handles
+minute 29 : cpu delta 2,297 ms total,    73.8 MB private,   143.3 MB WS, 16 threads, 795 handles
+minute 30 : cpu delta 2,297 ms total,    73.8 MB private,   143.3 MB WS, 16 threads, 807 handles

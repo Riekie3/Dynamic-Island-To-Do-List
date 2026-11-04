@@ -609,7 +609,8 @@ Rules:
    re-checked on `SystemEvents.PowerModeChanged`), or the session is remote (`SystemParameters.IsRemoteSession`):
    morph uses 120 ms with no content slide, all other animations are instant, no reminder pulse ring, no peek width tween.
 9. **Runtime settings** in `TaskIsland.App.csproj`: `<ConcurrentGarbageCollection>false</ConcurrentGarbageCollection>`
-   (no background GC thread; the heap is tiny), `<TieredPGO>true</TieredPGO>`, Workstation GC (default). Release
+   (no background GC thread; the heap is tiny), `<TieredCompilation>false</TieredCompilation>` and `<TieredPGO>false</TieredPGO>`
+   (changed in Phase 6, 2026-11-04: -13 MB private / -18 MB working set at idle for about +0.25 s cold start, see DEVLOG), Workstation GC (default). Release
    publish uses ReadyToRun (§Phase 7). SQLite: `PRAGMA cache_size = -1024` (1 MB) per connection, connections
    short-lived as today.
 10. **Measure, don't guess.** Phase 2 records a baseline (idle CPU, private bytes, working set) right after the island
