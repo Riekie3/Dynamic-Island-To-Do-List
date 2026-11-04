@@ -1,0 +1,303 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>TaskIsland preview 2 (rc.2)</title>
+<!-- Source for docs/design-reference-2.png (1672 x 941), the rc.2 version of preview-1.html. Regenerate with tools in DEVLOG (headless Chrome screenshot). -->
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; width: 1672px; height: 941px; overflow: hidden; background: #0d111c;
+    font-family: "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif; color: #f3f4f6; }
+  .desk { position: absolute; left: 0; top: 0; width: 1672px; height: 572px; overflow: hidden;
+    background: radial-gradient(ellipse 60% 70% at 72% 75%, #1f5cf0 0%, #1440c4 30%, transparent 62%),
+                radial-gradient(ellipse 50% 60% at 30% 95%, #2a66e8 0%, transparent 60%),
+                linear-gradient(180deg, #7ea3dc 0%, #6a92d6 35%, #3f6fcf 70%, #2453c2 100%); }
+  .swirl { position: absolute; border-radius: 50%; filter: blur(2px); }
+  .s1 { width: 1200px; height: 700px; left: 640px; top: 160px; border: 90px solid rgba(20, 70, 220, .55); transform: rotate(-18deg); }
+  .s2 { width: 900px; height: 520px; left: 820px; top: 250px; border: 60px solid rgba(60, 130, 255, .45); transform: rotate(-24deg); }
+  .s3 { width: 1100px; height: 640px; left: 200px; top: 330px; border: 80px solid rgba(25, 80, 230, .5); transform: rotate(8deg); }
+  .s4 { width: 700px; height: 420px; left: 1000px; top: 300px; border: 40px solid rgba(120, 180, 255, .35); transform: rotate(-30deg); }
+  .shade { position: absolute; inset: 0; background: linear-gradient(90deg, rgba(10,20,50,.35), transparent 40%); }
+
+  .brand { position: absolute; left: 48px; top: 30px; display: flex; align-items: baseline; gap: 10px; }
+  .brand b { font-size: 22px; letter-spacing: .2px; }
+  .brand span { font-size: 13px; color: #dbe6ff; opacity: .85; }
+
+  .ver { font-style: normal; font-size: 11.5px; font-weight: 600; padding: 2px 9px; border-radius: 10px; background: rgba(255,255,255,.16); color: #fff; }
+  .features { position: absolute; left: 44px; top: 78px; display: flex; flex-direction: column; gap: 14px; }
+  .feat { display: flex; gap: 18px; align-items: center; }
+  .feat .ic { width: 58px; height: 58px; border-radius: 50%; background: rgba(15, 25, 60, .55);
+    border: 1px solid rgba(255,255,255,.12); display: grid; place-items: center; flex: none; }
+  .feat h3 { margin: 0; font-size: 20px; font-weight: 600; }
+  .feat p { margin: 1px 0 0; font-size: 14.5px; color: #e3ebff; line-height: 1.35; }
+
+  /* island panel */
+  .panel { position: absolute; left: 573px; top: 10px; width: 526px; border-radius: 30px;
+    background: linear-gradient(180deg, rgba(24,26,34,.97), rgba(17,18,24,.97));
+    box-shadow: 0 0 0 1.5px rgba(80, 92, 255, .45), 0 0 18px rgba(74, 91, 255, .25), 0 18px 40px rgba(0,0,0,.45);
+    padding: 16px 20px 16px; }
+  .panel::before { content: ""; position: absolute; left: 24px; right: 24px; top: 0; height: 1px; background: rgba(255,255,255,.09); }
+  .hdr { display: flex; align-items: center; gap: 12px; height: 44px; }
+  .hdr .title { font-size: 21px; font-weight: 600; font-family: "Segoe UI Variable Display", "Segoe UI", sans-serif; }
+  .badge { min-width: 24px; height: 22px; padding: 0 7px; border-radius: 11px; background: rgba(47,140,255,.2); color: #8cc0ff;
+    font-size: 13px; font-weight: 600; display: grid; place-items: center; font-variant-numeric: tabular-nums; }
+  .hdr .sp { flex: 1; }
+  .ibtn { width: 32px; height: 32px; border-radius: 10px; display: grid; place-items: center; color: #aeb5c2; }
+  .chips { display: flex; gap: 8px; margin: 10px 0 12px; }
+  .chip { height: 30px; padding: 0 12px; border-radius: 15px; display: flex; align-items: center; gap: 7px; font-size: 13.5px;
+    color: #c9ced8; background: rgba(255,255,255,.05); }
+  .chip.sel { background: rgba(47,140,255,.2); color: #fff; box-shadow: inset 0 0 0 1px rgba(47,140,255,.6); }
+  .chip .n { color: #8e96a3; font-variant-numeric: tabular-nums; }
+  .chip.sel .n { color: #bcd8ff; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+  .add { height: 48px; border-radius: 24px; background: rgba(255,255,255,.06); display: flex; align-items: center; padding: 0 6px 0 16px; gap: 10px; }
+  .add .ph { flex: 1; color: #7b828f; font-size: 15.5px; }
+  .pchip { height: 26px; padding: 0 10px; border-radius: 13px; display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; }
+  .go { width: 38px; height: 38px; border-radius: 50%; background: #2f8cff; display: grid; place-items: center; box-shadow: 0 2px 10px rgba(47,140,255,.45); }
+  .rows { margin-top: 10px; display: flex; flex-direction: column; gap: 4px; }
+  .row { height: 54px; border-radius: 12px; display: flex; align-items: center; gap: 12px; padding: 0 10px; }
+  .row.hover { background: rgba(255,255,255,.06); }
+  .cb { width: 22px; height: 22px; border-radius: 50%; border: 2px solid #5d6573; flex: none; display: grid; place-items: center; }
+  .cb.on { background: #2f8cff; border-color: #2f8cff; }
+  .tt { flex: 1; min-width: 0; }
+  .tt .t { font-size: 15.5px; }
+  .tt .meta { font-size: 12px; color: #8e96a3; display: flex; align-items: center; gap: 6px; margin-top: 2px; }
+  .done .t { color: #7d8492; text-decoration: line-through; }
+  .due { font-size: 12.5px; color: #a7aebb; display: flex; align-items: center; gap: 5px; white-space: nowrap; }
+  .due.over { color: #ff6b6b; }
+  .act { display: flex; gap: 2px; }
+  .high { background: rgba(255,107,107,.14); color: #ff8a8a; } .high i { background: #ff6b6b; }
+  .med { background: rgba(245,184,61,.14); color: #f5c45e; } .med i { background: #f5b83d; }
+  .low { background: rgba(61,214,140,.14); color: #5fe0a2; } .low i { background: #3dd68c; }
+  .pchip i { width: 7px; height: 7px; border-radius: 50%; display: block; }
+  .foot { margin-top: 10px; padding-top: 12px; position: relative; display: flex; align-items: center; gap: 10px; }
+  .bar { position: absolute; left: 0; right: 0; top: 0; height: 3px; border-radius: 2px; background: rgba(255,255,255,.08); }
+  .bar b { display: block; height: 100%; width: 25%; border-radius: 2px; background: #2f8cff; }
+  .foot .st { flex: 1; font-size: 13px; color: #9aa1ad; font-variant-numeric: tabular-nums; }
+  .seg { display: flex; background: rgba(255,255,255,.06); border-radius: 16px; padding: 3px; }
+  .seg span { height: 26px; padding: 0 12px; border-radius: 13px; display: grid; place-items: center; font-size: 12.5px; color: #a7aebb; }
+  .seg span.on { background: rgba(255,255,255,.12); color: #fff; }
+
+  /* right callout */
+  .moods { position: absolute; left: 1182px; top: 92px; width: 300px; padding: 18px 18px 8px; border-radius: 22px;
+    background: rgba(12, 18, 44, .55); border: 1px solid rgba(255,255,255,.12); }
+  .moods h4 { margin: 0 0 12px; font-size: 18px; font-weight: 600; }
+  .mood { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+  .mood .lbl b { display: block; font-size: 14px; font-weight: 600; }
+  .mood .lbl span { font-size: 12.5px; color: #cdd8f5; }
+
+  .set { position: absolute; left: 1182px; top: 332px; width: 300px; padding: 16px 18px 14px; border-radius: 22px;
+    background: rgba(12, 18, 44, .55); border: 1px solid rgba(255,255,255,.12); }
+  .set h4 { margin: 0 0 10px; font-size: 18px; font-weight: 600; }
+  .srow { display: flex; align-items: center; justify-content: space-between; height: 34px; font-size: 14px; color: #e6ecf8; }
+  .sel { padding: 4px 12px; border-radius: 8px; background: rgba(255,255,255,.14); font-size: 13px; font-weight: 600; }
+  .tog { width: 38px; height: 22px; border-radius: 11px; background: #2f8cff; position: relative; }
+  .tog::after { content: ""; position: absolute; right: 3px; top: 3px; width: 16px; height: 16px; border-radius: 50%; background: #fff; }
+  .rem { height: 56px; border-radius: 28px; padding: 0 22px 0 16px; display: flex; align-items: center; gap: 12px; font-size: 18px; font-weight: 600;
+    background: linear-gradient(180deg, #16182A, #05060B); box-shadow: 0 0 0 2.5px #FF3B30, 0 0 6px 2px rgba(255,59,48,.9), 0 0 26px 4px rgba(255,59,48,.55); }
+  .rem small { margin-left: auto; font-size: 13px; font-weight: 600; color: #ff8a80; }
+  .taskbar { position: absolute; left: 0; top: 572px; width: 1672px; height: 64px; background: rgba(28, 36, 60, .92);
+    border-top: 1px solid rgba(255,255,255,.08); }
+  .tb-c { position: absolute; left: 50%; top: 12px; transform: translateX(-50%); display: flex; gap: 22px; }
+  .tb-i { width: 40px; height: 40px; border-radius: 9px; display: grid; place-items: center; }
+  .tb-r { position: absolute; right: 26px; top: 14px; display: flex; gap: 18px; align-items: center; font-size: 12.5px; color: #e6ecf7; }
+  .tb-r .clk { text-align: right; line-height: 1.3; }
+
+  .cards { position: absolute; left: 16px; top: 652px; width: 1640px; display: grid; grid-template-columns: 1fr 1fr 1fr 1.75fr 1fr; gap: 16px; }
+  .card { position: relative; height: 210px; border-radius: 10px; overflow: hidden;
+    background: radial-gradient(ellipse 80% 90% at 70% 110%, #1f5cf0, transparent 65%), linear-gradient(180deg, #7fa3dc, #3d6dce 70%, #2a58c6); }
+  .card .tag { position: absolute; left: 50%; top: 0; transform: translateX(-50%); padding: 7px 16px; border-radius: 0 0 14px 14px;
+    background: #1b2440; font-size: 15px; font-weight: 600; white-space: nowrap; }
+  .card .stage { position: absolute; left: 0; right: 0; top: 54px; display: flex; justify-content: center; gap: 14px; }
+  .card .cap { position: absolute; left: 0; right: 0; bottom: -2px; }
+  .caps { position: absolute; left: 16px; top: 872px; width: 1640px; display: grid; grid-template-columns: 1fr 1fr 1fr 1.75fr 1fr; gap: 16px;
+    text-align: center; font-size: 17px; color: #cfd6e4; }
+  .caps small { display: block; font-size: 13px; color: #8f98a8; margin-top: 3px; }
+  .info { height: 40px; padding: 0 12px 0 8px; border-radius: 20px; background: #000; display: flex; align-items: center; gap: 10px;
+    box-shadow: 0 0 0 1.5px rgba(80, 92, 255, .7), 0 0 14px rgba(74, 91, 255, .35); font-size: 15px; font-weight: 600; }
+  .cursor { position: absolute; }
+</style>
+</head>
+<body>
+<!-- shared SVG geometry, copied from docs/design/mascot-faces.html -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <linearGradient id="pillFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#16182A"/><stop offset="1" stop-color="#05060B"/></linearGradient>
+    <linearGradient id="pillStroke" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3550FF"/><stop offset="1" stop-color="#6B4DFF"/></linearGradient>
+    <style>
+      .s { fill:none; stroke-linecap:round; stroke-linejoin:round; stroke-width:var(--sw); }
+      .f { stroke-linejoin:round; stroke-width:var(--fw); }
+      .face { color:#EAF2FF; fill:currentColor; stroke:currentColor; --sw:5px; --fw:0px; }
+      .glow { color:#7FB6FF; fill:currentColor; stroke:currentColor; --sw:10px; --fw:5px; opacity:.28; }
+      .heart { color:#8FD3FF; }
+      .acc { color:#EAF2FF; fill:currentColor; stroke:currentColor; --sw:3.5px; --fw:0px; }
+      .accline { color:#3D5AFE; fill:currentColor; stroke:currentColor; --sw:8px; --fw:4px; }
+    </style>
+    <g id="pill">
+      <rect x="4" y="4" width="232" height="56" rx="28" fill="none" stroke="#4A5BFF" stroke-width="7" opacity=".3"/>
+      <rect x="4" y="4" width="232" height="56" rx="28" fill="url(#pillFill)"/>
+      <rect x="14" y="8" width="212" height="20" rx="10" fill="#FFFFFF" opacity=".05"/>
+      <rect x="4" y="4" width="232" height="56" rx="28" fill="none" stroke="url(#pillStroke)" stroke-width="2"/>
+    </g>
+    <g id="e-neutral"><rect class="f" x="81" y="21" width="10" height="22" rx="5"/><rect class="f" x="149" y="21" width="10" height="22" rx="5"/></g>
+    <g id="m-none"></g>
+    <g id="e-happy"><path class="s" d="M75,34 Q86,22 97,34"/><path class="s" d="M143,34 Q154,22 165,34"/></g>
+    <g id="m-open"><path class="f" d="M111,38 h18 a9,9 0 0 1 -18,0 z"/></g>
+    <g id="e-laugh"><path class="s" d="M79,23 L94,32 L79,41"/><path class="s" d="M161,23 L146,32 L161,41"/></g>
+    <g id="e-wink"><rect class="f" x="81" y="21" width="10" height="22" rx="5"/><path class="s" d="M162,24 L148,32 L162,40"/></g>
+    <g id="m-smile"><path class="s" d="M113,40 Q120,46 127,40"/></g>
+    <g id="e-surprised"><circle class="f" cx="86" cy="30" r="9"/><circle class="f" cx="154" cy="30" r="9"/></g>
+    <g id="m-o"><circle class="s" cx="120" cy="44" r="4.5"/></g>
+    <g id="e-sleepy"><path class="s" d="M75,30 Q86,41 97,30"/><path class="s" d="M143,30 Q154,41 165,30"/></g>
+    <g id="e-love" class="heart">
+      <path class="f" transform="translate(86 31) scale(1.45)" d="M0,5 C-9,-2 -7,-10 0,-5.5 C7,-10 9,-2 0,5 z"/>
+      <path class="f" transform="translate(154 31) scale(1.45)" d="M0,5 C-9,-2 -7,-10 0,-5.5 C7,-10 9,-2 0,5 z"/>
+    </g>
+    <g id="a-none"></g>
+    <g id="a-lines"><path class="s" d="M212,22 L221,7"/><path class="s" d="M222,24 L233,11"/></g>
+    <g id="a-zz"><path class="s" d="M205,14 h7 l-7,8 h7"/><path class="s" d="M217,4 h12 l-12,13 h12"/></g>
+    <g id="a-sparkles">
+      <path class="f" transform="translate(219 11)" d="M0,-10 Q1.6,-1.6 10,0 Q1.6,1.6 0,10 Q-1.6,1.6 -10,0 Q-1.6,-1.6 0,-10 z"/>
+      <path class="f" transform="translate(233 24)" d="M0,-5 Q.8,-.8 5,0 Q.8,.8 0,5 Q-.8,.8 -5,0 Q-.8,-.8 0,-5 z"/>
+    </g>
+  </defs>
+</svg>
+
+<div class="desk">
+  <div class="swirl s3"></div><div class="swirl s1"></div><div class="swirl s2"></div><div class="swirl s4"></div>
+  <div class="shade"></div>
+</div>
+
+<div class="brand"><b>TaskIsland</b><span>by RieSources</span><em class="ver">1.0.0-rc.2</em></div>
+
+<div class="features">
+  <div class="feat"><div class="ic"><span data-face="e-wink,m-smile,a-none,54"></span></div>
+    <div><h3>Island Buddy</h3><p>A tiny notch with 12 moods<br>that react to what you do.</p></div></div>
+  <div class="feat"><div class="ic"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="3.5" width="17" height="17" rx="4"/><path d="M8 12.3l2.6 2.6L16.2 9"/></svg></div>
+    <div><h3>Smart To-Do Lists</h3><p>Office, personal and project lists.<br>Priorities, due dates, reminders.</p></div></div>
+  <div class="feat"><div class="ic" style="border-color:rgba(255,59,48,.7);box-shadow:0 0 14px rgba(255,59,48,.55)"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ff6b5f" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 17V11a6 6 0 0 1 12 0v6l1.5 2h-15z"/><path d="M10 21.5a2.2 2.2 0 0 0 4 0"/></svg></div>
+    <div><h3>Reminders You Can't Miss</h3><p>The island widens to half the screen<br>with a blinking red border. You set the width.</p></div></div>
+  <div class="feat"><div class="ic"><svg width="26" height="26" viewBox="0 0 24 24" fill="#fff"><path d="M13.5 2 5 13.5h6L10 22l9-12h-6.2z"/></svg></div>
+    <div><h3>Auto Run</h3><p>Starts with Windows and comes<br>back after sleep or a new monitor.</p></div></div>
+  <div class="feat"><div class="ic"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#5fe0a2" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M5 19c0-8 5-13 15-14-1 10-6 15-14 15"/><path d="M5 19c3-4 6-7 10-9"/></svg></div>
+    <div><h3>Light on Power</h3><p>Almost no CPU while idle.<br>No network, no admin rights.</p></div></div>
+  <div class="feat"><div class="ic"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v11M7.5 10l4.5 4.5L16.5 10"/><path d="M4 16v3.5h16V16"/></svg></div>
+    <div><h3>Easy Install, Open Source</h3><p>Setup installer or portable zip.<br>Free under the MIT licence.</p></div></div>
+</div>
+
+<!-- expanded island -->
+<div class="panel">
+  <div class="hdr">
+    <span data-face="e-happy,m-open,a-none,104"></span>
+    <span class="title">My To-Do List</span><span class="badge">3</span>
+    <span class="sp"></span>
+    <span class="ibtn"><svg width="18" height="18" viewBox="0 0 24 24" fill="#aeb5c2"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg></span>
+    <span class="ibtn"><svg width="16" height="16" viewBox="0 0 24 24" stroke="#aeb5c2" stroke-width="2.2" stroke-linecap="round"><path d="M5 5l14 14M19 5L5 19"/></svg></span>
+  </div>
+  <div class="chips">
+    <span class="chip sel">All <span class="n">3</span></span>
+    <span class="chip"><span class="dot" style="background:#A970FF"></span>Office Work <span class="n">2</span></span>
+    <span class="chip"><span class="dot" style="background:#1E90FF"></span>Personal <span class="n">1</span></span>
+    <span class="chip"><span class="dot" style="background:#22C1C3"></span>Project Alpha <span class="n">0</span></span>
+    <span class="chip" style="padding:0 10px">+</span>
+  </div>
+  <div class="add">
+    <svg width="16" height="16" viewBox="0 0 24 24" stroke="#7b828f" stroke-width="2.4" stroke-linecap="round"><path d="M12 4v16M4 12h16"/></svg>
+    <span class="ph">Add a new task…</span>
+    <span class="pchip med"><i></i>Medium</span>
+    <span class="go"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+  </div>
+  <div class="rows">
+    <div class="row"><span class="cb"></span>
+      <div class="tt"><div class="t">Finish project report</div><div class="meta"><span class="dot" style="background:#A970FF;width:6px;height:6px"></span>Office Work</div></div>
+      <span class="due">⏱ Today 5:00 PM</span><span class="pchip high"><i></i>High</span></div>
+    <div class="row"><span class="cb"></span>
+      <div class="tt"><div class="t">Renew car insurance</div><div class="meta"><span class="dot" style="background:#1E90FF;width:6px;height:6px"></span>Personal</div></div>
+      <span class="due over">⏱ Overdue · Yesterday</span><span class="pchip high"><i></i>High</span></div>
+    <div class="row hover"><span class="cb"></span>
+      <div class="tt"><div class="t">Prepare slides for Monday</div><div class="meta"><span class="dot" style="background:#A970FF;width:6px;height:6px"></span>Office Work</div></div>
+      <span class="pchip med"><i></i>Medium</span>
+      <span class="act"><span class="ibtn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#aeb5c2" stroke-width="2" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg></span><span class="ibtn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#aeb5c2" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg></span></span></div>
+    <div class="row done"><span class="cb on"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>
+      <div class="tt"><div class="t">Buy wedding gift</div><div class="meta"><span class="dot" style="background:#1E90FF;width:6px;height:6px"></span>Personal</div></div>
+      <span class="pchip low"><i></i>Low</span></div>
+  </div>
+  <div class="foot">
+    <div class="bar"><b></b></div>
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="#9aa1ad"><rect x="4" y="12" width="3.5" height="8" rx="1"/><rect x="10.2" y="7" width="3.5" height="13" rx="1"/><rect x="16.5" y="3" width="3.5" height="17" rx="1"/></svg>
+    <span class="st">4 total · 1 done · 25%</span>
+    <span class="seg"><span class="on">Active</span><span>Completed</span><span>All</span></span>
+  </div>
+</div>
+
+<div class="moods">
+  <h4>It reacts to you</h4>
+  <div class="mood"><span data-face="e-laugh,m-open,a-sparkles,118"></span><div class="lbl"><b>Excited</b><span>Last task done!</span></div></div>
+  <div class="mood"><span data-face="e-surprised,m-o,a-lines,118"></span><div class="lbl"><b>Surprised</b><span>A reminder is due</span></div></div>
+  <div class="mood"><span data-face="e-sleepy,m-none,a-zz,118"></span><div class="lbl"><b>Sleepy</b><span>Idle for an hour</span></div></div>
+</div>
+
+<div class="set">
+  <h4>Make it yours</h4>
+  <div class="srow">Reminder width<span class="sel">50% &#9662;</span></div>
+  <div class="srow">Blink a red border<span class="tog"></span></div>
+  <div class="srow">Theme<span class="sel">Dark &#9662;</span></div>
+  <div class="srow">Start with Windows<span class="tog"></span></div>
+</div>
+
+<div class="taskbar">
+  <div class="tb-c">
+    <span class="tb-i"><svg width="24" height="24" viewBox="0 0 24 24"><rect x="2" y="2" width="9.5" height="9.5" rx="1.5" fill="#4cc2ff"/><rect x="12.5" y="2" width="9.5" height="9.5" rx="1.5" fill="#4cc2ff"/><rect x="2" y="12.5" width="9.5" height="9.5" rx="1.5" fill="#4cc2ff"/><rect x="12.5" y="12.5" width="9.5" height="9.5" rx="1.5" fill="#4cc2ff"/></svg></span>
+    <span class="tb-i"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L21 21"/></svg></span>
+    <span class="tb-i"><svg width="26" height="22" viewBox="0 0 26 22"><path d="M1 4a2 2 0 0 1 2-2h6l2.5 3H23a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2z" fill="#f6c343"/><rect x="1" y="7" width="24" height="13" rx="2" fill="#fbd96a"/></svg></span>
+    <span class="tb-i"><svg width="24" height="24" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#2f8cff"/><circle cx="12" cy="12" r="5" fill="#9fd1ff"/></svg></span>
+    <span class="tb-i"><svg width="24" height="24" viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="15" rx="2.5" fill="#e8eaef"/><rect x="7" y="2.5" width="10" height="6" rx="2" fill="none" stroke="#e8eaef" stroke-width="1.8"/><rect x="6.5" y="10" width="5" height="4" fill="#f25022"/><rect x="12.5" y="10" width="5" height="4" fill="#7fba00"/><rect x="6.5" y="15" width="5" height="4" fill="#00a4ef"/><rect x="12.5" y="15" width="5" height="4" fill="#ffb900"/></svg></span>
+  </div>
+  <div class="tb-r">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"><path d="M6 15l6-6 6 6"/></svg>
+    <svg width="18" height="16" viewBox="0 0 24 20" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><path d="M2 7a15 15 0 0 1 20 0M5.5 10.5a10 10 0 0 1 13 0M9 14a5 5 0 0 1 6 0"/><circle cx="12" cy="17.5" r="1.3" fill="#fff"/></svg>
+    <svg width="18" height="16" viewBox="0 0 24 20" fill="#fff"><path d="M3 7h4l5-4v14l-5-4H3z"/><path d="M16 6a6 6 0 0 1 0 8M19 3a10 10 0 0 1 0 14" stroke="#fff" stroke-width="1.8" fill="none" stroke-linecap="round"/></svg>
+    <svg width="24" height="14" viewBox="0 0 26 14"><rect x="1" y="1" width="21" height="12" rx="2.5" fill="none" stroke="#fff" stroke-width="1.6"/><rect x="3" y="3" width="15" height="8" rx="1" fill="#fff"/><rect x="23" y="4.5" width="2" height="5" rx="1" fill="#fff"/></svg>
+    <div class="clk">9:41 AM<br>Nov 2, 2026</div>
+  </div>
+</div>
+
+<div class="cards">
+  <div class="card"><span class="tag">Collapsed</span><div class="stage" style="top:70px"><span data-mini="150"></span></div></div>
+  <div class="card"><span class="tag">Reaction</span><div class="stage" style="top:62px"><span data-face="e-happy,m-open,a-none,230"></span></div></div>
+  <div class="card"><span class="tag">Hover</span><div class="stage" style="top:66px">
+    <span class="info"><svg width="28" height="28" viewBox="0 0 28 28"><circle cx="14" cy="14" r="11.5" fill="none" stroke="rgba(255,255,255,.16)" stroke-width="2.4"/><path d="M14 2.5 A11.5 11.5 0 0 1 25.5 14" fill="none" stroke="#2f8cff" stroke-width="2.4" stroke-linecap="round"/><circle cx="14" cy="14" r="7.5" fill="#2f8cff"/><path d="M10.5 14.2l2.4 2.4 4.6-4.8" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>3 tasks<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span></div></div>
+  <div class="card"><span class="tag" style="background:#4a1713;box-shadow:0 0 0 1.5px #FF3B30">Reminder</span><div class="stage" style="top:62px;padding:0 14px">
+    <div class="rem" style="width:100%"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ff6b5f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 17V11a6 6 0 0 1 12 0v6l1.5 2h-15z"/><path d="M10 21.5a2.2 2.2 0 0 0 4 0"/></svg>Renew car insurance<small>Due now</small></div></div></div>
+  <div class="card"><span class="tag">Random Moods</span><div class="stage" style="top:50px;flex-direction:column;align-items:center;gap:6px">
+    <span data-face="e-wink,m-smile,a-none,170"></span><span data-face="e-love,m-smile,a-none,170"></span></div></div>
+</div>
+<div class="caps">
+  <div>Small &amp; Quiet<small>Two glowing dots, zero CPU</small></div>
+  <div>Ticks Make It Smile<small>Eyes and mouth animate on their own</small></div>
+  <div>Count at a Glance<small>Hover to see what is left</small></div>
+  <div>Wide Red Alert<small>Half the screen, blinking border, you choose the width</small></div>
+  <div>Pops Up Now and Then<small>Wink, love, curious and more</small></div>
+</div>
+
+<script>
+  document.querySelectorAll("[data-face]").forEach(el => {
+    const [eyes, mouth, acc, w] = el.dataset.face.split(",");
+    const width = +w, height = Math.round(width * 68 / 244);
+    el.innerHTML = `<svg width="${width}" height="${height}" viewBox="0 -2 244 68" style="display:block;overflow:visible">
+      <use href="#pill"/><use href="#${eyes}" class="glow"/><use href="#${mouth}" class="glow"/>
+      <use href="#${eyes}" class="face"/><use href="#${mouth}" class="face"/>
+      <use href="#${acc}" class="accline"/><use href="#${acc}" class="acc"/></svg>`;
+  });
+  document.querySelectorAll("[data-mini]").forEach(el => {
+    const width = +el.dataset.mini, height = Math.round(width * 36 / 124);
+    el.innerHTML = `<svg width="${width}" height="${height}" viewBox="0 0 124 36" style="display:block;overflow:visible">
+      <rect x="2" y="2" width="120" height="32" rx="16" fill="none" stroke="#4A5BFF" stroke-width="5" opacity=".3"/>
+      <rect x="2" y="2" width="120" height="32" rx="16" fill="url(#pillFill)"/>
+      <rect x="2" y="2" width="120" height="32" rx="16" fill="none" stroke="url(#pillStroke)" stroke-width="1.6"/>
+      <circle cx="52" cy="18" r="5.5" fill="#7FB6FF" opacity=".28"/><circle cx="72" cy="18" r="5.5" fill="#7FB6FF" opacity=".28"/>
+      <circle cx="52" cy="18" r="3.2" fill="#EAF2FF"/><circle cx="72" cy="18" r="3.2" fill="#EAF2FF"/></svg>`;
+  });
+</script>
+</body>
+</html>
