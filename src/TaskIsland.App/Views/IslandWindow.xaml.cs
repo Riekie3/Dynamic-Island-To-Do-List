@@ -615,7 +615,8 @@ public partial class IslandWindow : Window
     private void StartPeek()
     {
         DebugLog($"StartPeek state={Host.State} hovering={_hovering}");
-        if (_expanded || !_hovering || !_vm.HasTopTask || Host.State != IslandState.Info) return;
+        // Never over a reminder pill: both draw their text in the same place.
+        if (_expanded || _alert is not null || !_hovering || !_vm.HasTopTask || Host.State != IslandState.Info) return;
         _peeking = true;
         double w = Math.Min(_settings.NotchWidth + 140, 360);
         Host.AnimateTo(IslandState.Info, w, 36, _motion.Normal, FluentEase.Decelerate);

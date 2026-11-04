@@ -64,13 +64,17 @@ public partial class SettingsWindow : Window
         var button = name.ToLowerInvariant() switch
         {
             "appearance" => NavAppearance,
-            "behaviour" => NavBehaviour,
+            "behaviour" or "reminders" => NavBehaviour,
             "lists" => NavLists,
             "data" => NavData,
             "about" => NavAbout,
             _ => NavGeneral,
         };
         button.IsChecked = true;
+        // "reminders" (debug screenshots): the Behaviour page scrolled down to its Reminders section.
+        if (name.Equals("reminders", StringComparison.OrdinalIgnoreCase))
+            Dispatcher.BeginInvoke(() => RemindersLabel.BringIntoView(new Rect(0, 0, 1, PageScroll.ViewportHeight)),
+                System.Windows.Threading.DispatcherPriority.Loaded);
     }
 
     /// <summary>Debug screenshots without screen capture: renders the window content on the Surface colour and exits.</summary>

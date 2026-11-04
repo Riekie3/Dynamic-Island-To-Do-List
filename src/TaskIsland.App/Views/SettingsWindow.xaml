@@ -45,7 +45,7 @@
             </StackPanel>
         </DockPanel>
 
-        <ScrollViewer Grid.Column="1" Style="{StaticResource OverlayScrollViewer}" VerticalScrollBarVisibility="Auto">
+        <ScrollViewer x:Name="PageScroll" Grid.Column="1" Style="{StaticResource OverlayScrollViewer}" VerticalScrollBarVisibility="Auto">
             <Grid Margin="10,18,22,24">
 
                 <!-- General -->
@@ -191,7 +191,7 @@
                     <TextBlock Style="{StaticResource HintText}" Text="{Binding Hint, ElementName=HotkeyBox}"/>
                     <TextBlock Style="{StaticResource WarnText}" Text="{Binding HotkeyWarning}"/>
 
-                    <TextBlock Style="{StaticResource SectionLabel}" Text="Reminders"/>
+                    <TextBlock x:Name="RemindersLabel" Style="{StaticResource SectionLabel}" Text="Reminders"/>
                     <Border Style="{StaticResource SettingsCard}">
                         <StackPanel>
                             <c:SettingRow Title="Reminders" Description="A notification, a pulse and a face when a task with a due date comes due.">
