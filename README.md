@@ -55,6 +55,26 @@ the [release notes](docs/RELEASE_NOTES.md)):
 
 In PowerShell: `Get-FileHash .\TaskIsland-Setup-1.0.0-rc.2-x64.exe` shows the hash of your download.
 
+### About the one VirusTotal detection (installer)
+
+On VirusTotal the installer is flagged by **1 of 68** security vendors: **Deep Instinct**, which reports only
+"MALICIOUS" with no malware name. The other 67 engines report it clean, and so does **Microsoft Defender** (scanned
+locally with up-to-date signatures, no threats found). We believe this is a **false positive**:
+
+- Deep Instinct is a *machine-learning* scanner. It judges how a file *looks* (its structure, how new it is, whether it
+  is signed), not what it does, and it has no named signature for TaskIsland. A brand-new program from a one-person
+  developer that is **not code-signed** and ships as a setup program is exactly what such models often get wrong.
+- Setup programs made with Inno Setup (like this one) bundle everything into one self-extracting file, which also looks
+  unusual to a classifier, even though it is the standard way to package Windows apps.
+- TaskIsland does none of the things real malware needs: it makes **no network connections**, installs **no hooks**, starts
+  **no other programs**, needs **no administrator rights** and writes only to your own user folders. The complete source
+  code is in this repository, and you can build the same installer yourself (see [Build from source](#build-from-source)).
+
+If you would rather not take our word for it: compare the SHA-256 hash above, scan the file with your own antivirus,
+or use the **portable zip** and the source code. The detection has been reported to the vendor as a false positive;
+such flags usually disappear within days. The rc.2 files are unsigned on purpose for now (code signing is a paid
+certificate), which is also why Windows SmartScreen shows its warning.
+
 ## Install
 
 ### Installer
@@ -174,6 +194,7 @@ Open them from the tray icon (right-click > **Settings…**) or from the panel's
 | Problem | Try this |
 |---|---|
 | "Windows protected your PC" | **More info** > **Run anyway**. The app is not code-signed yet. |
+| An antivirus flags the installer | See [About the one VirusTotal detection](#about-the-one-virustotal-detection-installer). Compare the SHA-256 hash, or use the portable zip. |
 | The notch is gone | Tray icon > **Show** or **Resume visibility**. It also hides on purpose during full-screen videos, games and slide shows. |
 | Ctrl+Alt+T does nothing | Another app may use it: Settings > Behaviour shows a warning; pick another shortcut. |
 | The notch is on the wrong screen | Settings > Behaviour > **Show on display**. |

@@ -185,7 +185,7 @@ Targets from PLAN §6.7. Record the measured number in Notes, every phase from P
 | S6 | Controlled Folder Access on → app runs normally; export to Documents shows the friendly message; Downloads works | A | ⏳ | |
 | S7 | All exe/dll files show Company "RieSources", product, version and description in file Properties | A | ✅ | 2026-11-04 Phase 6: our five files (TaskIsland.exe and the four TaskIsland.*.dll) show Company RieSources, Product TaskIsland, Version 0.1.0.0. Third-party DLLs keep their own properties; the publish folder is checked in Phase 7. | 2026-11-04 Phase 7: in `publish\win-x64` TaskIsland.exe and the four TaskIsland.*.dll show Company RieSources, Product TaskIsland, Version 1.0.0-rc.1+hash and their own description (`tools/ui-tests/fileprops.ps1`). Third-party DLLs keep their own properties. |
 | S8 | Signed build only: `Get-AuthenticodeSignature` = Valid on exe, dlls, installer, uninstaller | A | n/a | 2026-11-04: the user decided to stay unsigned (PLAN 4b). |
-| S9 | VirusTotal scan (only with the user's OK) → 0 detections or false positives reported | A+U | ⏳ | optional |
+| S9 | VirusTotal scan (only with the user's OK) → 0 detections or false positives reported | A+U | 🟡 | 2026-11-04 rc.2: the user uploaded both files. Installer (SHA-256 E3CE55F9...771C1): **1/68** — Deep Instinct "MALICIOUS", no family name shown; the other 67 incl. Defender undetected. Judged a machine-learning false positive on a new unsigned Inno Setup installer (README explains it). Reporting it to Deep Instinct is up to the user (no public submission link found). Zip result not seen yet. |
 
 ## Deployment
 
