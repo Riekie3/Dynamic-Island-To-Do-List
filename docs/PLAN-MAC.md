@@ -33,7 +33,7 @@ service files that reference `System.Windows`.
 | D1 | UI technology | **Avalonia 12** (C#, MIT licence; 12.1.5 on NuGet today) | Keeps Core, Data and the 438 tests. Its XAML is close to WPF. It also builds and runs on this Windows PC, so UI work does not need a Mac for every change |
 | D2 | Signing | **Ad-hoc signed for test builds** (free). Choose Developer ID before a public Mac 1.0 | Same choice as Windows so far, but the cost to Mac users is higher: see section 6 |
 | D3 | Chips | **Apple Silicon first**; Intel `.dmg` as a second, lightly tested file | Cross-building is cheap, but testing Intel properly needs an Intel Mac |
-| D4 | Real Mac for testing | **Needed: please confirm you have one** | See below. This is the only blocker |
+| D4 | Real Mac for testing | **Confirmed 2026-11-05: the owner has a Mac.** Model and macOS version to be recorded in `TESTING-MAC.md` | See below |
 | D5 | Timing | Work on a `mac` branch; merge after Windows 1.0.0 is tagged | Phase M1 touches shared Windows code and should not put the 1.0.0 test period at risk |
 
 **Rejected: native Swift/SwiftUI.** It would give the best Mac feel and the smallest download, but needs a rewrite of

@@ -1,0 +1,62 @@
+# Phase M0 (docs/PLAN-MAC.md): builds the throwaway test app for Mac, runs its self-test and offers the .dmg files as downloads.
+name: Mac spike
+
+on:
+  push:
+    branches: [mac]
+    paths:
+      - 'spikes/mac-m0/**'
+      - '.github/workflows/mac-spike.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  AVALONIA_TELEMETRY_OPTOUT: '1'
+  DOTNET_CLI_TELEMETRY_OPTOUT: '1'
+
+jobs:
+  build:
+    runs-on: macos-15
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Tests on macOS (Core and Data)
+        run: |
+          dotnet test tests/TaskIsland.Core.Tests -c Release
+          dotnet test tests/TaskIsland.Data.Tests -c Release
+
+      - name: Build Apple Silicon dmg
+        run: bash spikes/mac-m0/build-dmg.sh osx-arm64 "$RUNNER_TEMP/dmg"
+
+      - name: Build Intel dmg
+        run: bash spikes/mac-m0/build-dmg.sh osx-x64 "$RUNNER_TEMP/dmg"
+
+      - name: Self-test the Apple Silicon build from its dmg
+        run: |
+          hdiutil attach "$RUNNER_TEMP/dmg/TaskIsland-Spike-osx-arm64.dmg" -nobrowse -mountpoint /tmp/spike
+          /tmp/spike/TaskIsland\ Spike.app/Contents/MacOS/TaskIslandSpike --selftest &
+          PID=$!
+          for i in $(seq 1 90); do kill -0 "$PID" 2>/dev/null || break; sleep 1; done
+          kill "$PID" 2>/dev/null || true
+          mkdir -p "$RUNNER_TEMP/logs"
+          cp ~/Library/Logs/TaskIslandSpike.log "$RUNNER_TEMP/logs/" || true
+          cat "$RUNNER_TEMP/logs/TaskIslandSpike.log" || true
+          grep -q "SELFTEST DONE" "$RUNNER_TEMP/logs/TaskIslandSpike.log"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: TaskIsland-Spike-dmg
+          path: ${{ runner.temp }}/dmg/*.dmg
+          retention-days: 30
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: selftest-log
+          path: ${{ runner.temp }}/logs/
