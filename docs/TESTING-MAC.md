@@ -26,18 +26,20 @@ Things seen there to deal with later:
 - The system reports the app's name as "Avalonia Application" instead of the bundle name.
 - Login item status was `notFound` when run from the `.dmg`. It must be retested from Applications (row 11).
 
-Known spike bug, not fixed yet: when the panel is open, the eyes stay in the middle of it, over the log text.
+Bug found on the owner's Mac and fixed (2026-11-05): the pill vanished after closing the panel, and the panel opened 448 pt too low.
+The window was moved before Avalonia's later resize. Reproduced on CI by a new position check (run 41987562891), and the check
+passes after the fix (run 41987929283). The eyes no longer sit over the log text. **The Mac still has to confirm this: row 2.**
 
 ### On your Mac
 
-Setup: download `TaskIsland-Spike-dmg` from the
-[GitHub run](https://github.com/Riekie3/Dynamic-Island-To-Do-List/actions/runs/41983923819) (sign in to GitHub; the link lasts
+Setup: remove the old copy first, then download `TaskIsland-Spike-dmg` from the
+[GitHub run](https://github.com/Riekie3/Dynamic-Island-To-Do-List/actions/runs/41987929283) (sign in to GitHub; the link lasts
 30 days). Use `osx-arm64` for an Apple M chip, `osx-x64` for Intel. Open the `.dmg` and drag the app to Applications.
 
 | # | Do this | Expected | Result |
 |---|---|---|---|
 | 1 | Open the app from Applications | Blocked. System Settings > Privacy & Security > **Open Anyway**, confirm, password. Then it opens | ⏳ |
-| 2 | Look at the top of the screen | Dark pill with two eyes, centred **below** the menu bar and notch, nothing hidden. Around the pill is see-through. No Dock icon | ⏳ |
+| 2 | Look at the top of the screen | Dark pill with two eyes, centred **below** the menu bar and notch, nothing hidden. Around the pill is see-through. No Dock icon | ❌ First build: pill vanished after closing the panel. ⏳ Retest on the fixed build |
 | 3 | Look at the menu bar | Small pill icon that suits the menu bar colour; its menu opens | ⏳ |
 | 4 | Swipe to another desktop (Space) | The pill stays on screen and does not slide | ⏳ |
 | 5 | Make an app full screen. Then use the menu: "Toggle show over full-screen apps" | Pill hidden in full screen; after the toggle it shows there | ⏳ |
