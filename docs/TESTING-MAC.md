@@ -26,7 +26,9 @@ Things seen there to deal with later:
 - The system reports the app's name as "Avalonia Application" instead of the bundle name.
 - Login item status was `notFound` when run from the `.dmg`. It must be retested from Applications (row 11).
 
-### On your Mac: all ⏳
+Known spike bug, not fixed yet: when the panel is open, the eyes stay in the middle of it, over the log text.
+
+### On your Mac
 
 Setup: download `TaskIsland-Spike-dmg` from the
 [GitHub run](https://github.com/Riekie3/Dynamic-Island-To-Do-List/actions/runs/41983923819) (sign in to GitHub; the link lasts
@@ -42,9 +44,9 @@ Setup: download `TaskIsland-Spike-dmg` from the
 | 6 | Type in Notes while moving the mouse over the pill | Typing carries on in Notes | ⏳ |
 | 7 | Click just beside the pill, on the window under it | The click reaches that window | ⏳ |
 | 8 | From Notes, click the pill **once** | Panel opens on the first click and typing goes into its box | ⏳ |
-| 9 | Click back in Notes. Reopen and press Esc | Panel closes both ways, and you can type in Notes straight away | ⏳ |
-| 10 | Press Control+Option+T in any app | Panel opens and closes, with **no** permission prompt | ⏳ |
-| 11 | Panel: **Login item ON**. Check System Settings > General > Login Items. Restart the Mac | Listed there and starts after the restart. Turn it OFF after. If it fails: **LaunchAgent ON**, restart, then OFF | ⏳ |
+| 9 | Click back in Notes. Reopen and press Esc | Panel closes both ways, and you can type in Notes straight away | 🟡 Esc closes and it reopens (owner, 2026-11-05). Click-away and typing in Notes afterwards not tested |
+| 10 | Press Control+Option+T in any app | Panel opens and closes, with **no** permission prompt | 🟡 Opens and closes (owner, 2026-11-05). No prompt not confirmed yet |
+| 11 | Panel: **Login item ON**. Check System Settings > General > Login Items. Restart the Mac | Listed there and starts after the restart. Turn it OFF after. If it fails: **LaunchAgent ON**, restart, then OFF | 🟡 Register and unregister both returned OK with the ad-hoc signature (log photo). Restart not tested |
 | 12 | With a second screen: menu > "Move to next screen" | Pill moves to the other screen, centred below its menu bar | ⏳ |
 | 13 | Open and close the panel a few times, by eye | Smooth apart from perhaps the first opening | ⏳ |
 | 14 | Leave it alone for 5 minutes | Log lines say `idle:` with low CPU | ⏳ |
