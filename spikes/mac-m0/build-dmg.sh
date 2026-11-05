@@ -15,8 +15,8 @@ mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp -R "$WORK/pub/." "$APP/Contents/MacOS/"
 cp "$HERE/Info.plist" "$APP/Contents/Info.plist"
 
-# Apple Silicon refuses unsigned code, so sign the native libraries first and then the bundle (ad-hoc: no certificate).
-find "$APP/Contents/MacOS" -type f \( -name '*.dylib' -o -name 'TaskIslandSpike' \) -exec codesign --force --sign - {} \;
+# Apple Silicon refuses unsigned code. codesign treats every file here as code (.dll too), so sign them all, then the bundle (ad-hoc: no certificate).
+find "$APP/Contents/MacOS" -type f -exec codesign --force --sign - {} ;
 codesign --force --sign - "$APP"
 codesign --verify --strict --verbose=2 "$APP"
 

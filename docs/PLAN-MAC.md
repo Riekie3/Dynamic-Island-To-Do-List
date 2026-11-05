@@ -101,7 +101,7 @@ Build (on a Mac runner, `installer/mac/build-dmg.sh`):
 2. Assemble `TaskIsland.app/Contents/{MacOS,Resources,Info.plist}`. Bundle id `com.riesources.taskisland`, `LSUIElement`
    true, `LSMinimumSystemVersion` 14.0 (.NET 10 lists macOS 14, 15 and 26; confirm Avalonia 12's minimum in M0). Icon built
    with `iconutil` from `tools/IconGen`.
-3. Sign every native file, then the bundle: `codesign --force --sign -` (ad-hoc). Apple Silicon will not run unsigned code.
+3. Sign every file in `Contents/MacOS` (`codesign` treats `.dll` files as code too), then the bundle: `codesign --force --sign -` (ad-hoc). Apple Silicon will not run unsigned code.
 4. `hdiutil create -format UDZO` with the app, an `Applications` shortcut and a simple background.
 5. Output `TaskIsland-<version>-macos-arm64.dmg` (and `-macos-x64.dmg`); publish SHA-256 in the release notes.
 
