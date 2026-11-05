@@ -48,6 +48,7 @@ jobs:
           cp ~/Library/Logs/TaskIslandSpike.log "$RUNNER_TEMP/logs/" || true
           cat "$RUNNER_TEMP/logs/TaskIslandSpike.log" || true
           grep -q "SELFTEST DONE" "$RUNNER_TEMP/logs/TaskIslandSpike.log"
+          ! grep -q "FRAME FAIL" "$RUNNER_TEMP/logs/TaskIslandSpike.log"
 
       - uses: actions/upload-artifact@v4
         with:

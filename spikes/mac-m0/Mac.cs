@@ -92,6 +92,20 @@ internal static unsafe class Mac
         Send(w, S("setFrameOrigin:"), origin);
     }
 
+    /// <summary>Where the window really is compared with where it should be: top edge at the menu bar, centred, right size.</summary>
+    public static (bool Ok, string Text) CheckFrame(IntPtr w, int screen, double widthPt, double heightPt)
+    {
+        if (w == IntPtr.Zero) return (true, "no native window");
+        var s = Screen(screen % ScreenCount);
+        var f = Rect(w, "frame");
+        var sf = Rect(s, "frame");
+        var v = Rect(s, "visibleFrame");
+        var topGap = f.Y + f.H - (v.Y + v.H);
+        var centreGap = f.X + f.W / 2 - (sf.X + sf.W / 2);
+        var ok = Math.Abs(topGap) < 1 && Math.Abs(centreGap) < 1 && Math.Abs(f.W - widthPt) < 1 && Math.Abs(f.H - heightPt) < 1;
+        return (ok, $"size {f.W}x{f.H} (wanted {widthPt}x{heightPt}), top edge {topGap:+0;-0;0} pt from the menu bar line, centre {centreGap:+0;-0;0} pt");
+    }
+
     public static void LogScreens()
     {
         if (!Active) return;

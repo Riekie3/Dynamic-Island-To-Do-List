@@ -312,8 +312,17 @@ internal sealed class IslandWindow : Window
                 Mac.GiveFocusBack();
                 Log.Write($"collapsed: frontmost after = {Mac.FrontmostApp()}");
             }
+            _ = CheckFrameLaterAsync(open ? "panel" : "pill");
         }
         RequestAnimationFrame(Frame);
+    }
+
+    /// <summary>Checks after the resize has settled. "FRAME FAIL" also fails the CI self-test.</summary>
+    private async Task CheckFrameLaterAsync(string label)
+    {
+        await Task.Delay(300);
+        var (ok, text) = Mac.CheckFrame(_ns, _screen, Width, Height);
+        Log.Write($"{(ok ? "frame ok" : "FRAME FAIL")} {label}: {text}");
     }
 
     private void LogStats(string label)
