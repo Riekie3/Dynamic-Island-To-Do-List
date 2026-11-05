@@ -699,3 +699,11 @@ nothing without a reminder. It is the open M10 item; the release notes now say s
 - *Waiting on the user:* testing findings, optional VirusTotal OK.
 - *Exact next step:* fix findings; then Version `1.0.0`, `tools/publish.ps1`, `tools/build-installer.ps1`, scans, installer
   test, tag `v1.0.0`, `gh release create v1.0.0` with both files (not a pre-release).
+
+## Mac M0: spike built, waiting for the real-Mac test (2026-11-05, branch mac)
+
+Plan: docs/PLAN-MAC.md. Throwaway Avalonia 12.1.5 app in spikes/mac-m0 (not in TaskIsland.sln), built by .github/workflows/mac-spike.yml.
+On a GitHub macOS 15.8.2 Apple Silicon VM: 438 tests pass, ad-hoc dmg builds for both chips, app starts from the dmg, window level and Spaces
+settings read back, key window works, hotkey registers. First panel opening hitches (worst frame 287 ms); closing runs at 16.5 ms per frame.
+About 145 MB. codesign treats every file in Contents/MacOS as code, including .dll, so all of them must be signed.
+Not known until tested on the owner's Mac: see docs/TESTING-MAC.md. M1 does not start before the go/no-go rows pass.
