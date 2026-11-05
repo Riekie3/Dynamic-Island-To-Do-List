@@ -45,6 +45,7 @@ public partial class TaskRow : UserControl
         _vm.LeaveHandler = PlayLeaveAsync;
         _vm.PropertyChanged += OnVmChanged;
         StrikeLine.Opacity = _vm.IsCompleted ? 1 : 0;
+        UpdateStrikeMode();
         SyncDropMarker();
         if (_vm.PlayEnter)
         {
@@ -83,9 +84,21 @@ public partial class TaskRow : UserControl
 
     // ---- tick: done circle scales in, the strikethrough line fades in (200 ms) ----
 
+    // A long title wraps onto several lines. A single line through the middle of a wrapped block looks wrong, so wrapped
+    // titles use a normal text strikethrough instead (instant); one-line titles keep the fading line.
+    private void TitleText_SizeChanged(object sender, SizeChangedEventArgs e) => UpdateStrikeMode();
+
+    private void UpdateStrikeMode()
+    {
+        bool multi = TitleText.ActualHeight > TitleText.FontSize * 2.0;
+        StrikeLine.Visibility = multi ? Visibility.Collapsed : Visibility.Visible;
+        TitleText.TextDecorations = multi && _vm?.IsCompleted == true ? TextDecorations.Strikethrough : null;
+    }
+
     private void SyncCompleted()
     {
         if (_vm is null) return;
+        UpdateStrikeMode();
         double to = _vm.IsCompleted ? 1 : 0;
         var d = MotionPolicy.Current?.Normal ?? TimeSpan.Zero;
         if (!_userToggle || d <= TimeSpan.Zero)

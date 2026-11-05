@@ -85,7 +85,7 @@
 
                     <StackPanel Grid.Column="1" VerticalAlignment="Center">
                         <Grid HorizontalAlignment="Left">
-                            <TextBlock x:Name="TitleText" Text="{Binding Title}" FontSize="14" TextTrimming="CharacterEllipsis">
+                            <TextBlock x:Name="TitleText" Text="{Binding Title}" FontSize="14" TextWrapping="Wrap" SizeChanged="TitleText_SizeChanged">
                                 <TextBlock.Style>
                                     <Style TargetType="TextBlock">
                                         <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
