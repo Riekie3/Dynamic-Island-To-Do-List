@@ -11,6 +11,7 @@
 - **Updated look (2026-11-03):** [design-reference-1.webp](design-reference-1.webp) shows the current target (modern panel,
   list chips, mascot states). Source: `design/preview-1.html`. Where the two images differ, follow design-reference-1.
 - Test checklist: [TESTING.md](TESTING.md) · Dev log: [DEVLOG.md](DEVLOG.md)
+- Mac version (planned, not started): [PLAN-MAC.md](PLAN-MAC.md)
 
 ---
 
