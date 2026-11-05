@@ -22,7 +22,7 @@ internal static unsafe class Mac
     [DllImport(Objc, EntryPoint = "objc_msgSend")] private static extern IntPtr Send(IntPtr o, IntPtr s, IntPtr a);
     [DllImport(Objc, EntryPoint = "objc_msgSend")] private static extern IntPtr Send(IntPtr o, IntPtr s, long a);
     [DllImport(Objc, EntryPoint = "objc_msgSend")] private static extern IntPtr Send(IntPtr o, IntPtr s, ulong a);
-    [DllImport(Objc, EntryPoint = "objc_msgSend")] private static extern IntPtr Send(IntPtr o, IntPtr s, CGPoint a);
+    [DllImport(Objc, EntryPoint = "objc_msgSend")] private static extern IntPtr Send(IntPtr o, IntPtr s, CGRect a, byte b);
     [DllImport(Objc, EntryPoint = "objc_msgSend")] private static extern IntPtr Send(IntPtr o, IntPtr s, byte a);
     [DllImport(Objc, EntryPoint = "objc_msgSend")] private static extern IntPtr SendOut(IntPtr o, IntPtr s, out IntPtr error);
 
@@ -81,15 +81,19 @@ internal static unsafe class Mac
 
     private static IntPtr Screen(int i) => Send(Send(C("NSScreen"), S("screens")), S("objectAtIndex:"), (ulong)i);
 
-    /// <summary>Top centre of screen i, directly below the menu bar and the notch. Cocoa's origin is the bottom-left.</summary>
+    /// <summary>
+    /// Top centre of screen i, directly below the menu bar and the notch. Cocoa's origin is the bottom-left, so the origin
+    /// depends on the height. Position and size are set in one call: Avalonia resizes later, in its layout pass, so moving
+    /// first and letting it resize afterwards left the window off by the height difference (seen as a vanished pill).
+    /// </summary>
     public static void PlaceBelowMenuBar(IntPtr w, int screen, double widthPt, double heightPt)
     {
         if (w == IntPtr.Zero) return;
         var s = Screen(screen % ScreenCount);
         var frame = Rect(s, "frame");
         var visible = Rect(s, "visibleFrame");
-        var origin = new CGPoint { X = frame.X + (frame.W - widthPt) / 2, Y = visible.Y + visible.H - heightPt };
-        Send(w, S("setFrameOrigin:"), origin);
+        var rect = new CGRect { X = frame.X + (frame.W - widthPt) / 2, Y = visible.Y + visible.H - heightPt, W = widthPt, H = heightPt };
+        Send(w, S("setFrame:display:"), rect, (byte)1);
     }
 
     /// <summary>Where the window really is compared with where it should be: top edge at the menu bar, centred, right size.</summary>

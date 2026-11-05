@@ -127,6 +127,7 @@ internal sealed class IslandWindow : Window
     private bool _expanded, _overFullScreen, _faceOn = true, _animating;
     private TimeSpan _lastCpu;
     private DateTime _lastStats;
+    private double _targetW = PillW + Edge * 2, _targetH = PillH + Edge * 2;
 
     public IslandWindow()
     {
@@ -142,7 +143,12 @@ internal sealed class IslandWindow : Window
         Background = Brushes.Transparent;
 
         _eyeL = Eye(); _eyeR = Eye();
-        _face = new Canvas { Width = PillW, Height = PillH, IsHitTestVisible = false, Children = { _eyeL, _eyeR } };
+        _face = new Canvas
+        {
+            Width = PillW, Height = PillH, IsHitTestVisible = false, Children = { _eyeL, _eyeR },
+            // Stays at the top of the pill while the panel is open.
+            HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top,
+        };
         Canvas.SetLeft(_eyeL, PillW / 2 - 28); Canvas.SetTop(_eyeL, 20);
         Canvas.SetLeft(_eyeR, PillW / 2 + 16); Canvas.SetTop(_eyeR, 20);
 
@@ -192,6 +198,7 @@ internal sealed class IslandWindow : Window
         _stats.Tick += (_, _) => LogStats("idle");
 
         Opened += OnOpened;
+        SizeChanged += (_, _) => Place(); // same frame again is a no-op; corrects any later resize by Avalonia
     }
 
     private static Avalonia.Controls.Shapes.Ellipse Eye() => new() { Width = 12, Height = 12, Fill = Brushes.AliceBlue };
@@ -227,7 +234,7 @@ internal sealed class IslandWindow : Window
         if (Program.SelfTest) _ = RunSelfTestAsync();
     }
 
-    private void Place() => Mac.PlaceBelowMenuBar(_ns, _screen, Width, Height);
+    private void Place() => Mac.PlaceBelowMenuBar(_ns, _screen, _targetW, _targetH);
 
     public void NextScreen()
     {
@@ -270,9 +277,11 @@ internal sealed class IslandWindow : Window
 
     private void SetWindowSize(double w, double h)
     {
+        _targetW = w;
+        _targetH = h;
+        Place();
         Width = w;
         Height = h;
-        Place();
     }
 
     /// <summary>Drives the pill's size from real frame callbacks, so the numbers show actual frame times.</summary>
@@ -321,7 +330,7 @@ internal sealed class IslandWindow : Window
     private async Task CheckFrameLaterAsync(string label)
     {
         await Task.Delay(300);
-        var (ok, text) = Mac.CheckFrame(_ns, _screen, Width, Height);
+        var (ok, text) = Mac.CheckFrame(_ns, _screen, _targetW, _targetH);
         Log.Write($"{(ok ? "frame ok" : "FRAME FAIL")} {label}: {text}");
     }
 
