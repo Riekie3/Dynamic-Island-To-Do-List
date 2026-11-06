@@ -22,18 +22,45 @@ public sealed class BackupService(Database db, IClock clock)
     {
         Paths.EnsureCreated();
         var dest = destinationPath ?? UniquePath(Paths.BackupsDir, prefix);
+        if (IsLiveFile(dest))
+            throw new InvalidDataException("That is the live TaskIsland database itself. Choose a different file name for the backup.");
         var dir = Path.GetDirectoryName(Path.GetFullPath(dest));
         if (dir is not null) Directory.CreateDirectory(dir);
-        if (File.Exists(dest)) File.Delete(dest);
 
-        await using var source = await db.OpenAsync();
-        var target = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = dest, Pooling = false }.ToString());
-        await using (target)
+        // Written beside the destination first and swapped in at the end, so a failed backup never destroys an existing one.
+        var temp = dest + ".tmp-" + Guid.NewGuid().ToString("N")[..8];
+        try
         {
-            await target.OpenAsync();
-            source.BackupDatabase(target);
+            await using (var source = await db.OpenAsync())
+            {
+                var target = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = temp, Pooling = false }.ToString());
+                await using (target)
+                {
+                    await target.OpenAsync();
+                    source.BackupDatabase(target);
+                }
+            }
+            File.Move(temp, dest, overwrite: true);
+        }
+        catch
+        {
+            TryDelete(temp);
+            throw;
         }
         return dest;
+    }
+
+    /// <summary>True when <paramref name="path"/> is the live database or one of its -wal/-shm side files.</summary>
+    private bool IsLiveFile(string path)
+    {
+        var full = Path.GetFullPath(path);
+        var live = Path.GetFullPath(Paths.DatabasePath);
+        return new[] { live, live + "-wal", live + "-shm" }.Any(p => string.Equals(p, full, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static void TryDelete(string path)
+    {
+        try { if (File.Exists(path)) File.Delete(path); } catch (IOException) { } catch (UnauthorizedAccessException) { }
     }
 
     /// <summary>
@@ -97,16 +124,29 @@ public sealed class BackupService(Database db, IClock clock)
     /// </summary>
     public async Task<string> RestoreAsync(string backupPath)
     {
+        if (IsLiveFile(backupPath))
+            throw new InvalidDataException("That is the live TaskIsland database itself, not a backup. Choose a backup file.");
         await ValidateBackupAsync(backupPath);
         var safety = await BackupAsync(prefix: PreRestorePrefix);
 
-        SqliteConnection.ClearAllPools();   // release the pooled connections so the file can be replaced
-        foreach (var suffix in new[] { "-wal", "-shm" })
+        // Copy first, next to the live file: a failure here (disk full, locked source) leaves the live database untouched.
+        var temp = Paths.DatabasePath + ".restore-" + Guid.NewGuid().ToString("N")[..8];
+        try
         {
-            var side = Paths.DatabasePath + suffix;
-            if (File.Exists(side)) File.Delete(side);
+            File.Copy(backupPath, temp, overwrite: true);
+            SqliteConnection.ClearAllPools();   // release the pooled connections so the file can be replaced
+            foreach (var suffix in new[] { "-wal", "-shm" })
+            {
+                var side = Paths.DatabasePath + suffix;
+                if (File.Exists(side)) File.Delete(side);
+            }
+            File.Move(temp, Paths.DatabasePath, overwrite: true);
         }
-        File.Copy(backupPath, Paths.DatabasePath, overwrite: true);
+        catch
+        {
+            TryDelete(temp);
+            throw;
+        }
         await db.InitializeAsync();   // WAL mode again + migrations for older backups
         return safety;
     }
@@ -120,21 +160,35 @@ public sealed class BackupService(Database db, IClock clock)
     /// </summary>
     public async Task<string?> RestoreBrokenAsync(string backupPath)
     {
+        if (IsLiveFile(backupPath))
+            throw new InvalidDataException("That is the damaged database itself, not a backup. Choose a backup file.");
         await ValidateBackupAsync(backupPath);
         Paths.EnsureCreated();
         SqliteConnection.ClearAllPools();
+
+        // The chosen backup is copied beside the live file first, so nothing is moved aside unless the copy worked.
+        var temp = Paths.DatabasePath + ".restore-" + Guid.NewGuid().ToString("N")[..8];
         string? kept = null;
-        if (File.Exists(Paths.DatabasePath))
+        try
         {
-            kept = UniquePath(Paths.BackupsDir, BrokenPrefix);
-            File.Move(Paths.DatabasePath, kept);
-            foreach (var suffix in new[] { "-wal", "-shm" })
+            File.Copy(backupPath, temp, overwrite: true);
+            if (File.Exists(Paths.DatabasePath))
             {
-                var side = Paths.DatabasePath + suffix;
-                if (File.Exists(side)) File.Move(side, kept + suffix, overwrite: true);
+                kept = UniquePath(Paths.BackupsDir, BrokenPrefix);
+                File.Move(Paths.DatabasePath, kept);
+                foreach (var suffix in new[] { "-wal", "-shm" })
+                {
+                    var side = Paths.DatabasePath + suffix;
+                    if (File.Exists(side)) File.Move(side, kept + suffix, overwrite: true);
+                }
             }
+            File.Move(temp, Paths.DatabasePath, overwrite: true);
         }
-        File.Copy(backupPath, Paths.DatabasePath, overwrite: true);
+        catch
+        {
+            TryDelete(temp);
+            throw;
+        }
         await db.InitializeAsync();
         return kept;
     }

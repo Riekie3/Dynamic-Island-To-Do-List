@@ -298,4 +298,74 @@ public class BackupServiceTests
         await t.Backup.RunDailyBackupIfDueAsync(t.Settings);
         Assert.Equal(BackupService.KeepAutoBackups, Directory.GetFiles(t.Paths.BackupsDir, "taskisland-*.db").Length);
     }
+
+    // ---- safety guards (audit H-1) ----
+
+    [Fact]
+    public async Task Backup_onto_the_live_database_is_refused_and_the_data_survives()
+    {
+        using var t = await TestDb.CreateAsync();
+        await t.Tasks.AddAsync(P, "keep me", Priority.High);
+        await Assert.ThrowsAsync<InvalidDataException>(() => t.Backup.BackupAsync(t.Paths.DatabasePath));
+        await Assert.ThrowsAsync<InvalidDataException>(() => t.Backup.BackupAsync(t.Paths.DatabasePath.ToUpperInvariant()));
+        Assert.Single(await t.Tasks.GetAllAsync());
+    }
+
+    [Fact]
+    public async Task Backup_over_an_existing_file_replaces_it_and_leaves_no_temp_files()
+    {
+        using var t = await TestDb.CreateAsync();
+        var dest = Path.Combine(t.Root, "mine.db");
+        await t.Tasks.AddAsync(P, "one", Priority.High);
+        await t.Backup.BackupAsync(dest);
+        await t.Tasks.AddAsync(P, "two", Priority.High);
+        await t.Backup.BackupAsync(dest);
+        Assert.Equal(2, await CountTasksIn(dest));
+        Assert.Empty(Directory.GetFiles(t.Root, "mine.db.tmp-*"));
+    }
+
+    [Fact]
+    public async Task A_failed_backup_keeps_the_old_file_and_cleans_up()
+    {
+        using var t = await TestDb.CreateAsync();
+        var dest = Path.Combine(t.Root, "locked.db");
+        await t.Tasks.AddAsync(P, "one", Priority.High);
+        await t.Backup.BackupAsync(dest);
+        using (new FileStream(dest, FileMode.Open, FileAccess.Read, FileShare.Read))   // holds the old backup open
+        {
+            await t.Tasks.AddAsync(P, "two", Priority.High);
+            await Assert.ThrowsAnyAsync<Exception>(() => t.Backup.BackupAsync(dest));
+        }
+        Assert.Equal(1, await CountTasksIn(dest));
+        Assert.Empty(Directory.GetFiles(t.Root, "locked.db.tmp-*"));
+    }
+
+    [Fact]
+    public async Task Restore_from_the_live_database_is_refused_and_nothing_changes()
+    {
+        using var t = await TestDb.CreateAsync();
+        await t.Tasks.AddAsync(P, "keep me", Priority.High);
+        await Assert.ThrowsAsync<InvalidDataException>(() => t.Backup.RestoreAsync(t.Paths.DatabasePath));
+        Assert.Single(await t.Tasks.GetAllAsync());
+        Assert.Empty(Directory.GetFiles(t.Paths.BackupsDir, "pre-restore-*"));
+    }
+
+    [Fact]
+    public async Task Broken_database_recovery_from_the_live_file_is_refused_and_the_file_stays()
+    {
+        using var t = await TestDb.CreateAsync();
+        await t.Tasks.AddAsync(P, "keep me", Priority.High);
+        await Assert.ThrowsAsync<InvalidDataException>(() => t.Backup.RestoreBrokenAsync(t.Paths.DatabasePath));
+        Assert.True(File.Exists(t.Paths.DatabasePath));
+        Assert.Empty(Directory.GetFiles(t.Paths.BackupsDir, "broken-*"));
+    }
+
+    [Fact]
+    public async Task Restore_leaves_no_temp_files_behind()
+    {
+        using var t = await TestDb.CreateAsync();
+        var backup = await t.Backup.BackupAsync();
+        await t.Backup.RestoreAsync(backup);
+        Assert.Empty(Directory.GetFiles(Path.GetDirectoryName(t.Paths.DatabasePath)!, "*.restore-*"));
+    }
 }

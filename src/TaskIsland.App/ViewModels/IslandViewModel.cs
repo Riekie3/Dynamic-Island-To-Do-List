@@ -41,7 +41,7 @@ public sealed partial class IslandViewModel : ObservableObject, ITaskRowHost
     private List<TodoList> _lists = [];
     private List<TaskItem> _tasks = [];
     private Dictionary<long, TaskItem> _tasksById = [];
-    private List<long> _undoIds = [];
+    private readonly List<(string Text, List<long> Ids)> _undoBatches = [];
     private bool _internalSelect;
 
     public IslandViewModel(ITaskRepository tasks, ITodoListRepository lists, ISettingsStore settingsStore,
@@ -447,9 +447,11 @@ public sealed partial class IslandViewModel : ObservableObject, ITaskRowHost
         });
     }
 
+    // Every delete in the 5 s window is its own batch: Undo brings back the newest one, an earlier one stays undoable
+    // until the timer ends (the timer restarts with each delete).
     private void ShowUndo(string text, List<long> ids)
     {
-        _undoIds = ids;
+        _undoBatches.Add((text, ids));
         UndoText = text;
         HasUndo = true;
         _undoTimer.Stop();
@@ -460,9 +462,15 @@ public sealed partial class IslandViewModel : ObservableObject, ITaskRowHost
     private async Task UndoAsync()
     {
         _undoTimer.Stop();
-        var ids = _undoIds;
-        _undoIds = [];
-        HasUndo = false;
+        if (_undoBatches.Count == 0) { HasUndo = false; return; }
+        var ids = _undoBatches[^1].Ids;
+        _undoBatches.RemoveAt(_undoBatches.Count - 1);
+        if (_undoBatches.Count > 0)
+        {
+            UndoText = _undoBatches[^1].Text;   // the previous delete can still be undone
+            _undoTimer.Start();
+        }
+        else HasUndo = false;
         if (ids.Count == 0) return;
         await RunAsync("restore the tasks", async () =>
         {
@@ -475,7 +483,7 @@ public sealed partial class IslandViewModel : ObservableObject, ITaskRowHost
     private async Task ExpireUndoAsync()
     {
         HasUndo = false;
-        _undoIds = [];
+        _undoBatches.Clear();
         await RunAsync("remove the deleted tasks", () => _tasksRepo.PurgeDeletedAsync());
     }
 

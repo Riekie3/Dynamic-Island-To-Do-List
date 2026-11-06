@@ -138,6 +138,7 @@ public sealed partial class SettingsViewModel
             new DialogButton("Merge", DialogButtonKind.Primary), new DialogButton("Replace everything", DialogButtonKind.Danger));
         if (mode < 0) return;
 
+        bool backedUp = false;
         try
         {
             Busy = true;
@@ -146,9 +147,11 @@ public sealed partial class SettingsViewModel
                 if (!DialogWindow.Confirm(Owner, "Replace everything?",
                         "All current lists and tasks will be replaced by the file's. A backup of your current data is saved first.",
                         "Replace", destructive: true)) return;
-                var safety = await _backup.BackupAsync(prefix: "pre-import-");
-                FileLogger.Info($"backup before import (replace): {safety}");
             }
+            // A merge adds items one by one, so a failure part-way can leave some of them behind: keep a copy first.
+            var safety = await _backup.BackupAsync(prefix: "pre-import-");
+            FileLogger.Info($"backup before import ({(mode == 1 ? "replace" : "merge")}): {safety}");
+            backedUp = true;
             var summary = await _import.ImportAsync(data, mode == 1 ? ImportMode.Replace : ImportMode.Merge);
             await Island.RefreshAsync(reloadSettings: true);
             RefreshAll();
@@ -163,7 +166,9 @@ public sealed partial class SettingsViewModel
         {
             FileLogger.Error("import failed", ex);
             await TryRefreshAsync();
-            Status(ex is InvalidOperationException ? ex.Message : "The import failed and nothing was changed. See the log for details.", error: true);
+            Status(ex is InvalidOperationException ? ex.Message
+                : backedUp ? "The import did not finish, so some items may have been added. Your data from before the import is saved as a \"pre-import\" file in the Backups folder."
+                : "The import failed and nothing was changed. See the log for details.", error: true);
         }
         finally
         {
@@ -242,6 +247,10 @@ public sealed partial class SettingsViewModel
             await Island.RefreshAsync(reloadSettings: true);
             RefreshAll();
             Status($"Restored. Your previous data was kept as {Path.GetFileName(safety)} in the Backups folder.");
+        }
+        catch (InvalidDataException ex)
+        {
+            Status("Nothing was restored. " + ex.Message, error: true);
         }
         catch (Exception ex)
         {
