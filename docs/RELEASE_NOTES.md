@@ -1,19 +1,26 @@
-﻿# TaskIsland 1.0.0-rc.3 (test release: installer + portable)
+﻿# TaskIsland 1.0.0-rc.4 (test release: installer + portable)
 
 A Dynamic Island-style to-do list for Windows 11 (x64), by **RieSources** (https://rie-sources.com).
 
-This is the third test release (the second with an **installer**). Version 1.0.0 follows once it has been used for
+This is the fourth test release (the third with an **installer**). Version 1.0.0 follows once it has been used for
 a few days.
 
-## What's new since rc.2
+## What's new since rc.3
 
-- **Long task titles wrap.** A title that is too long for the panel now continues on the next line inside the same row,
-  so you can read all of it (before it was cut off with "..."). It is still one task with one tick; a done task gets a
-  normal strikethrough across the wrapped lines.
-- Everything from rc.2 is unchanged: the wide reminder with the blinking red border (Settings > Behaviour > Reminders),
-  the per-user installer and the hover-preview fix.
+A safety release: these came out of a code audit of rc.3.
 
-## Upgrading from rc.2 or rc.1
+- **Backup and restore are safer.** Backing up to, or restoring from, TaskIsland's own live database file is now refused
+  with a clear message. Backups are written to a temporary file and swapped in at the end, so a failed backup no longer
+  destroys an older one. A restore copies the backup first and only then replaces the database.
+- **Merge import keeps a safety copy.** Importing in Merge mode now saves a "pre-import" backup first (Replace already
+  did). If an import stops half-way, the message says so and points to that backup.
+- **Undo works for several deletes in a row.** Delete two tasks within 5 seconds and Undo brings back the newest, then the
+  one before it. Before, the first one could no longer be undone.
+- Smaller fixes: renaming a list that was just deleted shows a plain message; starting TaskIsland a second time no longer
+  fails on a pipe permission error; a restored backup now also re-applies the horizontal offset and companion setting.
+- Everything from rc.3 is unchanged (wrapped long titles, wide reminder, installer).
+
+## Upgrading from rc.3, rc.2 or rc.1
 
 Exit TaskIsland from the tray menu, then run the new installer over the old one. Tasks and settings stay (same data
 folder, `%LocalAppData%\TaskIsland`). The installer refuses to run while TaskIsland is open.
@@ -21,7 +28,7 @@ folder, `%LocalAppData%\TaskIsland`). The installer refuses to run while TaskIsl
 ## Install (recommended)
 
 1. **If you run the rc.1 portable copy:** Exit it from the tray menu first (the installer asks you to close it anyway).
-2. Run `TaskIsland-Setup-1.0.0-rc.3-x64.exe`. It is **not code-signed**, so SmartScreen may say "Windows protected your
+2. Run `TaskIsland-Setup-1.0.0-rc.4-x64.exe`. It is **not code-signed**, so SmartScreen may say "Windows protected your
    PC": click **More info**, then **Run anyway**. (Smart App Control, if turned on, can block unsigned apps.)
 3. It installs to `%LocalAppData%\Programs\TaskIsland`, adds a Start menu entry (desktop icon optional) and starts
    TaskIsland at the end. Your tasks from rc.1 are found again: the data folder is the same (`%LocalAppData%\TaskIsland`).
@@ -32,7 +39,7 @@ Upgrading later: run a newer installer over the top; tasks and settings stay.
 
 ## Or portable
 
-Unzip `TaskIsland-1.0.0-rc.3-win-x64-portable.zip` somewhere permanent and run `TaskIsland.exe` (same SmartScreen note).
+Unzip `TaskIsland-1.0.0-rc.4-win-x64-portable.zip` somewhere permanent and run `TaskIsland.exe` (same SmartScreen note).
 "Start with Windows" is on by default and points at that folder, so do not move it afterwards.
 
 No administrator rights, no internet connection, no .NET install needed (the runtime is included) either way.
@@ -48,12 +55,13 @@ No administrator rights, no internet connection, no .NET install needed (the run
 
 ## Checks done for this release
 
-- 438 automated tests green. Microsoft Defender (signatures 1.463.130.0) found no threats in the installer, the program
-  folder or the zip. The installer was tested on this PC with a separate test build (own folder, data folder and registry
-  key): install without administrator mode, upgrade (refused while TaskIsland runs, works over the top once closed, tasks
-  kept), uninstall with the "Also delete your tasks and backups?" question (default No) and reinstall. All checks passed;
-  the one check against the real installed copy was skipped because TaskIsland is already installed on this PC. The long-title wrapping was checked in a screenshot. The
-  10-minute Defender soak was **not** repeated for rc.3.
+- 444 automated tests green (6 new for the backup/restore guards). Microsoft Defender found no threats in the installer
+  or the zip. The installer was tested on this PC with a separate test build (own folder, data folder and registry key):
+  install without administrator mode, upgrade (refused while TaskIsland runs, works over the top once closed, tasks kept),
+  uninstall with the "Also delete your tasks and backups?" question (default No) and reinstall. All checks passed; the one
+  check against the real installed copy was skipped because TaskIsland is already installed on this PC. The undo and
+  import changes were not tried by hand in the running app. The 10-minute Defender soak was **not** repeated for rc.4.
+- The files were built from a clean, committed tree (the program reports `1.0.0-rc.4+3c49fa1`).
 
 ## Known limits (please tell us what you see)
 
@@ -75,8 +83,8 @@ No administrator rights, no internet connection, no .NET install needed (the run
 
 ## SHA-256
 
-- `TaskIsland-Setup-1.0.0-rc.3-x64.exe`: `F6F0FFD19D501F0B90DFE9E1AE592F0F095B311F8F776F06CF93E24938CF5A70`
-- `TaskIsland-1.0.0-rc.3-win-x64-portable.zip`: `38DDC70A91BD0D4D633BB720B7EC0C1AD119AE19ABAEAB6CC218AB1C74963B0C`
+- `TaskIsland-Setup-1.0.0-rc.4-x64.exe`: `25707C81DB3973DA042F0A1023C70B8AEC79BEA3B21AEE7836BB234C18750083`
+- `TaskIsland-1.0.0-rc.4-win-x64-portable.zip`: `944F0D4D62189D6ADD134ABEEEDD183AD09683217BBCEC076D1FCDE4022699DD`
 
 ---
 
