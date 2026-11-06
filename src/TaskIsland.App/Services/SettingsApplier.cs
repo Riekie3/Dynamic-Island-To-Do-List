@@ -74,7 +74,8 @@ public sealed class SettingsApplier
     private static readonly string[] AllKeys =
     [
         AppSettings.Keys.Theme, AppSettings.Keys.AccentSource, AppSettings.Keys.Density, AppSettings.Keys.MascotEnabled,
-        AppSettings.Keys.NotchWidth, AppSettings.Keys.PanelOpacity, AppSettings.Keys.TopMargin, AppSettings.Keys.MonitorDeviceName,
+        AppSettings.Keys.NotchWidth, AppSettings.Keys.PanelOpacity, AppSettings.Keys.TopMargin, AppSettings.Keys.HorizontalOffset,
+        AppSettings.Keys.MonitorDeviceName, AppSettings.Keys.Companion,
         AppSettings.Keys.AnimationsEnabled, AppSettings.Keys.FollowWindowsAnimations, AppSettings.Keys.IdleReactions,
         AppSettings.Keys.AlwaysShowNotch, AppSettings.Keys.HideInFullScreen, AppSettings.Keys.ToggleHotkey,
         AppSettings.Keys.RemindersEnabled, AppSettings.Keys.LaunchAtStartup, AppSettings.Keys.PillCountScope,

@@ -189,7 +189,8 @@ public sealed partial class IslandViewModel
         {
             if (editor.ListId is { } id)
             {
-                var old = _lists.First(l => l.Id == id);
+                var old = _lists.FirstOrDefault(l => l.Id == id)
+                    ?? throw new InvalidOperationException("That list no longer exists.");
                 if (old.Name != name) await _listsRepo.RenameAsync(id, name);
                 if (!string.Equals(old.ColorHex, editor.ColorHex, StringComparison.OrdinalIgnoreCase))
                     await _listsRepo.SetColorAsync(id, editor.ColorHex);
@@ -246,7 +247,8 @@ public sealed partial class IslandViewModel
             return;
         }
         CancelTransientUi();
-        var list = _lists.First(l => l.Id == chip.Id);
+        var list = _lists.FirstOrDefault(l => l.Id == chip.Id);
+        if (list is null) return;   // already gone
         int count = _tasks.Count(t => t.ListId == list.Id);
         var targets = _lists.Where(l => l.Id != list.Id)
             .Select(l => new ListChoiceViewModel(l.Id, l.Name, BrushCache.Frozen(BrushCache.Parse(l.ColorHex), 1))).ToList();

@@ -62,6 +62,11 @@ public sealed class SingleInstance : IDisposable
             }
             catch (TimeoutException) { }
             catch (IOException) { Thread.Sleep(250); }
+            catch (Exception ex) when (ex is UnauthorizedAccessException or System.Security.SecurityException
+                                           or InvalidOperationException or ArgumentException or PlatformNotSupportedException)
+            {
+                return false;   // the pipe can't be used at all; retrying won't help and the caller just exits
+            }
         }
         return false;
     }
