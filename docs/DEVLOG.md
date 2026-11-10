@@ -744,10 +744,11 @@ and drop to the front and back".
 blocked group drop was not observed directly; the test asserts the order stayed unchanged. Reduced motion was not re-captured,
 but the code path sets the lift/gap values without animation.
 
-**Release:** version 1.0.2, built from `ec6d26f` (`1.0.2+ec6d26f`). Portable zip 66.7 MB, installer 50.8 MB; hashes and
-checks in `docs/RELEASE_NOTES.md`.
+**Release:** [v1.0.2](https://github.com/Riekie3/Dynamic-Island-To-Do-List/releases/tag/v1.0.2) published 2026-11-10,
+built from `ec6d26f` (`1.0.2+ec6d26f`). Portable zip 66.7 MB, installer 50.8 MB; both re-downloaded from GitHub and their
+SHA-256 hashes matched. Hashes and checks in `docs/RELEASE_NOTES.md`.
 
-**Commit:** `499ab13` (drag preview, tests and docs), `ec6d26f` (Version 1.0.2).
+**Commit:** `499ab13` (drag preview, tests and docs), `ec6d26f` (Version 1.0.2), `7067add` (release notes, README, hashes).
 
 **Handoff (for the next drag change, survives /compact):** `DragLift.Start` is the only lift implementation; it needs an adorner
 layer and returns null otherwise. `GiveFeedback` is what keeps the copy under the pointer between drop targets; `DragOver` only
