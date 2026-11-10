@@ -97,7 +97,6 @@
             <ScrollViewer x:Name="ChipScroller" Grid.Row="1" Margin="0,6,0,0" HorizontalScrollBarVisibility="Hidden"
                           VerticalScrollBarVisibility="Disabled" PreviewMouseWheel="Chips_MouseWheel" Focusable="False"
                           AllowDrop="True" DragOver="Chips_DragOver" DragLeave="Chips_DragLeave" Drop="Chips_Drop">
-                <Grid>
                 <StackPanel x:Name="ChipStrip" Orientation="Horizontal" Background="Transparent">
                     <ItemsControl x:Name="ChipItems" ItemsSource="{Binding Chips}" Focusable="False">
                         <ItemsControl.ItemsPanel>
@@ -142,12 +141,6 @@
                     <Button x:Name="NewListButton" Style="{StaticResource IconButton}" Width="28" Height="28" FontSize="11" Content="&#xE710;"
                             Command="{Binding NewListCommand}" ToolTip="New list" AutomationProperties.Name="New list"/>
                 </StackPanel>
-                <!-- Where a dragged list chip will land -->
-                <Canvas IsHitTestVisible="False">
-                    <Rectangle x:Name="ChipDropLine" Width="2" RadiusX="1" RadiusY="1" Fill="{DynamicResource AccentBrush}"
-                               Visibility="Collapsed"/>
-                </Canvas>
-                </Grid>
             </ScrollViewer>
 
             <!-- 3. Quick add -->

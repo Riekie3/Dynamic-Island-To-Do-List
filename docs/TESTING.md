@@ -87,8 +87,8 @@ These cover the logic behind T1–T15, L2–L10, L13, D1–D3 and D5–D10, but 
 | T7 | Tick → blue tick + strikethrough → slides out of Active after 2 s | A | ✅ | 2026-11-04 Phase 3: tick keeps the row for 2 s (strike-line overlay), then it slides out of Active; completed state saved. The animation frames were not watched (render-only code, ran without errors). |
 | T8 | Untick within 2 s cancels slide-out; untick in Completed view works | A | ✅ | 2026-11-04 Phase 3: untick within 2 s keeps the row in Active; untick in the Completed view works. |
 | T9 | Sorting High → Medium → Low; stable order within group | A | ✅ | 2026-11-04 Phase 3: High, Medium, Low, stable within a group; checked in the UI row order and in the DB. |
-| T10 | Drag reorder within a priority group persists after restart | A | ⏳ | 2026-11-04 Phase 3: keyboard reorder (Alt+Up/Down) works: persisted and survives a restart. The real mouse drag with the insertion line is NOT tested (needs the mouse; ask the user). |
-| T11 | Drag into another priority group is blocked | A | ⏳ | 2026-11-04 Phase 3: group rule works by keyboard (Alt+Down stops at the group edge; reorder is off in All lists). The "No" cursor on a mouse drag into another group is NOT tested (needs the mouse). |
+| T10 | Drag reorder within a priority group persists after restart | A | ✅ | 2026-11-04 Phase 3: keyboard reorder (Alt+Up/Down) works: persisted and survives a restart. 2026-11-10: real mouse drag in `tools/ui-tests/rowdrag.ps1`: Prepare slides for Monday dragged below Draft roadmap in Office Work; DB order, panel still open, and panel order after a restart all correct. Row now lifts out with a gap preview instead of an insertion line. |
+| T11 | Drag into another priority group is blocked | A | ✅ | 2026-11-04 Phase 3: group rule works by keyboard (Alt+Down stops at the group edge; reorder is off in All lists). 2026-11-10: real mouse drop of a Medium row onto a High row left the DB order unchanged (`rowdrag.ps1`); the cursor itself was not observed. |
 | T12 | Filters Active / Completed / All; filter remembered | A | ✅ | 2026-11-04 Phase 3: Active / Completed / All; the filter is remembered after a restart and after taskkill /f. |
 | T13 | Counters (pill, header, footer, %) update instantly | A | ✅ | 2026-11-04 Phase 3: footer, list chip, header badge and pill ("1 task", "2 tasks", "All done", read from rendered --snap images) update at once on add / tick / delete / undo. |
 | T14 | Clear completed → confirm → Undo works | A | ✅ | 2026-11-04 Phase 3: Clear completed shows a confirm card (with the count), Cancel keeps everything, Confirm removes and the Undo bar restores them. |
@@ -266,9 +266,9 @@ New in Phase 6:
    starting TaskIsland is the one that may stutter (known). Note whether later expands are smooth.
 2. **Scrolling (P9):** add or import many tasks (Settings > Data > Import any big JSON, or just add 30) and scroll the list with the mouse wheel.
    Expected: smooth, no blank rows flashing.
-3. **Drag to reorder (T10, T11):** in one list with three tasks of the same priority, drag one above another: a blue insertion line shows and the order
-   stays after you close and reopen the panel (and after restarting TaskIsland). Then drag a task into a different priority group: the cursor
-   shows "not allowed" and nothing moves.
+3. **Drag to reorder (T10, T11):** in one list with three tasks of the same priority, drag one above another: the row lifts out and follows
+   the pointer while the other rows slide aside, and the order stays after you close and reopen the panel (and after restarting TaskIsland).
+   Then drag a task into a different priority group: the cursor shows "not allowed" and nothing moves.
 4. **Peek toggle (UI10):** hover the collapsed island: the top task peeks out. Turn "Peek on hover" off in Settings > Behaviour: hovering no longer peeks.
 5. **Animations off (UI12) and Windows animations (UI14):** Settings > Behaviour: turn "Animations" off: expand/collapse becomes instant.
    Turn it on again. Then in Windows Settings > Accessibility > Visual effects turn "Animation effects" off *and* in TaskIsland tick

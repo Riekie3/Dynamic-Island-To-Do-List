@@ -133,9 +133,10 @@ portable folder.
 - **Edit:** hover a task and click the pencil (or select it and press **F2**) to change its title, priority, notes, due
   date and time, and list. **Save** or **Cancel**.
 - **Delete:** hover a task and click the bin (or press **Delete**). An **Undo** bar appears for a few seconds.
-- **Reorder:** drag a task up or down, or select it and press **Alt+Up** / **Alt+Down**.
-- **Reorder lists:** drag a list chip (for example **Personal**) left or right in the list row; a line shows where it
-  lands. Or right-click the chip > **Move left** / **Move right**.
+- **Reorder:** drag a task up or down within its priority group, or select it and press **Alt+Up** / **Alt+Down**.
+  The row lifts out and follows the pointer while the other rows slide aside to show where it will land.
+- **Reorder lists:** drag a list chip (for example **Personal**) left or right in the list row; the chip lifts out and
+  the other chips make room for it. Or right-click the chip > **Move left** / **Move right**.
 - **Filter:** **Active**, **Completed** or **All** at the bottom. The bottom line shows totals and progress.
 - **Clear completed:** the **…** menu at the top right.
 

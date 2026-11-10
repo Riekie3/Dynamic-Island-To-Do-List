@@ -46,7 +46,6 @@ public partial class TaskRow : UserControl
         _vm.PropertyChanged += OnVmChanged;
         StrikeLine.Opacity = _vm.IsCompleted ? 1 : 0;
         UpdateStrikeMode();
-        SyncDropMarker();
         if (_vm.PlayEnter)
         {
             _vm.PlayEnter = false;
@@ -75,9 +74,6 @@ public partial class TaskRow : UserControl
             case nameof(TaskItemViewModel.IsEditing):
                 if (_vm!.IsEditing) FocusTitle();
                 else DatePopup.IsOpen = false;
-                break;
-            case nameof(TaskItemViewModel.DropMarker):
-                SyncDropMarker();
                 break;
         }
     }
@@ -251,8 +247,8 @@ public partial class TaskRow : UserControl
         if (e.LeftButton != MouseButtonState.Pressed) { _dragStart = null; return; }
         if ((e.GetPosition(this) - start).Length < DragThreshold) return;
         _dragStart = null;
-        var data = new DataObject(DragFormat, _vm);
-        DragDrop.DoDragDrop(this, data, DragDropEffects.Move);
+        if (FindPanel() is not { } panel) return;
+        panel.BeginTaskDrag(this, _vm, e.GetPosition(panel));
     }
 
     protected override void OnPreviewMouseLeftButtonUp(MouseButtonEventArgs e)
@@ -271,10 +267,31 @@ public partial class TaskRow : UserControl
         return false;
     }
 
-    private void SyncDropMarker()
+    private PanelView? FindPanel()
     {
-        var marker = _vm?.DropMarker ?? DropMarker.None;
-        DropAbove.Visibility = marker == DropMarker.Above ? Visibility.Visible : Visibility.Collapsed;
-        DropBelow.Visibility = marker == DropMarker.Below ? Visibility.Visible : Visibility.Collapsed;
+        DependencyObject? current = this;
+        while (current is not null)
+        {
+            if (current is PanelView panel) return panel;
+            current = current is Visual or System.Windows.Media.Media3D.Visual3D
+                ? VisualTreeHelper.GetParent(current)
+                : LogicalTreeHelper.GetParent(current);
+        }
+        return null;
     }
+
+    // ---- drag gap preview ----
+
+    /// <summary>The row's current vertical preview offset (0 when no drag is in progress).</summary>
+    public double DragShiftY => RowSlide.Y;
+
+    /// <summary>Slides the row out of the way for the drag preview (fast token; instant under reduced motion).</summary>
+    public void ShiftForDrag(double y)
+    {
+        var d = MotionPolicy.Current?.Fast ?? TimeSpan.Zero;
+        Anim.To(RowSlide, TranslateTransform.YProperty, y, d, FluentEase.Decelerate);
+    }
+
+    /// <summary>Puts the row back at once when the drop finishes or the drag is cancelled.</summary>
+    public void ResetDragShift() => Anim.Stop(RowSlide, TranslateTransform.YProperty, 0);
 }

@@ -18,13 +18,13 @@ public partial class PanelView : UserControl
     private const double FaceScale = 28.0 / FaceRig.FrameHeight;
     private const double EdgeScroll = 28;
     private readonly IslandViewModel _vm;
-    private TaskItemViewModel? _marked;
 
     public PanelView(IslandViewModel vm, bool mascot)
     {
         InitializeComponent();
         _vm = vm;
         DataContext = vm;
+        AddHandler(DragDrop.GiveFeedbackEvent, new GiveFeedbackEventHandler(OnDragFeedback));
         Face = new FaceRig(withShell: true) { RenderTransform = new ScaleTransform(FaceScale, FaceScale) };
         // The rig's pill (x 4..236, y 4..60) scaled into the 105 x 28 header slot.
         Canvas.SetLeft(Face, -4 * FaceScale);
@@ -236,96 +236,6 @@ public partial class PanelView : UserControl
 
     // ---- drag a list chip to a new place ----
 
-    private const string ChipDragFormat = "TaskIsland.ListChip";
-    private Point? _chipDragStart;
-
-    private void Chip_PreviewMouseDown(object sender, MouseButtonEventArgs e) =>
-        _chipDragStart = sender is FrameworkElement { DataContext: ListChipViewModel { IsAll: false } } && !_vm.HasOverlay
-            ? e.GetPosition(ChipStrip)
-            : null;
-
-    private void Chip_PreviewMouseUp(object sender, MouseButtonEventArgs e) => _chipDragStart = null;
-
-    private void Chip_PreviewMouseMove(object sender, MouseEventArgs e)
-    {
-        if (_chipDragStart is not { } start) return;
-        if (e.LeftButton != MouseButtonState.Pressed) { _chipDragStart = null; return; }
-        if (Math.Abs(e.GetPosition(ChipStrip).X - start.X) < SystemParameters.MinimumHorizontalDragDistance + 2) return;
-        _chipDragStart = null;
-        if (sender is not ButtonBase { DataContext: ListChipViewModel chip } button) return;
-        button.ReleaseMouseCapture();   // so the button does not also count this as a click
-        try { DragDrop.DoDragDrop(button, new DataObject(ChipDragFormat, chip), DragDropEffects.Move); }
-        finally { ChipDropLine.Visibility = Visibility.Collapsed; }
-    }
-
-    private void Chips_DragOver(object sender, DragEventArgs e)
-    {
-        e.Handled = true;
-        if (e.Data.GetData(ChipDragFormat) is not ListChipViewModel dragged)
-        {
-            e.Effects = DragDropEffects.None;
-            return;
-        }
-        e.Effects = DragDropEffects.Move;
-        var pos = e.GetPosition(ChipScroller);
-        if (pos.X < EdgeScroll) ChipScroller.ScrollToHorizontalOffset(ChipScroller.HorizontalOffset - 8);
-        else if (pos.X > ChipScroller.ActualWidth - EdgeScroll) ChipScroller.ScrollToHorizontalOffset(ChipScroller.HorizontalOffset + 8);
-
-        int slot = ChipSlot(e.GetPosition(ChipStrip).X);
-        int from = _vm.Lists.ToList().FindIndex(l => l.Id == dragged.Id);
-        if (from < 0 || slot == from || slot == from + 1)
-        {
-            ChipDropLine.Visibility = Visibility.Collapsed;   // dropping here changes nothing
-            return;
-        }
-        ShowDropLine(slot);
-    }
-
-    private void Chips_DragLeave(object sender, DragEventArgs e) => ChipDropLine.Visibility = Visibility.Collapsed;
-
-    private void Chips_Drop(object sender, DragEventArgs e)
-    {
-        e.Handled = true;
-        ChipDropLine.Visibility = Visibility.Collapsed;
-        if (e.Data.GetData(ChipDragFormat) is not ListChipViewModel dragged) return;
-        _ = _vm.MoveListToAsync(dragged, ChipSlot(e.GetPosition(ChipStrip).X));
-    }
-
-    /// <summary>The list chips (not All) with their left and right edges in <see cref="ChipStrip"/>.</summary>
-    private List<(double Left, double Right)> ListChipEdges()
-    {
-        var edges = new List<(double, double)>();
-        for (int i = 1; i < ChipItems.Items.Count; i++)
-        {
-            if (ChipItems.ItemContainerGenerator.ContainerFromIndex(i) is not FrameworkElement c || !c.IsVisible) continue;
-            double left = c.TransformToAncestor(ChipStrip).Transform(new Point(0, 0)).X;
-            edges.Add((left, left + c.ActualWidth));
-        }
-        return edges;
-    }
-
-    /// <summary>Where a drop at <paramref name="x"/> puts the list: 0 = first, Lists.Count = last.</summary>
-    private int ChipSlot(double x)
-    {
-        var edges = ListChipEdges();
-        for (int i = 0; i < edges.Count; i++)
-            if (x < (edges[i].Left + edges[i].Right) / 2) return i;
-        return edges.Count;
-    }
-
-    private void ShowDropLine(int slot)
-    {
-        var edges = ListChipEdges();
-        if (edges.Count == 0) return;
-        double x = slot < edges.Count ? edges[slot].Left : edges[^1].Right;
-        double gap = slot > 0 && slot < edges.Count ? (edges[slot].Left - edges[slot - 1].Right) / 2 : 3;
-        double lineX = slot < edges.Count ? x - gap : x + gap;
-        Canvas.SetLeft(ChipDropLine, lineX - ChipDropLine.Width / 2);
-        Canvas.SetTop(ChipDropLine, 4);
-        ChipDropLine.Height = Math.Max(10, ChipStrip.ActualHeight - 8);
-        ChipDropLine.Visibility = Visibility.Visible;
-    }
-
     /// <summary>In All lists the quick-add chip picks the list for new tasks.</summary>
     private void QuickAddList_Click(object sender, RoutedEventArgs e)
     {
@@ -355,78 +265,6 @@ public partial class PanelView : UserControl
     private void Exit_Click(object sender, RoutedEventArgs e) => ExitRequested?.Invoke(this, EventArgs.Empty);
 
     // ---- drag to reorder: drop target (PLAN.md section 6.4) ----
-
-    private static bool TryDragged(DragEventArgs e, out TaskItemViewModel row)
-    {
-        row = null!;
-        if (!e.Data.GetDataPresent(TaskRow.DragFormat) || e.Data.GetData(TaskRow.DragFormat) is not TaskItemViewModel r) return false;
-        row = r;
-        return true;
-    }
-
-    private void TaskList_DragOver(object sender, DragEventArgs e)
-    {
-        e.Handled = true;
-        var pos = e.GetPosition(TaskList);
-        if (!TryDragged(e, out var dragged) || !_vm.CanReorder)
-        {
-            e.Effects = DragDropEffects.None;
-            Mark(null, DropMarker.None);
-            return;
-        }
-        AutoScroll(pos);
-        var hit = HitRow(pos);
-        if (hit is not { Row.DataContext: TaskItemViewModel target } h || !SameGroup(dragged, target))
-        {
-            e.Effects = DragDropEffects.None; // outside the priority group: the "no" cursor
-            Mark(null, DropMarker.None);
-            return;
-        }
-        e.Effects = DragDropEffects.Move;
-        Mark(target, h.Below ? DropMarker.Below : DropMarker.Above);
-    }
-
-    private void TaskList_DragLeave(object sender, DragEventArgs e) => Mark(null, DropMarker.None);
-
-    private void TaskList_Drop(object sender, DragEventArgs e)
-    {
-        e.Handled = true;
-        Mark(null, DropMarker.None);
-        if (!TryDragged(e, out var dragged) || !_vm.CanReorder) return;
-        if (HitRow(e.GetPosition(TaskList)) is not { Row.DataContext: TaskItemViewModel target } h || !SameGroup(dragged, target)) return;
-        var ids = _vm.GroupIds(dragged.ListId, dragged.Priority);
-        int index = ids.IndexOf(target.Id) + (h.Below ? 1 : 0);
-        _ = _vm.MoveAsync(dragged, index);
-    }
-
-    private static bool SameGroup(TaskItemViewModel a, TaskItemViewModel b) =>
-        a.ListId == b.ListId && a.Priority == b.Priority && !b.Model.IsCompleted;
-
-    private void Mark(TaskItemViewModel? row, DropMarker marker)
-    {
-        if (_marked is not null && _marked != row) _marked.DropMarker = DropMarker.None;
-        _marked = row;
-        if (row is not null) row.DropMarker = marker;
-    }
-
-    private (TaskRow Row, bool Below)? HitRow(Point inList)
-    {
-        foreach (var row in FindRows())
-        {
-            double top = row.TransformToAncestor(TaskList).Transform(new Point(0, 0)).Y;
-            if (inList.Y >= top && inList.Y < top + row.ActualHeight)
-                return (row, inList.Y > top + row.ActualHeight / 2);
-        }
-        return null;
-    }
-
-    private void AutoScroll(Point inList)
-    {
-        var scroller = Descendants<ScrollViewer>(TaskList).FirstOrDefault();
-        if (scroller is null) return;
-        if (inList.Y < EdgeScroll) scroller.ScrollToVerticalOffset(scroller.VerticalOffset - 12);
-        else if (inList.Y > TaskList.ActualHeight - EdgeScroll) scroller.ScrollToVerticalOffset(scroller.VerticalOffset + 12);
-    }
 
     private IEnumerable<TaskRow> FindRows() => Descendants<TaskRow>(TaskList);
 

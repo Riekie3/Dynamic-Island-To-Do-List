@@ -699,3 +699,59 @@ nothing without a reminder. It is the open M10 item; the release notes now say s
 - *Waiting on the user:* testing findings, optional VirusTotal OK.
 - *Exact next step:* fix findings; then Version `1.0.0`, `tools/publish.ps1`, `tools/build-installer.ps1`, scans, installer
   test, tag `v1.0.0`, `gh release create v1.0.0` with both files (not a pre-release).
+
+### Change — lifted drag preview for list chips and task rows (2026-11-10, DeepSeek V4.1 Flash)
+
+User request: "improve the list/group drag and drop to have like animation like the button is pulled out. instead of play drag
+and drop to the front and back".
+
+**Implemented:**
+- New `Controls/DragLift.cs`: snapshots the chip/row with `RenderTargetBitmap` before dimming it, then floats the copy in the
+  panel's adorner layer 3 px above the pointer. It follows the whole drag through `DragDrop.GiveFeedback` plus the screen cursor
+  position (`Mouse.GetPosition` is unreliable inside the OLE drag loop). The copy starts at 0.65 opacity, lifts to 1.05 for chips
+  / 1.03 for rows with a short overshoot, and the source dims to 0.2. An opaque surface backing stops rows underneath showing
+  through transparent task rows; a 1 px outline replaces the too-expensive `DropShadowEffect`. Finite `Anim.Keys` calls,
+  render-only opacity/scale, and reduced motion sets the final values instantly.
+- New `Views/PanelView.Drag.cs`: both chips and rows keep a dim placeholder, slide the items between the source and the projected
+  slot aside by one chip width / row height, and move the gap to the projected slot. Positions use base layout coordinates
+  (excluding the in-flight translate) so an animation cannot feed back into the next update. Drop completion stays on screen until
+  `MoveListToAsync` / `MoveAsync` finishes; Esc, cancel and drop outside restore immediately. Row rules are unchanged:
+  `CanReorder`, same `(ListId, Priority)`, single list in the Active filter, completed/editing rows not draggable.
+- Removed the old `ChipDropLine` and the `DropMarker` / `DropAbove` / `DropBelow` insertion lines. `TaskRow` now exposes
+  `ShiftForDrag` / `ResetDragShift` / `DragShiftY` and starts `PanelView.BeginTaskDrag`; the panel registers `GiveFeedbackEvent`
+  in its constructor. A row drag starts on the title area; the checkbox still toggles instead of dragging.
+- Updated `README.md` (drag now lifts and makes room) and `docs/TESTING.md` T10/T11 plus the Phase 6 mouse step.
+
+**Files created/modified:** `Controls/DragLift.cs` (new), `Views/PanelView.Drag.cs` (new), `Views/PanelView.xaml`,
+`Views/PanelView.xaml.cs`, `Views/TaskRow.xaml`, `Views/TaskRow.xaml.cs`, `ViewModels/TaskItemViewModel.cs`,
+`tools/ui-tests/rowdrag.ps1` (new), `README.md`, `docs/TESTING.md`, this log.
+
+**Tests performed:** `dotnet build TaskIsland.sln -c Debug` 0 warnings / 0 errors. `dotnet test TaskIsland.sln -c Debug`:
+**444 passed, 0 failed** (315 Core + 129 Data).
+- `tools/ui-tests/chipdrag.ps1` (real mouse): **5/5 pass** — start order, Office Work dragged in front of Personal, panel still
+  open, dragged back behind Personal, plain click does not reorder.
+- New `tools/ui-tests/rowdrag.ps1` (real mouse): **6/6 pass, twice in a row** — seeded `Draft roadmap` as a second Medium task
+  in Office Work, dragged `Prepare slides for Monday` below it; DB order `Draft roadmap+Prepare slides for Monday`, panel still
+  open, a Medium drop on a High row leaves the order unchanged, a plain click does not reorder, and the panel order is still
+  correct after a restart. The test clears the seeded overdue due date before launch: the startup reminder pill resizes the panel
+  and made the first version fail intermittently when the drag began during the alert.
+- Visual check with screenshots (temp `rowpreview` / `dragpreview` folders): the chip and row copies follow the pointer across the
+  chip row and quick-add strip, the source is dimmed, the gap opens, and the task-row ghost has a solid surface with no text
+  show-through. Screenshots inspected after the opaque backing and 3 px offset change.
+- Only capture/visual checks, not unit tests, cover the animation math; the reorder rules themselves are unit-tested.
+
+**Remaining defects / not tested:** the change is uncommitted and not in the released 1.0.1 installers; a future version bump and
+release are needed for users to see it. Drag remains mouse-only (Alt+Up/Down still works). The "not allowed" cursor during a
+blocked group drop was not observed directly; the test asserts the order stayed unchanged. Reduced motion was not re-captured,
+but the code path sets the lift/gap values without animation.
+
+**Commit:** not committed (working tree on `7a1a286`).
+
+**Handoff (for the next drag change, survives /compact):** `DragLift.Start` is the only lift implementation; it needs an adorner
+layer and returns null otherwise. `GiveFeedback` is what keeps the copy under the pointer between drop targets; `DragOver` only
+fires over `AllowDrop` elements. Chip preview widths come from `ChipSlots()` (`element.ActualWidth`, with the chip margin already
+in the slot); row preview heights are captured when the drag starts. When a drag ends with `state.Dropped == false`, the
+`finally` in `Chip_PreviewMouseMove` / `BeginTaskDrag` cleans up; when it is true, `Finish*DropAsync` owns cleanup after the move.
+Re-run `chipdrag.ps1` + `rowdrag.ps1` after any change to drag thresholds, templates or margins. Any UI test that seeds an
+overdue task must clear it before a mouse drag: the startup reminder pill changes the panel width and invalidates the captured
+row coordinates.

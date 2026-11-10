@@ -1030,8 +1030,9 @@ Steps:
    Untick within 2 s cancels the timer.
 5. Priority change: chip colour/label crossfade 150 ms. Row animates to its new position (fade out/in is fine).
 6. Inline edit (§6.5) with List ComboBox + DatePicker + time.
-7. Drag to reorder within the same priority group in Active view. Show an insertion line. Dropping
-   outside the group is not allowed (cursor `No`). Persist via `ReorderAsync`.
+7. Drag to reorder within the same priority group in Active view. Lift a copy of the row, dim the source and slide the
+   other rows aside to show the gap (no insertion line). Dropping outside the group is not allowed (cursor `No`).
+   Persist via `ReorderAsync`.
 8. Filters, empty states, counters, panel height re-animation when list changes.
 8b. Mascot triggers from §6.8 for task events: tick → Happy, High tick or 5 in 30 min → Love, last task done → Excited,
    add → Wink, typing/editing → Focused (panel face), save failure → Sad. Reminder → Surprised is wired in Phase 4,

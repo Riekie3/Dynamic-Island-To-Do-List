@@ -11,9 +11,6 @@ namespace TaskIsland.App.ViewModels;
 /// <summary>How a row leaves the list: collapses and fades (deleted) or slides out (filtered away, moved to another list).</summary>
 public enum RowLeave { Delete, SlideOut }
 
-/// <summary>Where the insertion line is drawn while a row is dragged over this one.</summary>
-public enum DropMarker { None, Above, Below }
-
 /// <summary>What a row needs from the view model that owns it.</summary>
 public interface ITaskRowHost
 {
@@ -66,7 +63,6 @@ public sealed partial class TaskItemViewModel : ObservableObject
     [ObservableProperty] private string _dueText = "";
     [ObservableProperty] private bool _isOverdue;
     [ObservableProperty] private bool _isCompleted;
-    [ObservableProperty] private DropMarker _dropMarker;
 
     partial void OnIsCompletedChanged(bool value)
     {
