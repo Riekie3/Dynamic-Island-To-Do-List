@@ -156,7 +156,7 @@ public sealed partial class SettingsViewModel
         await ListOpAsync("delete the list", async () =>
         {
             // Deleting a list is not covered by Undo, so a backup comes first (PLAN.md section 4.6).
-            var file = await _backup.BackupAsync(prefix: "pre-delete-");
+            var file = await _backup.BackupAsync(prefix: BackupService.PreDeletePrefix);
             FileLogger.Info($"backup before deleting list {row.Id}: {file}");
             await _listsRepo.DeleteAsync(row.Id, moveTo);
             if (long.TryParse(await _store.GetAsync(AppSettings.Keys.DefaultListId), out var def)) _s.DefaultListId = def;

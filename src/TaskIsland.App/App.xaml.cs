@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Media.Animation;
+using System.Windows.Threading;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Win32;
 using TaskIsland.App.Logging;
@@ -27,6 +28,7 @@ public partial class App : Application
     private IslandViewModel? _vm;
     private AppTheme _theme;
     private AppSettings? _liveSettings;
+    private DispatcherTimer? _preDeleteCleanup;
     private bool _exiting;
 
     /// <summary>True when TASKISLAND_ROOT redirects the data folder (tests): separate Run key, mutex and pipe.</summary>
@@ -137,7 +139,11 @@ public partial class App : Application
                 await store.SetAsync(AppSettings.Keys.FirstRunCompleted, "true");
                 FileLogger.Info("first run completed");
             }
-            _ = RunDailyBackupAsync(_services.GetRequiredService<BackupService>(), store, settings);
+            var backup = _services.GetRequiredService<BackupService>();
+            _ = RunDailyBackupAsync(backup, store, settings);
+            _preDeleteCleanup = new DispatcherTimer(DispatcherPriority.Background) { Interval = TimeSpan.FromHours(1) };
+            _preDeleteCleanup.Tick += (_, _) => PruneExpiredPreDeleteBackups(backup);
+            _preDeleteCleanup.Start();
 
             if (!options.Startup && !settings.StartCollapsed) window.OpenFromOutside();
 #if DEBUG
@@ -255,6 +261,20 @@ public partial class App : Application
         }
     }
 
+    /// <summary>Hourly while the app runs; start-up and wake already prune through the daily-backup check.</summary>
+    private static void PruneExpiredPreDeleteBackups(BackupService backup)
+    {
+        try
+        {
+            int removed = backup.PruneExpiredPreDeleteBackups();
+            if (removed > 0) FileLogger.Info($"removed {removed} pre-delete backup(s) older than 24 hours");
+        }
+        catch (Exception ex)
+        {
+            FileLogger.Error("could not remove old pre-delete backups", ex);
+        }
+    }
+
     /// <summary>PLAN.md section 7.10: log everything; keep running after a UI exception where it is safe to.</summary>
     private void HookGlobalExceptionHandlers()
     {
@@ -277,6 +297,7 @@ public partial class App : Application
 
     protected override void OnExit(ExitEventArgs e)
     {
+        _preDeleteCleanup?.Stop();
         Microsoft.Win32.SystemEvents.UserPreferenceChanged -= OnWindowsPreferenceChanged;
         try { _services?.Dispose(); }
         catch (Exception ex) { FileLogger.Error("dispose at exit failed", ex); }
@@ -395,6 +416,7 @@ public partial class App : Application
         services.AddSingleton<ITodoListRepository, SqliteTodoListRepository>();
         services.AddSingleton<ISettingsStore, SqliteSettingsStore>();
         services.AddSingleton<BackupService>();
+        services.AddSingleton<DataMaintenanceService>();
         services.AddSingleton<ImportService>();
         services.AddSingleton(_ => new MotionPolicy(settings.AnimationsEnabled, options.ForceReducedMotion)
         {

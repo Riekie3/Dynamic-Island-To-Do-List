@@ -10,7 +10,10 @@ public sealed class BackupService(Database db, IClock clock)
     public const string AutoPrefix = "taskisland-";
     public const string ManualPrefix = "manual-";
     public const string PreRestorePrefix = "pre-restore-";
-    public const int KeepAutoBackups = 7;
+    public const string PreDeletePrefix = "pre-delete-";
+    public const int KeepAutoBackups = 3;
+    /// <summary>Safety copies made before a list is deleted are kept for one day, then removed automatically.</summary>
+    public static readonly TimeSpan PreDeleteRetention = TimeSpan.FromHours(24);
 
     private AppPaths Paths => db.Paths;
 
@@ -64,11 +67,15 @@ public sealed class BackupService(Database db, IClock clock)
     }
 
     /// <summary>
-    /// Makes an automatic backup when enabled and the last one is older than 24 hours, then keeps only the newest
-    /// <see cref="KeepAutoBackups"/> automatic backups. Returns the new file, or null when nothing was due.
+    /// Runs the backup clean-up (newest <see cref="KeepAutoBackups"/> automatic files, pre-delete copies at most
+    /// <see cref="PreDeleteRetention"/> old), then makes an automatic backup when enabled and the last one is older than
+    /// 24 hours. Returns the new file, or null when nothing was due.
     /// </summary>
     public async Task<string?> RunDailyBackupIfDueAsync(ISettingsStore settings)
     {
+        // Clean-up runs even when daily backups are switched off or not due yet: old safety copies must not live forever.
+        PruneExpiredPreDeleteBackups();
+        PruneAutoBackups();
         var s = await settings.LoadAsync();
         if (!s.DailyBackupEnabled) return null;
         if (s.LastBackupAt is { } last && clock.UtcNow - last < TimeSpan.FromHours(24)) return null;
@@ -79,7 +86,7 @@ public sealed class BackupService(Database db, IClock clock)
         return path;
     }
 
-    /// <summary>Deletes the oldest automatic backups beyond <paramref name="keep"/>. Manual and pre-restore files are never touched.</summary>
+    /// <summary>Deletes the oldest automatic backups beyond <paramref name="keep"/>. Manual, pre-delete and pre-restore files are never touched.</summary>
     public int PruneAutoBackups(int keep = KeepAutoBackups)
     {
         if (!Directory.Exists(Paths.BackupsDir)) return 0;
@@ -88,6 +95,27 @@ public sealed class BackupService(Database db, IClock clock)
             .Skip(keep).ToList();
         foreach (var f in old) File.Delete(f);
         return old.Count;
+    }
+
+    /// <summary>Deletes pre-delete copies older than <see cref="PreDeleteRetention"/>. Every other backup kind is untouched.</summary>
+    public int PruneExpiredPreDeleteBackups()
+    {
+        if (!Directory.Exists(Paths.BackupsDir)) return 0;
+        var cutoff = clock.UtcNow - PreDeleteRetention;
+        var expired = Directory.GetFiles(Paths.BackupsDir, PreDeletePrefix + "*.db")
+            .Where(f => File.GetLastWriteTimeUtc(f) <= cutoff)
+            .ToList();
+        foreach (var f in expired) File.Delete(f);
+        return expired.Count;
+    }
+
+    /// <summary>Deletes every file in the Backups folder. The live database, settings and logs are never touched.</summary>
+    public int DeleteAllBackups()
+    {
+        if (!Directory.Exists(Paths.BackupsDir)) return 0;
+        var files = Directory.GetFiles(Paths.BackupsDir);
+        foreach (var f in files) File.Delete(f);
+        return files.Length;
     }
 
     /// <summary>Checks that a file is a usable TaskIsland database. Throws <see cref="InvalidDataException"/> with a user-friendly message.</summary>

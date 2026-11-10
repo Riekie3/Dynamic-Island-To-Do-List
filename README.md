@@ -176,7 +176,7 @@ Open them from the tray icon (right-click > **Settings…**) or from the panel's
 | **Appearance** | Theme (Dark, Light, System), accent colour, row size, notch width and position, gap from the top, panel opacity, the mascot face, how often it pops up, companion, animations. |
 | **Behaviour** | Which display, hide in full-screen apps, collapse by itself, come back after sleep, peek on hover, slide out ticked tasks, the open/close shortcut, and **Reminders**: on/off, early reminder, widen the island, **reminder width** (Compact, 30-75 % of the screen or full width) and **blink a red border**. |
 | **Lists** | Your lists, where new tasks go (default list), what the notch counts. |
-| **Data** | Daily backup, export and import (JSON), back up now, restore a backup, open the data folder, clear completed tasks. |
+| **Data** | Daily backup, export and import (JSON), back up now, restore a backup, delete all backups, open the data folder, clear completed tasks, reset TaskIsland. |
 | **About** | Version and credits. |
 
 <p align="center">
@@ -187,7 +187,9 @@ Open them from the tray icon (right-click > **Settings…**) or from the panel's
 ## Your data
 
 - Everything is stored on your PC in `%LocalAppData%\TaskIsland`: the database (`Data`), daily backups (`Backups`, the
-  last 7 are kept) and log files (`Logs`).
+  last 3 are kept; copies made before a list is deleted are removed after 24 hours) and log files (`Logs`).
+- Settings > **Data** can delete all backups without touching your tasks, or reset TaskIsland to its first-run state
+  (this deletes all lists, tasks, settings and backups).
 - Settings > **Data** exports everything to a JSON file and imports it again (merge or replace), for example to move to
   another PC.
 - TaskIsland never connects to the internet.

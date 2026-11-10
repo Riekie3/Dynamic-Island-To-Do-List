@@ -61,6 +61,13 @@ public sealed class SettingsApplier
         _pending.Clear();
     }
 
+    /// <summary>Drops debounced saves without writing them (the whole database is about to be reset).</summary>
+    public void CancelPending()
+    {
+        foreach (var timer in _pending.Values) timer.Stop();
+        _pending.Clear();
+    }
+
     /// <summary>After a restore the whole settings object was replaced: apply every setting that has an effect.</summary>
     public void ApplyAll()
     {

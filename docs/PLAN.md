@@ -315,10 +315,14 @@ or **Replace** (automatic backup first, then confirm, then `ReplaceAllAsync`). S
 - Backup = `SqliteConnection.BackupDatabase()` (online, safe while running) to
   `Backups\taskisland-yyyyMMdd-HHmmss.db`. Manual backup lets the user pick a path via Save dialog.
 - Daily auto-backup: at startup and on resume, if setting on and `LastBackupAt` > 24 h ago → backup
-  then prune auto-backups to newest 7 (manual backups saved elsewhere are never pruned).
+  then prune auto-backups to newest 3 (manual backups saved elsewhere are never pruned). Each check also prunes
+  existing auto-backups to 3 and deletes `pre-delete-*.db` copies older than 24 h; an hourly timer does the same while
+  the app stays open.
 - Restore: user picks a `.db` → open it read-only and run `PRAGMA integrity_check` and check
   `user_version` ≤ current and `Tasks` table exists → confirm dialog → create a `pre-restore-*.db`
   backup of the current DB → `SqliteConnection.ClearAllPools()` → copy over → run migrations → reload UI.
+- Settings > Data can delete every file in `Backups` (tasks and settings stay), or reset the database to the first-run
+  state (starter lists, default settings, no tasks and no backups).
 
 ### 4.6 Lists (groups) (`ITodoListRepository`)
 

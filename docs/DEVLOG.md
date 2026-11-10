@@ -758,3 +758,46 @@ in the slot); row preview heights are captured when the drag starts. When a drag
 Re-run `chipdrag.ps1` + `rowdrag.ps1` after any change to drag thresholds, templates or margins. Any UI test that seeds an
 overdue task must clear it before a mouse drag: the startup reminder pill changes the panel width and invalidates the captured
 row coordinates.
+
+### Maintenance — backup retention, delete-backups and full reset (2026-11-10, DeepSeek V4.1 Flash)
+
+User request: "pre-delete backup from the list you deleted also should be automatically remove after 24h", "change newest 7
+automatic daily backups to 3 only", "add a button to delete all data folder for backup", and a reset button at the bottom of
+Settings > Data that returns the app to a first-run state. The user also asked for a live same-priority reorder test.
+
+**Implemented:**
+- `BackupService`: `KeepAutoBackups` 7 → 3; new `PreDeletePrefix` and `PreDeleteRetention` (24 h); new
+  `PruneExpiredPreDeleteBackups()` (age from the file's last-write time) and `DeleteAllBackups()` (every file in the
+  Backups folder only). The daily check now prunes expired pre-delete copies and extra automatic backups even when daily
+  backups are switched off or not due yet. `App` repeats the pre-delete prune hourly while it stays open.
+- New `DataMaintenanceService.ResetToFirstRunAsync()`: clears Tasks/Lists/Settings, resets the id counters, re-inserts the
+  migration-1 starter lists and DefaultListId, then deletes every backup. The schema is kept, so the running app reloads
+  without a restart.
+- Settings > Data: **Delete all backups…** and **Reset everything…**, both with a destructive confirmation. Reset also
+  cancels debounced settings saves and the task Undo bar, applies the default settings and reloads lists/tasks.
+- UI copy now says the newest 3 are kept and pre-delete copies are removed after 24 h. Docs: README, PLAN §4.5, TESTING
+  D9/D11/D12.
+
+**Files created/modified:** `src/TaskIsland.Data/BackupService.cs`, `src/TaskIsland.Data/DataMaintenanceService.cs` (new),
+`src/TaskIsland.App/App.xaml.cs`, `src/TaskIsland.App/Services/SettingsApplier.cs`,
+`src/TaskIsland.App/ViewModels/SettingsViewModel.cs`, `SettingsViewModel.Data.cs`, `SettingsViewModel.Lists.cs`,
+`IslandViewModel.cs`, `IslandViewModel.Lists.cs`, `Views/SettingsWindow.xaml`,
+`tests/TaskIsland.Data.Tests/BackupServiceTests.cs`, `DataMaintenanceServiceTests.cs` (new), `tools/ui-tests/backupui.ps1`
+(new), `README.md`, `docs/PLAN.md`, `docs/TESTING.md`, this log.
+
+**Tests performed:** `dotnet build TaskIsland.sln -c Debug` 0 warnings / 0 errors. `dotnet test TaskIsland.sln -c Debug`
+**451 passed, 0 failed** (315 Core + 136 Data).
+- `tools/ui-tests/backupui.ps1` (new, temp data folder), **12/12 pass**: both buttons visible on the Data page; Delete all
+  backups removed all 4 fake backup files and kept the seeded tasks; Reset removed the tasks, restored Personal + Office
+  Work and the default Dark theme, deleted the backup file, and left the Settings window responsive.
+- Live installed 1.0.2 (user's real database), **8/8 pass**: panel opened, Office Work showed both High tasks; dragging
+  `Training ISO wei yee` below `Dr Chen monitor` saved that order, dragging it back above restored the original order; the
+  panel stayed open through both drags and was closed again afterwards. Database order was checked after each drop.
+- `chipdrag.ps1` / `rowdrag.ps1` were not re-run because drag code did not change.
+
+**Remaining defects / not tested:** the changes are not committed or released. Existing extra automatic backups shrink to
+3 at the next startup/recovery (not immediately when this build is installed). Reset keeps `Logs` on purpose and lets the
+default `LaunchAtStartup=true` re-add the Run entry. The hourly prune was verified by unit test, not by leaving the app
+open for a day.
+
+**Commit:** not committed (working tree on `a5c3240`).

@@ -33,8 +33,8 @@ public sealed partial class SettingsViewModel
     private void UpdateBackupText()
     {
         LastBackupText = _s.LastBackupAt is { } t
-            ? $"Last automatic backup: {t.ToLocalTime():yyyy-MM-dd HH:mm}. The newest 7 are kept."
-            : "No automatic backup yet. The newest 7 are kept.";
+            ? $"Last automatic backup: {t.ToLocalTime():yyyy-MM-dd HH:mm}. The newest 3 are kept; pre-delete copies are removed after 24 hours."
+            : "No automatic backup yet. The newest 3 are kept; pre-delete copies are removed after 24 hours.";
     }
 
     private void Status(string text, bool error = false)
@@ -266,6 +266,74 @@ public sealed partial class SettingsViewModel
 
     [RelayCommand]
     private void OpenDataFolder() => App.OpenFolder(_paths.Root);
+
+    [RelayCommand]
+    private void DeleteAllBackups()
+    {
+        Status("");
+        int count = Directory.Exists(_paths.BackupsDir) ? Directory.GetFiles(_paths.BackupsDir).Length : 0;
+        if (count == 0)
+        {
+            Status("There are no backups to delete.");
+            return;
+        }
+        if (!DialogWindow.Confirm(Owner, "Delete all backups?",
+                $"This permanently deletes all {count} {(count == 1 ? "file" : "files")} in {_paths.BackupsDir}, including automatic, " +
+                "pre-delete, pre-import, pre-restore, manual and broken backups. Your tasks and settings are kept.",
+                "Delete all backups", destructive: true)) return;
+        try
+        {
+            Busy = true;
+            int deleted = _backup.DeleteAllBackups();
+            FileLogger.Info($"deleted all backups: {deleted} file(s)");
+            Status($"Deleted {deleted} backup {(deleted == 1 ? "file" : "files")}.");
+        }
+        catch (Exception ex)
+        {
+            FileLogger.Error("deleting all backups failed", ex);
+            Status("Some backups could not be deleted. See the log for details.", error: true);
+        }
+        finally
+        {
+            Busy = false;
+        }
+    }
+
+    [RelayCommand]
+    private async Task ResetEverythingAsync()
+    {
+        Status("");
+        if (!DialogWindow.Confirm(Owner, "Reset TaskIsland?",
+                "This permanently deletes all lists, tasks, settings and backups, and returns TaskIsland to its first-run state. " +
+                "This cannot be undone.",
+                "Reset everything", destructive: true)) return;
+        try
+        {
+            Busy = true;
+            _apply.CancelPending();   // a slider's 300 ms save must not land after the reset
+            int deleted = await _maintenance.ResetToFirstRunAsync();
+            var fresh = await _store.LoadAsync();
+            fresh.FirstRunCompleted = true;   // this run is the first run; do not make the next launch behave like one again
+            await _store.SaveAsync(fresh);
+            _s.CopyFrom(fresh);
+            _apply.ApplyAll();
+            Island.CancelUndo();   // these batches point at tasks that no longer exist
+            await Island.RefreshAsync(reloadSettings: true);
+            RefreshAll();
+            FileLogger.Info($"reset to first run; {deleted} backup file(s) deleted");
+            Status($"TaskIsland was reset to its first-run state. {deleted} backup {(deleted == 1 ? "file was" : "files were")} deleted.");
+        }
+        catch (Exception ex)
+        {
+            FileLogger.Error("reset to first run failed", ex);
+            await TryRefreshAsync();
+            Status("The reset did not finish. See the log for details.", error: true);
+        }
+        finally
+        {
+            Busy = false;
+        }
+    }
 
     [RelayCommand]
     private async Task ClearCompletedAsync()

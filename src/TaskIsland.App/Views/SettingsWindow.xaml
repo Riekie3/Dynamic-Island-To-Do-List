@@ -312,6 +312,10 @@
                             <c:SettingRow Title="Open the data folder" Description="{Binding DataFolder}">
                                 <Button Content="Open folder" Style="{StaticResource TextButton}" Command="{Binding OpenDataFolderCommand}"/>
                             </c:SettingRow>
+                            <Rectangle Style="{StaticResource CardDivider}"/>
+                            <c:SettingRow Title="Delete all backups" Description="Removes every file in the Backups folder. Your tasks and settings are kept.">
+                                <Button Content="Delete all…" Style="{StaticResource DangerTextButton}" Command="{Binding DeleteAllBackupsCommand}"/>
+                            </c:SettingRow>
                         </StackPanel>
                     </Border>
 
@@ -319,6 +323,13 @@
                     <Border Style="{StaticResource SettingsCard}">
                         <c:SettingRow Title="Clear completed tasks" Description="Removes every ticked task in all lists. You can undo for 5 seconds.">
                             <Button Content="Clear completed…" Style="{StaticResource TextButton}" Command="{Binding ClearCompletedCommand}"/>
+                        </c:SettingRow>
+                    </Border>
+
+                    <TextBlock Style="{StaticResource SectionLabel}" Text="Reset"/>
+                    <Border Style="{StaticResource SettingsCard}">
+                        <c:SettingRow Title="Reset TaskIsland" Description="Deletes all lists, tasks, settings and backups, and returns the app to its first-run state.">
+                            <Button Content="Reset everything…" Style="{StaticResource DangerTextButton}" Command="{Binding ResetEverythingCommand}"/>
                         </c:SettingRow>
                     </Border>
 

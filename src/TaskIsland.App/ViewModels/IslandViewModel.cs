@@ -487,6 +487,14 @@ public sealed partial class IslandViewModel : ObservableObject, ITaskRowHost
         await RunAsync("remove the deleted tasks", () => _tasksRepo.PurgeDeletedAsync());
     }
 
+    /// <summary>Drops the Undo bar without restoring anything (the whole database was replaced or reset).</summary>
+    public void CancelUndo()
+    {
+        _undoTimer.Stop();
+        _undoBatches.Clear();
+        HasUndo = false;
+    }
+
     // ---- clear completed (Settings -> Data) ----
 
     /// <summary>Completed tasks in all lists.</summary>

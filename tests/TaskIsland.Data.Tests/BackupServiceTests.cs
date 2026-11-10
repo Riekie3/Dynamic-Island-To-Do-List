@@ -1,5 +1,6 @@
 using Microsoft.Data.Sqlite;
 using TaskIsland.Core.Models;
+using TaskIsland.Core.Services;
 using TaskIsland.Data;
 
 namespace TaskIsland.Data.Tests;
@@ -223,16 +224,16 @@ public class BackupServiceTests
     }
 
     [Fact]
-    public async Task Prune_keeps_the_newest_seven_automatic_backups()
+    public async Task Prune_keeps_the_newest_three_automatic_backups()
     {
         using var t = await TestDb.CreateAsync();
         MakeFakeBackups(t.Paths.BackupsDir, BackupService.AutoPrefix, 10);
 
-        Assert.Equal(3, t.Backup.PruneAutoBackups());
+        Assert.Equal(7, t.Backup.PruneAutoBackups());
 
         var left = Directory.GetFiles(t.Paths.BackupsDir, "taskisland-*.db").Select(Path.GetFileName).OrderBy(x => x).ToArray();
-        Assert.Equal(7, left.Length);
-        Assert.Equal("taskisland-20260101-120003.db", left[0]);   // the 3 oldest (00, 01, 02) are gone
+        Assert.Equal(3, left.Length);
+        Assert.Equal("taskisland-20260101-120007.db", left[0]);   // the 7 oldest (00-06) are gone
     }
 
     [Fact]
@@ -245,7 +246,7 @@ public class BackupServiceTests
 
         t.Backup.PruneAutoBackups();
 
-        Assert.Equal(7, Directory.GetFiles(t.Paths.BackupsDir, "taskisland-*").Length);
+        Assert.Equal(3, Directory.GetFiles(t.Paths.BackupsDir, "taskisland-*").Length);
         Assert.Equal(9, Directory.GetFiles(t.Paths.BackupsDir, "manual-*").Length);
         Assert.Equal(9, Directory.GetFiles(t.Paths.BackupsDir, "pre-restore-*").Length);
     }
@@ -256,6 +257,71 @@ public class BackupServiceTests
         using var t = await TestDb.CreateAsync();
         MakeFakeBackups(t.Paths.BackupsDir, BackupService.AutoPrefix, 3);
         Assert.Equal(0, t.Backup.PruneAutoBackups());
+    }
+
+    [Fact]
+    public async Task Prune_removes_pre_delete_backups_after_24_hours_and_keeps_recent_ones()
+    {
+        using var t = await TestDb.CreateAsync();
+        var old = Path.Combine(t.Paths.BackupsDir, "pre-delete-20261031-080000.db");
+        var recent = Path.Combine(t.Paths.BackupsDir, "pre-delete-20261101-070000.db");
+        await File.WriteAllTextAsync(old, "old");
+        await File.WriteAllTextAsync(recent, "recent");
+        File.SetLastWriteTimeUtc(old, t.Clock.UtcNow.AddHours(-25));
+        File.SetLastWriteTimeUtc(recent, t.Clock.UtcNow.AddHours(-23));
+
+        Assert.Equal(1, t.Backup.PruneExpiredPreDeleteBackups());
+
+        Assert.False(File.Exists(old));
+        Assert.True(File.Exists(recent));
+    }
+
+    [Fact]
+    public async Task Prune_never_touches_other_backup_kinds_however_old()
+    {
+        using var t = await TestDb.CreateAsync();
+        MakeFakeBackups(t.Paths.BackupsDir, BackupService.AutoPrefix, 1);
+        MakeFakeBackups(t.Paths.BackupsDir, BackupService.ManualPrefix, 1);
+        MakeFakeBackups(t.Paths.BackupsDir, BackupService.PreRestorePrefix, 1);
+        MakeFakeBackups(t.Paths.BackupsDir, "pre-import-", 1);
+        MakeFakeBackups(t.Paths.BackupsDir, BackupService.BrokenPrefix, 1);
+        var old = t.Clock.UtcNow.AddDays(-90);
+        foreach (var f in Directory.GetFiles(t.Paths.BackupsDir)) File.SetLastWriteTimeUtc(f, old);
+
+        Assert.Equal(0, t.Backup.PruneExpiredPreDeleteBackups());
+        Assert.Equal(5, Directory.GetFiles(t.Paths.BackupsDir).Length);
+    }
+
+    [Fact]
+    public async Task Daily_check_prunes_expired_pre_delete_backups_even_when_daily_backup_is_off()
+    {
+        using var t = await TestDb.CreateAsync();
+        await t.Settings.SetAsync(AppSettings.Keys.DailyBackupEnabled, "false");
+        var old = Path.Combine(t.Paths.BackupsDir, "pre-delete-20261031-080000.db");
+        await File.WriteAllTextAsync(old, "old");
+        File.SetLastWriteTimeUtc(old, t.Clock.UtcNow.AddHours(-25));
+
+        Assert.Null(await t.Backup.RunDailyBackupIfDueAsync(t.Settings));
+        Assert.False(File.Exists(old));
+    }
+
+    [Fact]
+    public async Task Delete_all_backups_clears_the_backups_folder_but_not_the_live_database()
+    {
+        using var t = await TestDb.CreateAsync();
+        await t.Tasks.AddAsync(P, "keep me", Priority.High);
+        MakeFakeBackups(t.Paths.BackupsDir, BackupService.AutoPrefix, 2);
+        MakeFakeBackups(t.Paths.BackupsDir, BackupService.ManualPrefix, 2);
+        MakeFakeBackups(t.Paths.BackupsDir, BackupService.PreDeletePrefix, 2);
+        MakeFakeBackups(t.Paths.BackupsDir, "pre-import-", 2);
+        MakeFakeBackups(t.Paths.BackupsDir, BackupService.PreRestorePrefix, 2);
+        MakeFakeBackups(t.Paths.BackupsDir, BackupService.BrokenPrefix, 2);
+
+        Assert.Equal(12, t.Backup.DeleteAllBackups());
+
+        Assert.Empty(Directory.GetFiles(t.Paths.BackupsDir));
+        Assert.Single(await t.Tasks.GetAllAsync());
+        Assert.True(File.Exists(t.Paths.DatabasePath));
     }
 
     [Fact]
@@ -296,6 +362,30 @@ public class BackupServiceTests
         using var t = await TestDb.CreateAsync();
         MakeFakeBackups(t.Paths.BackupsDir, BackupService.AutoPrefix, 12);
         await t.Backup.RunDailyBackupIfDueAsync(t.Settings);
+        Assert.Equal(BackupService.KeepAutoBackups, Directory.GetFiles(t.Paths.BackupsDir, "taskisland-*.db").Length);
+    }
+
+    [Fact]
+    public async Task Daily_check_shrinks_extra_automatic_backups_when_daily_backup_is_off()
+    {
+        using var t = await TestDb.CreateAsync();
+        await t.Settings.SetAsync(AppSettings.Keys.DailyBackupEnabled, "false");
+        MakeFakeBackups(t.Paths.BackupsDir, BackupService.AutoPrefix, 8);
+
+        Assert.Null(await t.Backup.RunDailyBackupIfDueAsync(t.Settings));
+
+        Assert.Equal(BackupService.KeepAutoBackups, Directory.GetFiles(t.Paths.BackupsDir, "taskisland-*.db").Length);
+    }
+
+    [Fact]
+    public async Task Daily_check_shrinks_extra_automatic_backups_when_no_backup_is_due()
+    {
+        using var t = await TestDb.CreateAsync();
+        await t.Settings.SetAsync(AppSettings.Keys.LastBackupAt, IsoDate.ToUtcString(t.Clock.UtcNow));
+        MakeFakeBackups(t.Paths.BackupsDir, BackupService.AutoPrefix, 8);
+
+        Assert.Null(await t.Backup.RunDailyBackupIfDueAsync(t.Settings));
+
         Assert.Equal(BackupService.KeepAutoBackups, Directory.GetFiles(t.Paths.BackupsDir, "taskisland-*.db").Length);
     }
 

@@ -4,6 +4,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using TaskIsland.App.Logging;
 using TaskIsland.Core.Models;
+using TaskIsland.Data;
 
 namespace TaskIsland.App.ViewModels;
 
@@ -282,7 +283,7 @@ public sealed partial class IslandViewModel
         await RunAsync("delete the list", async () =>
         {
             // Deleting a list is not covered by Undo, so make a backup first (PLAN.md section 4.6).
-            var file = await _backup.BackupAsync(prefix: "pre-delete-");
+            var file = await _backup.BackupAsync(prefix: BackupService.PreDeletePrefix);
             FileLogger.Info($"backup before deleting list {card.ListId}: {file}");
             await _listsRepo.DeleteAsync(card.ListId, target);
             if (SelectedListId == card.ListId) SelectListInternal(0);

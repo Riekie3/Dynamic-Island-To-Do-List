@@ -20,10 +20,12 @@ public sealed partial class SettingsViewModel : ObservableObject
 
     private readonly AppSettings _s;
     private readonly SettingsApplier _apply;
+    private readonly DataMaintenanceService _maintenance;
     private List<string> _monitorNames = [];
 
     public SettingsViewModel(AppSettings settings, SettingsApplier applier, IslandViewModel island, ITaskRepository tasks,
-        ITodoListRepository lists, ISettingsStore store, BackupService backup, ImportService import, AppPaths paths, IClock clock)
+        ITodoListRepository lists, ISettingsStore store, BackupService backup, DataMaintenanceService maintenance,
+        ImportService import, AppPaths paths, IClock clock)
     {
         _s = settings;
         _apply = applier;
@@ -32,6 +34,7 @@ public sealed partial class SettingsViewModel : ObservableObject
         _listsRepo = lists;
         _store = store;
         _backup = backup;
+        _maintenance = maintenance;
         _import = import;
         _paths = paths;
         _clock = clock;
