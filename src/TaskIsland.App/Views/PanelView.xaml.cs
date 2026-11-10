@@ -234,6 +234,98 @@ public partial class PanelView : UserControl
         if (ChipOf(sender) is { } chip) _vm.OpenDeleteListCommand.Execute(chip);
     }
 
+    // ---- drag a list chip to a new place ----
+
+    private const string ChipDragFormat = "TaskIsland.ListChip";
+    private Point? _chipDragStart;
+
+    private void Chip_PreviewMouseDown(object sender, MouseButtonEventArgs e) =>
+        _chipDragStart = sender is FrameworkElement { DataContext: ListChipViewModel { IsAll: false } } && !_vm.HasOverlay
+            ? e.GetPosition(ChipStrip)
+            : null;
+
+    private void Chip_PreviewMouseUp(object sender, MouseButtonEventArgs e) => _chipDragStart = null;
+
+    private void Chip_PreviewMouseMove(object sender, MouseEventArgs e)
+    {
+        if (_chipDragStart is not { } start) return;
+        if (e.LeftButton != MouseButtonState.Pressed) { _chipDragStart = null; return; }
+        if (Math.Abs(e.GetPosition(ChipStrip).X - start.X) < SystemParameters.MinimumHorizontalDragDistance + 2) return;
+        _chipDragStart = null;
+        if (sender is not ButtonBase { DataContext: ListChipViewModel chip } button) return;
+        button.ReleaseMouseCapture();   // so the button does not also count this as a click
+        try { DragDrop.DoDragDrop(button, new DataObject(ChipDragFormat, chip), DragDropEffects.Move); }
+        finally { ChipDropLine.Visibility = Visibility.Collapsed; }
+    }
+
+    private void Chips_DragOver(object sender, DragEventArgs e)
+    {
+        e.Handled = true;
+        if (e.Data.GetData(ChipDragFormat) is not ListChipViewModel dragged)
+        {
+            e.Effects = DragDropEffects.None;
+            return;
+        }
+        e.Effects = DragDropEffects.Move;
+        var pos = e.GetPosition(ChipScroller);
+        if (pos.X < EdgeScroll) ChipScroller.ScrollToHorizontalOffset(ChipScroller.HorizontalOffset - 8);
+        else if (pos.X > ChipScroller.ActualWidth - EdgeScroll) ChipScroller.ScrollToHorizontalOffset(ChipScroller.HorizontalOffset + 8);
+
+        int slot = ChipSlot(e.GetPosition(ChipStrip).X);
+        int from = _vm.Lists.ToList().FindIndex(l => l.Id == dragged.Id);
+        if (from < 0 || slot == from || slot == from + 1)
+        {
+            ChipDropLine.Visibility = Visibility.Collapsed;   // dropping here changes nothing
+            return;
+        }
+        ShowDropLine(slot);
+    }
+
+    private void Chips_DragLeave(object sender, DragEventArgs e) => ChipDropLine.Visibility = Visibility.Collapsed;
+
+    private void Chips_Drop(object sender, DragEventArgs e)
+    {
+        e.Handled = true;
+        ChipDropLine.Visibility = Visibility.Collapsed;
+        if (e.Data.GetData(ChipDragFormat) is not ListChipViewModel dragged) return;
+        _ = _vm.MoveListToAsync(dragged, ChipSlot(e.GetPosition(ChipStrip).X));
+    }
+
+    /// <summary>The list chips (not All) with their left and right edges in <see cref="ChipStrip"/>.</summary>
+    private List<(double Left, double Right)> ListChipEdges()
+    {
+        var edges = new List<(double, double)>();
+        for (int i = 1; i < ChipItems.Items.Count; i++)
+        {
+            if (ChipItems.ItemContainerGenerator.ContainerFromIndex(i) is not FrameworkElement c || !c.IsVisible) continue;
+            double left = c.TransformToAncestor(ChipStrip).Transform(new Point(0, 0)).X;
+            edges.Add((left, left + c.ActualWidth));
+        }
+        return edges;
+    }
+
+    /// <summary>Where a drop at <paramref name="x"/> puts the list: 0 = first, Lists.Count = last.</summary>
+    private int ChipSlot(double x)
+    {
+        var edges = ListChipEdges();
+        for (int i = 0; i < edges.Count; i++)
+            if (x < (edges[i].Left + edges[i].Right) / 2) return i;
+        return edges.Count;
+    }
+
+    private void ShowDropLine(int slot)
+    {
+        var edges = ListChipEdges();
+        if (edges.Count == 0) return;
+        double x = slot < edges.Count ? edges[slot].Left : edges[^1].Right;
+        double gap = slot > 0 && slot < edges.Count ? (edges[slot].Left - edges[slot - 1].Right) / 2 : 3;
+        double lineX = slot < edges.Count ? x - gap : x + gap;
+        Canvas.SetLeft(ChipDropLine, lineX - ChipDropLine.Width / 2);
+        Canvas.SetTop(ChipDropLine, 4);
+        ChipDropLine.Height = Math.Max(10, ChipStrip.ActualHeight - 8);
+        ChipDropLine.Visibility = Visibility.Visible;
+    }
+
     /// <summary>In All lists the quick-add chip picks the list for new tasks.</summary>
     private void QuickAddList_Click(object sender, RoutedEventArgs e)
     {

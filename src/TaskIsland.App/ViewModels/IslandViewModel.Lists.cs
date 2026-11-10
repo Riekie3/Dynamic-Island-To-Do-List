@@ -229,6 +229,22 @@ public sealed partial class IslandViewModel
             await ReloadAsync();
         });
 
+    /// <summary>Drag and drop: puts the list at <paramref name="slot"/> (0 = first, Lists.Count = after the last).</summary>
+    public Task MoveListToAsync(ListChipViewModel chip, int slot) =>
+        chip.IsAll ? Task.CompletedTask : RunAsync("move the list", async () =>
+        {
+            var ids = _lists.Select(l => l.Id).ToList();
+            int from = ids.IndexOf(chip.Id);
+            if (from < 0) return;
+            int to = Math.Clamp(slot, 0, ids.Count);
+            if (to > from) to--;
+            if (to == from) return;
+            ids.RemoveAt(from);
+            ids.Insert(to, chip.Id);
+            await _listsRepo.ReorderAsync(ids);
+            await ReloadAsync();
+        });
+
     public bool CanMoveList(ListChipViewModel chip, int direction)
     {
         int from = _lists.FindIndex(l => l.Id == chip.Id), to = from + Math.Sign(direction);

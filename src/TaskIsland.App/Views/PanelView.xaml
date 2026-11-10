@@ -95,9 +95,11 @@
 
             <!-- 2. List switcher -->
             <ScrollViewer x:Name="ChipScroller" Grid.Row="1" Margin="0,6,0,0" HorizontalScrollBarVisibility="Hidden"
-                          VerticalScrollBarVisibility="Disabled" PreviewMouseWheel="Chips_MouseWheel" Focusable="False">
-                <StackPanel Orientation="Horizontal">
-                    <ItemsControl ItemsSource="{Binding Chips}" Focusable="False">
+                          VerticalScrollBarVisibility="Disabled" PreviewMouseWheel="Chips_MouseWheel" Focusable="False"
+                          AllowDrop="True" DragOver="Chips_DragOver" DragLeave="Chips_DragLeave" Drop="Chips_Drop">
+                <Grid>
+                <StackPanel x:Name="ChipStrip" Orientation="Horizontal" Background="Transparent">
+                    <ItemsControl x:Name="ChipItems" ItemsSource="{Binding Chips}" Focusable="False">
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate><StackPanel Orientation="Horizontal"/></ItemsPanelTemplate>
                         </ItemsControl.ItemsPanel>
@@ -105,7 +107,9 @@
                             <DataTemplate>
                                 <Button Style="{StaticResource ListChip}" AutomationProperties.Name="{Binding Name}"
                                         Command="{Binding DataContext.SelectListCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
-                                        CommandParameter="{Binding}" ContextMenuOpening="Chip_ContextMenuOpening">
+                                        CommandParameter="{Binding}" ContextMenuOpening="Chip_ContextMenuOpening"
+                                        PreviewMouseLeftButtonDown="Chip_PreviewMouseDown" PreviewMouseMove="Chip_PreviewMouseMove"
+                                        PreviewMouseLeftButtonUp="Chip_PreviewMouseUp">
                                     <Button.ContextMenu>
                                         <ContextMenu>
                                             <MenuItem Header="Rename…" Click="ChipRename_Click" AutomationProperties.Name="Rename list"/>
@@ -138,6 +142,12 @@
                     <Button x:Name="NewListButton" Style="{StaticResource IconButton}" Width="28" Height="28" FontSize="11" Content="&#xE710;"
                             Command="{Binding NewListCommand}" ToolTip="New list" AutomationProperties.Name="New list"/>
                 </StackPanel>
+                <!-- Where a dragged list chip will land -->
+                <Canvas IsHitTestVisible="False">
+                    <Rectangle x:Name="ChipDropLine" Width="2" RadiusX="1" RadiusY="1" Fill="{DynamicResource AccentBrush}"
+                               Visibility="Collapsed"/>
+                </Canvas>
+                </Grid>
             </ScrollViewer>
 
             <!-- 3. Quick add -->
