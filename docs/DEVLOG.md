@@ -740,12 +740,14 @@ and drop to the front and back".
   show-through. Screenshots inspected after the opaque backing and 3 px offset change.
 - Only capture/visual checks, not unit tests, cover the animation math; the reorder rules themselves are unit-tested.
 
-**Remaining defects / not tested:** the change is uncommitted and not in the released 1.0.1 installers; a future version bump and
-release are needed for users to see it. Drag remains mouse-only (Alt+Up/Down still works). The "not allowed" cursor during a
+**Remaining defects / not tested:** drag remains mouse-only (Alt+Up/Down still works). The "not allowed" cursor during a
 blocked group drop was not observed directly; the test asserts the order stayed unchanged. Reduced motion was not re-captured,
 but the code path sets the lift/gap values without animation.
 
-**Commit:** not committed (working tree on `7a1a286`).
+**Release:** version 1.0.2, built from `ec6d26f` (`1.0.2+ec6d26f`). Portable zip 66.7 MB, installer 50.8 MB; hashes and
+checks in `docs/RELEASE_NOTES.md`.
+
+**Commit:** `499ab13` (drag preview, tests and docs), `ec6d26f` (Version 1.0.2).
 
 **Handoff (for the next drag change, survives /compact):** `DragLift.Start` is the only lift implementation; it needs an adorner
 layer and returns null otherwise. `GiveFeedback` is what keeps the copy under the pointer between drop targets; `DragOver` only
