@@ -40,12 +40,12 @@ data stays on your PC; the app makes no network connections.
 
 ## Download
 
-Latest release **1.0.0** on the [Releases page](https://github.com/Riekie3/Dynamic-Island-To-Do-List/releases):
+Latest release **1.0.1** on the [Releases page](https://github.com/Riekie3/Dynamic-Island-To-Do-List/releases):
 
 | File | What it is |
 |---|---|
-| `TaskIsland-Setup-1.0.0-x64.exe` | **Installer (recommended).** Installs for your Windows user only. No administrator rights, no UAC prompt. |
-| `TaskIsland-1.0.0-win-x64-portable.zip` | **Portable.** Unzip and run; nothing is installed. |
+| `TaskIsland-Setup-1.0.1-x64.exe` | **Installer (recommended).** Installs for your Windows user only. No administrator rights, no UAC prompt. |
+| `TaskIsland-1.0.1-win-x64-portable.zip` | **Portable.** Unzip and run; nothing is installed. |
 
 Requirements: Windows 11 (or Windows 10 version 1809 or newer), 64-bit. Nothing else: the .NET runtime is included.
 
@@ -54,14 +54,14 @@ Requirements: Windows 11 (or Windows 10 version 1809 or newer), 64-bit. Nothing 
 
 | File | SHA-256 |
 |---|---|
-| `TaskIsland-Setup-1.0.0-x64.exe` | `8B92774C1AADD30E38C5EA39BECC34FD9B4248FC8D04C145843E5BC9E85E98BB` |
-| `TaskIsland-1.0.0-win-x64-portable.zip` | `229EA01A6A2C637C733C54DC115AF674D101E7FED60FB7AE2075B71DD16914E7` |
+| `TaskIsland-Setup-1.0.1-x64.exe` | `12577FF0426C6DC57FBA0C1B0103F3A2B470292B7A8453DBD5024BC68717B882` |
+| `TaskIsland-1.0.1-win-x64-portable.zip` | `6B43D83994C35F1AF76F1A20FF0CADD1111CDE921CC756D4FA9CD1304AB7D3E1` |
 
 The earlier rc.2 files were scanned on VirusTotal ([installer](https://www.virustotal.com/gui/file/e3ce55f9137a4a019e42bee2241e837dc53d5cf6bfb6808cd734e30929b771c1),
-[zip](https://www.virustotal.com/gui/file/8ace638d1d6be2010b817149a21c9d1c7e183893e9de883800d1c96a108fb5ea)). The 1.0.0 files have been scanned with Microsoft Defender
+[zip](https://www.virustotal.com/gui/file/8ace638d1d6be2010b817149a21c9d1c7e183893e9de883800d1c96a108fb5ea)). The 1.0.1 files have been scanned with Microsoft Defender
 (no threats); you can upload them to [VirusTotal](https://www.virustotal.com) yourself to compare.
 
-In PowerShell: `Get-FileHash .\TaskIsland-Setup-1.0.0-x64.exe` shows the hash of your download.
+In PowerShell: `Get-FileHash .\TaskIsland-Setup-1.0.1-x64.exe` shows the hash of your download.
 
 ### About the one VirusTotal detection (installer)
 
@@ -80,14 +80,14 @@ locally with up-to-date signatures, no threats found). We believe this is a **fa
 
 If you would rather not take our word for it: compare the SHA-256 hash above, scan the file with your own antivirus,
 or use the **portable zip** and the source code. We are asking the vendor to review the flag; such flags often
-disappear after a review, but we cannot promise when. The 1.0.0 files are unsigned on purpose for now (code signing is a paid
+disappear after a review, but we cannot promise when. The 1.0.1 files are unsigned on purpose for now (code signing is a paid
 certificate), which is also why Windows SmartScreen shows its warning.
 
 ## Install
 
 ### Installer
 
-1. Download `TaskIsland-Setup-1.0.0-x64.exe` and run it.
+1. Download `TaskIsland-Setup-1.0.1-x64.exe` and run it.
 2. The files are **not code-signed** yet, so Windows SmartScreen may show "Windows protected your PC". Click
    **More info**, then **Run anyway**. (If Smart App Control is turned on, Windows may block unsigned apps entirely.)
 3. Click through the installer. It installs to `%LocalAppData%\Programs\TaskIsland`, adds TaskIsland to the Start
@@ -103,7 +103,7 @@ portable folder.
 
 ### Portable
 
-1. Unzip `TaskIsland-1.0.0-win-x64-portable.zip` to a folder you keep, for example `Documents\TaskIsland`.
+1. Unzip `TaskIsland-1.0.1-win-x64-portable.zip` to a folder you keep, for example `Documents\TaskIsland`.
 2. Double-click `TaskIsland.exe` (same SmartScreen note as above).
 3. "Start with Windows" is on by default and points at that folder, so do not move the folder afterwards.
 
@@ -134,6 +134,8 @@ portable folder.
   date and time, and list. **Save** or **Cancel**.
 - **Delete:** hover a task and click the bin (or press **Delete**). An **Undo** bar appears for a few seconds.
 - **Reorder:** drag a task up or down, or select it and press **Alt+Up** / **Alt+Down**.
+- **Reorder lists:** drag a list chip (for example **Personal**) left or right in the list row; a line shows where it
+  lands. Or right-click the chip > **Move left** / **Move right**.
 - **Filter:** **Active**, **Completed** or **All** at the bottom. The bottom line shows totals and progress.
 - **Clear completed:** the **…** menu at the top right.
 
@@ -210,7 +212,7 @@ Open them from the tray icon (right-click > **Settings…**) or from the panel's
 
 ## Status and known limits
 
-**1.0.0 is the first full release.** Details:
+**1.0.1 is the current release** (1.0.0 was the first full release). Details:
 [docs/RELEASE_NOTES.md](docs/RELEASE_NOTES.md).
 
 - Memory is above the original target: about 64 MB private (130-140 MB working set once the panel has been opened).
