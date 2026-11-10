@@ -40,12 +40,12 @@ data stays on your PC; the app makes no network connections.
 
 ## Download
 
-Latest release **1.0.2** on the [Releases page](https://github.com/Riekie3/Dynamic-Island-To-Do-List/releases):
+Latest release **1.0.3** on the [Releases page](https://github.com/Riekie3/Dynamic-Island-To-Do-List/releases):
 
 | File | What it is |
 |---|---|
-| `TaskIsland-Setup-1.0.2-x64.exe` | **Installer (recommended).** Installs for your Windows user only. No administrator rights, no UAC prompt. |
-| `TaskIsland-1.0.2-win-x64-portable.zip` | **Portable.** Unzip and run; nothing is installed. |
+| `TaskIsland-Setup-1.0.3-x64.exe` | **Installer (recommended).** Installs for your Windows user only. No administrator rights, no UAC prompt. |
+| `TaskIsland-1.0.3-win-x64-portable.zip` | **Portable.** Unzip and run; nothing is installed. |
 
 Requirements: Windows 11 (or Windows 10 version 1809 or newer), 64-bit. Nothing else: the .NET runtime is included.
 
@@ -54,14 +54,14 @@ Requirements: Windows 11 (or Windows 10 version 1809 or newer), 64-bit. Nothing 
 
 | File | SHA-256 |
 |---|---|
-| `TaskIsland-Setup-1.0.2-x64.exe` | `5C52494E06FF778383C6E1A7FFBC31028FAF3AEAA13F1B48D27849FDD6557016` |
-| `TaskIsland-1.0.2-win-x64-portable.zip` | `94C8C92024BC9510F6E5E0EC2AA9726C116B393842B823B7D14DC68C96FF6E97` |
+| `TaskIsland-Setup-1.0.3-x64.exe` | `51018B5983B6F38BD32777CC245533548486047761767BA47E5821BADBBEE057` |
+| `TaskIsland-1.0.3-win-x64-portable.zip` | `6013CAB97F5D5E2AFECE2C1E7BA125A3962156881F62E2C33CD5A955DEC58D6F` |
 
 The earlier rc.2 files were scanned on VirusTotal ([installer](https://www.virustotal.com/gui/file/e3ce55f9137a4a019e42bee2241e837dc53d5cf6bfb6808cd734e30929b771c1),
-[zip](https://www.virustotal.com/gui/file/8ace638d1d6be2010b817149a21c9d1c7e183893e9de883800d1c96a108fb5ea)). The 1.0.2 files have been scanned with Microsoft Defender
+[zip](https://www.virustotal.com/gui/file/8ace638d1d6be2010b817149a21c9d1c7e183893e9de883800d1c96a108fb5ea)). The 1.0.3 files have been scanned with Microsoft Defender
 (no threats); you can upload them to [VirusTotal](https://www.virustotal.com) yourself to compare.
 
-In PowerShell: `Get-FileHash .\TaskIsland-Setup-1.0.2-x64.exe` shows the hash of your download.
+In PowerShell: `Get-FileHash .\TaskIsland-Setup-1.0.3-x64.exe` shows the hash of your download.
 
 ### About the one VirusTotal detection (installer)
 
@@ -80,14 +80,14 @@ locally with up-to-date signatures, no threats found). We believe this is a **fa
 
 If you would rather not take our word for it: compare the SHA-256 hash above, scan the file with your own antivirus,
 or use the **portable zip** and the source code. We are asking the vendor to review the flag; such flags often
-disappear after a review, but we cannot promise when. The 1.0.2 files are unsigned on purpose for now (code signing is a paid
+disappear after a review, but we cannot promise when. The 1.0.3 files are unsigned on purpose for now (code signing is a paid
 certificate), which is also why Windows SmartScreen shows its warning.
 
 ## Install
 
 ### Installer
 
-1. Download `TaskIsland-Setup-1.0.2-x64.exe` and run it.
+1. Download `TaskIsland-Setup-1.0.3-x64.exe` and run it.
 2. The files are **not code-signed** yet, so Windows SmartScreen may show "Windows protected your PC". Click
    **More info**, then **Run anyway**. (If Smart App Control is turned on, Windows may block unsigned apps entirely.)
 3. Click through the installer. It installs to `%LocalAppData%\Programs\TaskIsland`, adds TaskIsland to the Start
@@ -103,7 +103,7 @@ portable folder.
 
 ### Portable
 
-1. Unzip `TaskIsland-1.0.2-win-x64-portable.zip` to a folder you keep, for example `Documents\TaskIsland`.
+1. Unzip `TaskIsland-1.0.3-win-x64-portable.zip` to a folder you keep, for example `Documents\TaskIsland`.
 2. Double-click `TaskIsland.exe` (same SmartScreen note as above).
 3. "Start with Windows" is on by default and points at that folder, so do not move the folder afterwards.
 
@@ -215,7 +215,7 @@ Open them from the tray icon (right-click > **Settings…**) or from the panel's
 
 ## Status and known limits
 
-**1.0.2 is the current release** (1.0.0 was the first full release). Details:
+**1.0.3 is the current release** (1.0.0 was the first full release). Details:
 [docs/RELEASE_NOTES.md](docs/RELEASE_NOTES.md).
 
 - Memory is above the original target: about 64 MB private (130-140 MB working set once the panel has been opened).

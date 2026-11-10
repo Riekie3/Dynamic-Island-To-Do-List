@@ -785,19 +785,23 @@ Settings > Data that returns the app to a first-run state. The user also asked f
 `tests/TaskIsland.Data.Tests/BackupServiceTests.cs`, `DataMaintenanceServiceTests.cs` (new), `tools/ui-tests/backupui.ps1`
 (new), `README.md`, `docs/PLAN.md`, `docs/TESTING.md`, this log.
 
-**Tests performed:** `dotnet build TaskIsland.sln -c Debug` 0 warnings / 0 errors. `dotnet test TaskIsland.sln -c Debug`
+**Tests performed:** `dotnet build TaskIsland.sln -c Release` 0 warnings / 0 errors; `dotnet test -c Release --no-build`
 **451 passed, 0 failed** (315 Core + 136 Data).
 - `tools/ui-tests/backupui.ps1` (new, temp data folder), **12/12 pass**: both buttons visible on the Data page; Delete all
   backups removed all 4 fake backup files and kept the seeded tasks; Reset removed the tasks, restored Personal + Office
-  Work and the default Dark theme, deleted the backup file, and left the Settings window responsive.
+  Work and the default Dark theme, deleted the backup file, and left the Settings window responsive. Re-ran on the final
+  Debug build after the version bump: 12/12 again.
 - Live installed 1.0.2 (user's real database), **8/8 pass**: panel opened, Office Work showed both High tasks; dragging
   `Training ISO wei yee` below `Dr Chen monitor` saved that order, dragging it back above restored the original order; the
   panel stayed open through both drags and was closed again afterwards. Database order was checked after each drop.
 - `chipdrag.ps1` / `rowdrag.ps1` were not re-run because drag code did not change.
+- Release build `1.0.3+5bdd484` published by `tools\publish.ps1` (portable zip 66.7 MB) and `tools\build-installer.ps1`
+  (installer 50.8 MB). `installer-test.ps1`: **29 checks pass**, real-installer check skipped because TaskIsland is
+  already installed. Defender signatures 1.463.222.0: custom scans of the installer, `publish\win-x64` and the zip found
+  no threats; no TaskIsland entry in threat history.
 
-**Remaining defects / not tested:** the changes are not committed or released. Existing extra automatic backups shrink to
-3 at the next startup/recovery (not immediately when this build is installed). Reset keeps `Logs` on purpose and lets the
-default `LaunchAtStartup=true` re-add the Run entry. The hourly prune was verified by unit test, not by leaving the app
-open for a day.
+**Remaining defects / not tested:** existing extra automatic backups shrink to 3 at the next startup/recovery (not
+immediately when this build is installed). Reset keeps `Logs` on purpose and lets the default `LaunchAtStartup=true`
+re-add the Run entry. The hourly prune was verified by unit test, not by leaving the app open for a day.
 
-**Commit:** not committed (working tree on `a5c3240`).
+**Commit:** `739f4da` (retention, reset, tests and docs), `5bdd484` (Version 1.0.3).

@@ -1,17 +1,19 @@
-# TaskIsland 1.0.2 (installer + portable)
+# TaskIsland 1.0.3 (installer + portable)
 
 A Dynamic Island-style to-do list for Windows 11 (x64), by **RieSources** (https://rie-sources.com).
 
-## What's new since 1.0.1
+## What's new since 1.0.2
 
-- **Drag and drop now lifts the item out.** Drag a list chip or a task row and a copy lifts out of the panel and follows
-  the pointer; the item left behind dims and the other chips/rows slide aside to show the gap where it will land.
-  Dropping settles the item into that gap. The old insertion lines (and the thin line for list chips) are gone.
-- **Task rows use the same lifted preview.** Rows still reorder only inside the same priority group, only when reorder
-  is available, and completed or editing rows still cannot be dragged. Keyboard reorder (Alt+Up/Down) and the list
-  chip's **Move left** / **Move right** menu are unchanged.
+- **Backups clean up after themselves.** The newest **3** automatic daily backups are kept (previously 7), and the
+  safety copies made before you delete a list (`pre-delete-*.db`) are removed automatically after **24 hours**. The
+  check runs at start-up, after sleep and once an hour while TaskIsland stays open, so old copies do not pile up.
+- **Delete all backups.** Settings > Data > **Delete all backups…** clears every file in the Backups folder after a
+  confirmation. Your tasks and settings are kept.
+- **Reset TaskIsland.** Settings > Data > **Reset everything…** returns the app to its first-run state: all lists, tasks,
+  settings and backups are deleted, the Personal and Office Work starter lists come back with the default settings, and
+  the app keeps running without a restart. Logs are kept. This cannot be undone.
 
-Everything else is the same as 1.0.1.
+Everything else is the same as 1.0.2.
 
 ## Upgrading
 
@@ -21,7 +23,7 @@ folder, `%LocalAppData%\TaskIsland`). The installer refuses to run while TaskIsl
 ## Install (recommended)
 
 1. **If you run an older portable copy:** Exit it from the tray menu first (the installer asks you to close it anyway).
-2. Run `TaskIsland-Setup-1.0.2-x64.exe`. It is **not code-signed**, so SmartScreen may say "Windows protected your
+2. Run `TaskIsland-Setup-1.0.3-x64.exe`. It is **not code-signed**, so SmartScreen may say "Windows protected your
    PC": click **More info**, then **Run anyway**. (Smart App Control, if turned on, can block unsigned apps.)
 3. It installs to `%LocalAppData%\Programs\TaskIsland`, adds a Start menu entry (desktop icon optional) and starts
    TaskIsland at the end. Your tasks from an older version are found again: the data folder is the same
@@ -33,7 +35,7 @@ Upgrading later: run a newer installer over the top; tasks and settings stay.
 
 ## Or portable
 
-Unzip `TaskIsland-1.0.2-win-x64-portable.zip` somewhere permanent and run `TaskIsland.exe` (same SmartScreen note).
+Unzip `TaskIsland-1.0.3-win-x64-portable.zip` somewhere permanent and run `TaskIsland.exe` (same SmartScreen note).
 "Start with Windows" is on by default and points at that folder, so do not move it afterwards.
 
 No administrator rights, no internet connection, no .NET install needed (the runtime is included) either way.
@@ -44,24 +46,22 @@ No administrator rights, no internet connection, no .NET install needed (the run
 - Lists (Personal, Office Work, your own), priorities, due dates with reminders, drag to reorder, undo for deletes.
 - Tray icon, global hotkey Ctrl+Alt+T, start with Windows (optional), one instance only.
 - Settings: themes, accent colour, panel opacity, companion face on/off, reminder width and blink, JSON export/import,
-  daily backups.
+  daily backups, backup deletion and a full reset.
 - Data stays on your PC in `%LocalAppData%\TaskIsland`. The app makes no network connections.
 
 ## Checks done for this release
 
-- 444 automated tests green.
-- `tools/ui-tests/chipdrag.ps1` (real mouse): all 5 checks passed — Office Work dragged in front of Personal and back
-  again, the panel stays open, and a plain click does not change the order.
-- New `tools/ui-tests/rowdrag.ps1` (real mouse): all 6 checks passed, twice in a row — a Medium task dragged below
-  another Medium task was saved in the database and still shown in that order after a restart; a drop onto a High task
-  was refused; a plain click did not reorder.
-- Drag screenshots taken with `--full-motion` were checked: the chip/row copy follows the pointer across the
-  list and quick-add strip, the source is dimmed and the gap opens. The row ghost has an opaque backing, so the rows
-  underneath do not show through.
+- 451 automated tests green.
+- New `tools/ui-tests/backupui.ps1` (temporary data folder): **12/12 passed** — both buttons visible on the Data page;
+  Delete all backups removed every backup file and kept the tasks; Reset cleared the tasks, restored Personal + Office
+  Work and the default theme, deleted the backups and left the Settings window responsive.
+- Live same-priority reorder check on the installed 1.0.2 copy and the real database: **8/8 passed** — dragged
+  `Training ISO wei yee` below `Dr Chen monitor` in Office Work, confirmed the saved order, then dragged it back above
+  and confirmed the original order was restored.
 - The installer test passed 29 checks (install without administrator mode, upgrade over the top with tasks kept,
   uninstall with the "Also delete your tasks and backups?" question, reinstall). The check against the real installed
   copy was skipped because TaskIsland is already installed on this PC.
-- Built from a clean, committed tree (`1.0.2+ec6d26f`). Microsoft Defender (signatures 1.463.218.0) scanned the
+- Built from a clean, committed tree (`1.0.3+5bdd484`). Microsoft Defender (signatures 1.463.222.0) scanned the
   published folder, the portable zip and the installer with no threats found. The 10-minute Defender soak was **not**
   repeated.
 
@@ -86,8 +86,8 @@ No administrator rights, no internet connection, no .NET install needed (the run
 
 ## SHA-256
 
-- `TaskIsland-Setup-1.0.2-x64.exe`: `5C52494E06FF778383C6E1A7FFBC31028FAF3AEAA13F1B48D27849FDD6557016`
-- `TaskIsland-1.0.2-win-x64-portable.zip`: `94C8C92024BC9510F6E5E0EC2AA9726C116B393842B823B7D14DC68C96FF6E97`
+- `TaskIsland-Setup-1.0.3-x64.exe`: `51018B5983B6F38BD32777CC245533548486047761767BA47E5821BADBBEE057`
+- `TaskIsland-1.0.3-win-x64-portable.zip`: `6013CAB97F5D5E2AFECE2C1E7BA125A3962156881F62E2C33CD5A955DEC58D6F`
 
 ---
 
