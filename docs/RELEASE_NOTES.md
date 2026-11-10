@@ -1,19 +1,18 @@
-# TaskIsland 1.0.3 (installer + portable)
+# TaskIsland 1.0.4 (installer + portable)
 
 A Dynamic Island-style to-do list for Windows 11 (x64), by **RieSources** (https://rie-sources.com).
 
-## What's new since 1.0.2
+## What's new since 1.0.3
 
-- **Backups clean up after themselves.** The newest **3** automatic daily backups are kept (previously 7), and the
-  safety copies made before you delete a list (`pre-delete-*.db`) are removed automatically after **24 hours**. The
-  check runs at start-up, after sleep and once an hour while TaskIsland stays open, so old copies do not pile up.
-- **Delete all backups.** Settings > Data > **Delete all backups…** clears every file in the Backups folder after a
-  confirmation. Your tasks and settings are kept.
-- **Reset TaskIsland.** Settings > Data > **Reset everything…** returns the app to its first-run state: all lists, tasks,
-  settings and backups are deleted, the Personal and Office Work starter lists come back with the default settings, and
-  the app keeps running without a restart. Logs are kept. This cannot be undone.
+- **A locked old backup can no longer stop the daily backup.** The clean-up of old backups now skips a file it cannot
+  delete (for example one an antivirus scan or another program is holding) and tries again next time, instead of
+  skipping that day's backup.
+- **Reset everything really wipes the old data.** After a reset the database file is compacted and its write-ahead file
+  emptied, so the deleted lists and tasks are no longer sitting in unused space on disk.
+- **Reset no longer reuses task numbers.** New tasks after a reset always get numbers higher than any task before, so a
+  reminder the app remembers can never be mistaken for a new task with the same due time.
 
-Everything else is the same as 1.0.2.
+Everything else is the same as 1.0.3.
 
 ## Upgrading
 
@@ -23,7 +22,7 @@ folder, `%LocalAppData%\TaskIsland`). The installer refuses to run while TaskIsl
 ## Install (recommended)
 
 1. **If you run an older portable copy:** Exit it from the tray menu first (the installer asks you to close it anyway).
-2. Run `TaskIsland-Setup-1.0.3-x64.exe`. It is **not code-signed**, so SmartScreen may say "Windows protected your
+2. Run `TaskIsland-Setup-1.0.4-x64.exe`. It is **not code-signed**, so SmartScreen may say "Windows protected your
    PC": click **More info**, then **Run anyway**. (Smart App Control, if turned on, can block unsigned apps.)
 3. It installs to `%LocalAppData%\Programs\TaskIsland`, adds a Start menu entry (desktop icon optional) and starts
    TaskIsland at the end. Your tasks from an older version are found again: the data folder is the same
@@ -35,7 +34,7 @@ Upgrading later: run a newer installer over the top; tasks and settings stay.
 
 ## Or portable
 
-Unzip `TaskIsland-1.0.3-win-x64-portable.zip` somewhere permanent and run `TaskIsland.exe` (same SmartScreen note).
+Unzip `TaskIsland-1.0.4-win-x64-portable.zip` somewhere permanent and run `TaskIsland.exe` (same SmartScreen note).
 "Start with Windows" is on by default and points at that folder, so do not move it afterwards.
 
 No administrator rights, no internet connection, no .NET install needed (the runtime is included) either way.
@@ -51,19 +50,16 @@ No administrator rights, no internet connection, no .NET install needed (the run
 
 ## Checks done for this release
 
-- 451 automated tests green.
-- New `tools/ui-tests/backupui.ps1` (temporary data folder): **12/12 passed** — both buttons visible on the Data page;
-  Delete all backups removed every backup file and kept the tasks; Reset cleared the tasks, restored Personal + Office
-  Work and the default theme, deleted the backups and left the Settings window responsive.
-- Live same-priority reorder check on the installed 1.0.2 copy and the real database: **8/8 passed** — dragged
-  `Training ISO wei yee` below `Dr Chen monitor` in Office Work, confirmed the saved order, then dragged it back above
-  and confirmed the original order was restored.
+- 454 automated tests green (3 new). Each new test was also run against the 1.0.3 code and fails there: a locked old
+  backup blocking the daily backup, task ids reused after a reset, and old task text still readable in the database
+  file after a reset.
+- `tools/ui-tests/backupui.ps1` (temporary data folder): 12/12 passed with the compacting reset. `chipdrag.ps1` and
+  `rowdrag.ps1` were not re-run: no drag code changed.
 - The installer test passed 29 checks (install without administrator mode, upgrade over the top with tasks kept,
   uninstall with the "Also delete your tasks and backups?" question, reinstall). The check against the real installed
   copy was skipped because TaskIsland is already installed on this PC.
-- Built from a clean, committed tree (`1.0.3+5bdd484`). Microsoft Defender (signatures 1.463.222.0) scanned the
-  published folder, the portable zip and the installer with no threats found. The 10-minute Defender soak was **not**
-  repeated.
+- Built from a clean, committed tree (`1.0.4+dde6e2b`). Microsoft Defender scanned the portable zip and the installer
+  with no threats found. The 10-minute Defender soak was **not** repeated.
 
 ## Known limits (please tell us what you see)
 
@@ -86,8 +82,8 @@ No administrator rights, no internet connection, no .NET install needed (the run
 
 ## SHA-256
 
-- `TaskIsland-Setup-1.0.3-x64.exe`: `51018B5983B6F38BD32777CC245533548486047761767BA47E5821BADBBEE057`
-- `TaskIsland-1.0.3-win-x64-portable.zip`: `6013CAB97F5D5E2AFECE2C1E7BA125A3962156881F62E2C33CD5A955DEC58D6F`
+- `TaskIsland-Setup-1.0.4-x64.exe`: `3676DBE11AC98D287D4A3E3B1F362E473BEEC4088E4F298CAEFCAA81329EE745`
+- `TaskIsland-1.0.4-win-x64-portable.zip`: `261B4AD69E6B88412E97504F1E2B131B512BFB659C3F8A4982A493F3269CC974`
 
 ---
 
