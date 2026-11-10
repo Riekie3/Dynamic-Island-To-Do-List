@@ -804,4 +804,9 @@ Settings > Data that returns the app to a first-run state. The user also asked f
 immediately when this build is installed). Reset keeps `Logs` on purpose and lets the default `LaunchAtStartup=true`
 re-add the Run entry. The hourly prune was verified by unit test, not by leaving the app open for a day.
 
-**Commit:** `739f4da` (retention, reset, tests and docs), `5bdd484` (Version 1.0.3).
+**Release:** [v1.0.3](https://github.com/Riekie3/Dynamic-Island-To-Do-List/releases/tag/v1.0.3) published 2026-11-10
+as the latest release, built from `5bdd484` (`1.0.3+5bdd484`). Portable zip 66.7 MB, installer 50.8 MB; both were
+re-downloaded from GitHub and their SHA-256 hashes matched. Hashes and checks in `docs/RELEASE_NOTES.md`.
+
+**Commit:** `739f4da` (retention, reset, tests and docs), `5bdd484` (Version 1.0.3), `1886cdb` (release notes, README,
+hashes).
