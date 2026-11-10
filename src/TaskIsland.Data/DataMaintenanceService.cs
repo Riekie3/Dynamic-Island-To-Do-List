@@ -19,8 +19,8 @@ public sealed class DataMaintenanceService(Database db, BackupService backup)
         """;
 
     /// <summary>
-    /// Clears every list, task and setting, puts the starter lists back and resets the id counters, then deletes every
-    /// backup. The schema is kept, so the running app can reload immediately. Returns the number of backup files removed.
+    /// Clears every list, task and setting, puts the starter lists back and restarts the list id counter, compacts the
+    /// database file, then deletes every backup. The schema is kept, so the running app can reload immediately. Returns the number of backup files removed.
     /// </summary>
     public async Task<int> ResetToFirstRunAsync()
     {
@@ -31,9 +31,19 @@ public sealed class DataMaintenanceService(Database db, BackupService backup)
                 DELETE FROM Tasks;
                 DELETE FROM Lists;
                 DELETE FROM Settings;
-                DELETE FROM sqlite_sequence WHERE name IN ('Tasks', 'Lists');
+                DELETE FROM sqlite_sequence WHERE name = 'Lists';
                 """ + StarterData);
             await tx.CommitAsync();
+        }
+        // Task ids keep counting up (only the list counter restarts), so a new task never reuses the id of a deleted
+        // one: the reminder service remembers which ids it already announced.
+
+        // Deleted rows stay in free pages and in the -wal file until something overwrites them. Rebuild the file and
+        // empty the -wal so the old lists and tasks are really gone from disk.
+        await using (var conn = await db.OpenAsync())
+        {
+            await conn.ExecAsync(null, "VACUUM;");
+            await conn.ExecAsync(null, "PRAGMA wal_checkpoint(TRUNCATE);");
         }
         return backup.DeleteAllBackups();
     }

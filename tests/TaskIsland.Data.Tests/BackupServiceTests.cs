@@ -389,6 +389,24 @@ public class BackupServiceTests
         Assert.Equal(BackupService.KeepAutoBackups, Directory.GetFiles(t.Paths.BackupsDir, "taskisland-*.db").Length);
     }
 
+    [Fact]
+    public async Task A_locked_old_backup_does_not_stop_the_daily_backup()
+    {
+        using var t = await TestDb.CreateAsync();
+        MakeFakeBackups(t.Paths.BackupsDir, BackupService.AutoPrefix, 6);
+        var oldest = Directory.GetFiles(t.Paths.BackupsDir, "taskisland-*.db").OrderBy(f => f, StringComparer.Ordinal).First();
+
+        string? path;
+        using (new FileStream(oldest, FileMode.Open, FileAccess.Read, FileShare.None))   // e.g. an antivirus scan holds it
+        {
+            path = await t.Backup.RunDailyBackupIfDueAsync(t.Settings);
+        }
+
+        Assert.NotNull(path);
+        Assert.True(File.Exists(path));
+        Assert.Equal(t.Clock.UtcNow, (await t.Settings.LoadAsync()).LastBackupAt);
+    }
+
     // ---- safety guards (audit H-1) ----
 
     [Fact]

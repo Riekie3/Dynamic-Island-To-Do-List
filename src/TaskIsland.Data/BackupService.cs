@@ -61,6 +61,20 @@ public sealed class BackupService(Database db, IClock clock)
         return new[] { live, live + "-wal", live + "-shm" }.Any(p => string.Equals(p, full, StringComparison.OrdinalIgnoreCase));
     }
 
+    /// <summary>Deletes one old backup; a file that is locked or read-only is left for the next clean-up.</summary>
+    private static bool TryDeleteBackup(string path)
+    {
+        try
+        {
+            File.Delete(path);
+            return true;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return false;
+        }
+    }
+
     private static void TryDelete(string path)
     {
         try { if (File.Exists(path)) File.Delete(path); } catch (IOException) { } catch (UnauthorizedAccessException) { }
@@ -74,6 +88,7 @@ public sealed class BackupService(Database db, IClock clock)
     public async Task<string?> RunDailyBackupIfDueAsync(ISettingsStore settings)
     {
         // Clean-up runs even when daily backups are switched off or not due yet: old safety copies must not live forever.
+        // Pruning skips files it cannot delete (locked by antivirus or an open program), so it never blocks the backup.
         PruneExpiredPreDeleteBackups();
         PruneAutoBackups();
         var s = await settings.LoadAsync();
@@ -93,8 +108,7 @@ public sealed class BackupService(Database db, IClock clock)
         var old = Directory.GetFiles(Paths.BackupsDir, AutoPrefix + "*.db")
             .OrderByDescending(f => Path.GetFileName(f), StringComparer.Ordinal)   // names start with a sortable timestamp
             .Skip(keep).ToList();
-        foreach (var f in old) File.Delete(f);
-        return old.Count;
+        return old.Count(TryDeleteBackup);
     }
 
     /// <summary>Deletes pre-delete copies older than <see cref="PreDeleteRetention"/>. Every other backup kind is untouched.</summary>
@@ -105,8 +119,7 @@ public sealed class BackupService(Database db, IClock clock)
         var expired = Directory.GetFiles(Paths.BackupsDir, PreDeletePrefix + "*.db")
             .Where(f => File.GetLastWriteTimeUtc(f) <= cutoff)
             .ToList();
-        foreach (var f in expired) File.Delete(f);
-        return expired.Count;
+        return expired.Count(TryDeleteBackup);
     }
 
     /// <summary>Deletes every file in the Backups folder. The live database, settings and logs are never touched.</summary>
