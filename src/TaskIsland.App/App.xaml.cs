@@ -41,6 +41,9 @@ public partial class App : Application
         ShutdownMode = ShutdownMode.OnExplicitShutdown;
         // PLAN.md section 6.7 rule 2: cap animation frames at 60 fps so 120/144 Hz screens don't double the cost.
         Timeline.DesiredFrameRateProperty.OverrideMetadata(typeof(Timeline), new FrameworkPropertyMetadata { DefaultValue = 60 });
+        // The island is a see-through (layered) window; on the GPU path WPF keeps ~60 MB of D3D surfaces alive after every
+        // morph (measured: 64 MB idle -> 122 MB after 10 morphs; software: 56 MB flat). Must be set before any window exists.
+        System.Windows.Media.RenderOptions.ProcessRenderMode = System.Windows.Interop.RenderMode.SoftwareOnly;
         var options = LaunchOptions.Parse(e.Args);
         // TASKISLAND_ROOT lets tests and smoke runs use a throw-away data folder.
         var root = Environment.GetEnvironmentVariable("TASKISLAND_ROOT");
