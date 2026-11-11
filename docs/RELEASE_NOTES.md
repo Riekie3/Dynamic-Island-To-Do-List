@@ -61,7 +61,9 @@ No administrator rights, no internet connection, no .NET install needed (the run
 - The installer test passed 29 checks (install without administrator mode, upgrade over the top with tasks kept,
   uninstall with the "Also delete your tasks and backups?" question, reinstall). The check against the real installed
   copy was skipped because TaskIsland is already installed on this PC.
-- Built from a clean, committed tree (`1.0.4+dde6e2b`). Microsoft Defender scanned the portable zip and the installer
+- The installer test passed (install without administrator mode, upgrade over the top with tasks kept, uninstall,
+  reinstall). The check against the real installed copy was skipped because TaskIsland is already installed on this PC.
+- Built from a clean, committed tree (`1.0.5+3c28bdc`). Microsoft Defender scanned the portable zip and the installer
   with no threats found. The 10-minute Defender soak was **not** repeated.
 
 ## Known limits (please tell us what you see)
@@ -86,8 +88,8 @@ No administrator rights, no internet connection, no .NET install needed (the run
 
 ## SHA-256
 
-- `TaskIsland-Setup-1.0.4-x64.exe`: `3676DBE11AC98D287D4A3E3B1F362E473BEEC4088E4F298CAEFCAA81329EE745`
-- `TaskIsland-1.0.4-win-x64-portable.zip`: `261B4AD69E6B88412E97504F1E2B131B512BFB659C3F8A4982A493F3269CC974`
+- `TaskIsland-Setup-1.0.5-x64.exe`: `099D6D60A8C854D3F2DE0A386E3A66971D87D167CA38CDCEB6556B59E023BCA0`
+- `TaskIsland-1.0.5-win-x64-portable.zip`: `5C0C8B152B7245A5533898FAC27C4A25C8A7A52CF6D143C30DF3A749C9B281DE`
 
 ---
 
