@@ -40,12 +40,12 @@ data stays on your PC; the app makes no network connections.
 
 ## Download
 
-Latest release **1.0.4** on the [Releases page](https://github.com/Riekie3/Dynamic-Island-To-Do-List/releases):
+Latest release **1.0.5** on the [Releases page](https://github.com/Riekie3/Dynamic-Island-To-Do-List/releases):
 
 | File | What it is |
 |---|---|
-| `TaskIsland-Setup-1.0.4-x64.exe` | **Installer (recommended).** Installs for your Windows user only. No administrator rights, no UAC prompt. |
-| `TaskIsland-1.0.4-win-x64-portable.zip` | **Portable.** Unzip and run; nothing is installed. |
+| `TaskIsland-Setup-1.0.5-x64.exe` | **Installer (recommended).** Installs for your Windows user only. No administrator rights, no UAC prompt. |
+| `TaskIsland-1.0.5-win-x64-portable.zip` | **Portable.** Unzip and run; nothing is installed. |
 
 Requirements: Windows 11 (or Windows 10 version 1809 or newer), 64-bit. Nothing else: the .NET runtime is included.
 
@@ -58,10 +58,10 @@ Requirements: Windows 11 (or Windows 10 version 1809 or newer), 64-bit. Nothing 
 | `TaskIsland-1.0.4-win-x64-portable.zip` | `261B4AD69E6B88412E97504F1E2B131B512BFB659C3F8A4982A493F3269CC974` |
 
 The earlier rc.2 files were scanned on VirusTotal ([installer](https://www.virustotal.com/gui/file/e3ce55f9137a4a019e42bee2241e837dc53d5cf6bfb6808cd734e30929b771c1),
-[zip](https://www.virustotal.com/gui/file/8ace638d1d6be2010b817149a21c9d1c7e183893e9de883800d1c96a108fb5ea)). The 1.0.4 files have been scanned with Microsoft Defender
+[zip](https://www.virustotal.com/gui/file/8ace638d1d6be2010b817149a21c9d1c7e183893e9de883800d1c96a108fb5ea)). The 1.0.5 files have been scanned with Microsoft Defender
 (no threats); you can upload them to [VirusTotal](https://www.virustotal.com) yourself to compare.
 
-In PowerShell: `Get-FileHash .\TaskIsland-Setup-1.0.4-x64.exe` shows the hash of your download.
+In PowerShell: `Get-FileHash .\TaskIsland-Setup-1.0.5-x64.exe` shows the hash of your download.
 
 ### About the one VirusTotal detection (installer)
 
@@ -80,14 +80,14 @@ locally with up-to-date signatures, no threats found). We believe this is a **fa
 
 If you would rather not take our word for it: compare the SHA-256 hash above, scan the file with your own antivirus,
 or use the **portable zip** and the source code. We are asking the vendor to review the flag; such flags often
-disappear after a review, but we cannot promise when. The 1.0.4 files are unsigned on purpose for now (code signing is a paid
+disappear after a review, but we cannot promise when. The 1.0.5 files are unsigned on purpose for now (code signing is a paid
 certificate), which is also why Windows SmartScreen shows its warning.
 
 ## Install
 
 ### Installer
 
-1. Download `TaskIsland-Setup-1.0.4-x64.exe` and run it.
+1. Download `TaskIsland-Setup-1.0.5-x64.exe` and run it.
 2. The files are **not code-signed** yet, so Windows SmartScreen may show "Windows protected your PC". Click
    **More info**, then **Run anyway**. (If Smart App Control is turned on, Windows may block unsigned apps entirely.)
 3. Click through the installer. It installs to `%LocalAppData%\Programs\TaskIsland`, adds TaskIsland to the Start
@@ -103,7 +103,7 @@ portable folder.
 
 ### Portable
 
-1. Unzip `TaskIsland-1.0.4-win-x64-portable.zip` to a folder you keep, for example `Documents\TaskIsland`.
+1. Unzip `TaskIsland-1.0.5-win-x64-portable.zip` to a folder you keep, for example `Documents\TaskIsland`.
 2. Double-click `TaskIsland.exe` (same SmartScreen note as above).
 3. "Start with Windows" is on by default and points at that folder, so do not move the folder afterwards.
 
@@ -215,11 +215,13 @@ Open them from the tray icon (right-click > **Settings…**) or from the panel's
 
 ## Status and known limits
 
-**1.0.4 is the current release** (1.0.0 was the first full release). Details:
+**1.0.5 is the current release** (1.0.0 was the first full release). Details:
 [docs/RELEASE_NOTES.md](docs/RELEASE_NOTES.md).
 
-- Memory is above the original target: about 64 MB private (130-140 MB working set once the panel has been opened).
-  WPF itself needs much of that.
+- Memory: since 1.0.5 about 50-55 MB private and stays flat however often the panel opens (it used to climb to
+  about 120 MB). The total working set (about 115-125 MB) is mostly shared .NET and WPF code and is above the original
+  70 MB target. The cost of drawing in software: opening and closing the panel uses about twice the CPU for a
+  moment (about 0.5 s of one core per open and close); idle CPU is unchanged.
 - The face's random animations cost a little CPU: about 1.5-2 % of one core averaged over the first minutes after a
   first start in our latest check (lower over long idle periods; "Face pops up on its own" can be turned down).
 - Sleep, hibernate, reboot auto-start, multiple monitors and display scaling are being verified in real use.

@@ -1,18 +1,20 @@
-# TaskIsland 1.0.4 (installer + portable)
+# TaskIsland 1.0.5 (installer + portable)
 
 A Dynamic Island-style to-do list for Windows 11 (x64), by **RieSources** (https://rie-sources.com).
 
-## What's new since 1.0.3
+## What's new since 1.0.4
 
-- **A locked old backup can no longer stop the daily backup.** The clean-up of old backups now skips a file it cannot
-  delete (for example one an antivirus scan or another program is holding) and tries again next time, instead of
-  skipping that day's backup.
-- **Reset everything really wipes the old data.** After a reset the database file is compacted and its write-ahead file
-  emptied, so the deleted lists and tasks are no longer sitting in unused space on disk.
-- **Reset no longer reuses task numbers.** New tasks after a reset always get numbers higher than any task before, so a
-  reminder the app remembers can never be mistaken for a new task with the same due time.
+- **Memory no longer grows when you open the panel.** The see-through island window used to leave about 60 MB of
+  graphics memory behind after each open and close (64 MB at start, 120+ MB after a few opens). TaskIsland now draws
+  its windows in software: 49-55 MB private memory, flat, and about 130 fewer handles. It looks the same (transparency,
+  shadow and panel opacity are unchanged).
+- **Long task titles no longer get squeezed when you point at a row.** The due date now sits under the title, and the
+  space for the edit and delete buttons is kept free, so the title stays on its lines instead of breaking into a thin
+  column.
+- Trade-off: opening and closing the panel uses about twice the CPU for that moment (about 0.5 s of one core per open
+  and close, measured at 1920x1080). Idle CPU is unchanged.
 
-Everything else is the same as 1.0.3.
+Everything else is the same as 1.0.4.
 
 ## Upgrading
 
@@ -22,7 +24,7 @@ folder, `%LocalAppData%\TaskIsland`). The installer refuses to run while TaskIsl
 ## Install (recommended)
 
 1. **If you run an older portable copy:** Exit it from the tray menu first (the installer asks you to close it anyway).
-2. Run `TaskIsland-Setup-1.0.4-x64.exe`. It is **not code-signed**, so SmartScreen may say "Windows protected your
+2. Run `TaskIsland-Setup-1.0.5-x64.exe`. It is **not code-signed**, so SmartScreen may say "Windows protected your
    PC": click **More info**, then **Run anyway**. (Smart App Control, if turned on, can block unsigned apps.)
 3. It installs to `%LocalAppData%\Programs\TaskIsland`, adds a Start menu entry (desktop icon optional) and starts
    TaskIsland at the end. Your tasks from an older version are found again: the data folder is the same
@@ -34,7 +36,7 @@ Upgrading later: run a newer installer over the top; tasks and settings stay.
 
 ## Or portable
 
-Unzip `TaskIsland-1.0.4-win-x64-portable.zip` somewhere permanent and run `TaskIsland.exe` (same SmartScreen note).
+Unzip `TaskIsland-1.0.5-win-x64-portable.zip` somewhere permanent and run `TaskIsland.exe` (same SmartScreen note).
 "Start with Windows" is on by default and points at that folder, so do not move it afterwards.
 
 No administrator rights, no internet connection, no .NET install needed (the runtime is included) either way.
@@ -50,11 +52,12 @@ No administrator rights, no internet connection, no .NET install needed (the run
 
 ## Checks done for this release
 
-- 454 automated tests green (3 new). Each new test was also run against the 1.0.3 code and fails there: a locked old
-  backup blocking the daily backup, task ids reused after a reset, and old task text still readable in the database
-  file after a reset.
-- `tools/ui-tests/backupui.ps1` (temporary data folder): 12/12 passed with the compacting reset. `chipdrag.ps1` and
-  `rowdrag.ps1` were not re-run: no drag code changed.
+- 454 automated tests green (no new ones: the change is in how windows are drawn and in the row layout).
+- UI tests `t1` to `t6`, `chipdrag.ps1` and `rowdrag.ps1` passed on the software-rendering build (temporary data
+  folders). `p5a.ps1` has one failure ("pulse after the pill is wide") that happens the same way on 1.0.4.
+- A/B measurement, 10 open/close cycles, 1920x1080 at 125 %: private memory 64 -> 122 MB (1.0.4) against 49 -> 55 MB
+  (1.0.5); CPU per open and close 502 ms against 1,083 ms; handles 663 against 528. A screenshot of the open panel
+  differs in 25 of 64,200 sampled pixels (0.04 %).
 - The installer test passed 29 checks (install without administrator mode, upgrade over the top with tasks kept,
   uninstall with the "Also delete your tasks and backups?" question, reinstall). The check against the real installed
   copy was skipped because TaskIsland is already installed on this PC.
@@ -63,8 +66,9 @@ No administrator rights, no internet connection, no .NET install needed (the run
 
 ## Known limits (please tell us what you see)
 
-- **Memory is above the target.** About 64 MB private memory (126 MB working set) at idle; once the list panel has been
-  opened it stays around 130-140 MB working set. The target was 50 MB / 70 MB. WPF itself needs a lot of that.
+- **Memory:** 49-55 MB private memory, flat after the panel has been opened many times (the target was 50 MB). The
+  total working set is about 115-125 MB against a 70 MB target; most of it is shared .NET and WPF code, not TaskIsland's
+  own data. A 200-cycle soak, 4K and a second monitor have not been measured yet.
 - The face's random animations use a little CPU. Measured right after a first start with default settings: about
   1.5-2 % of one core averaged over 4 minutes; an earlier 30-minute measurement averaged 0.13 %. Settings > Appearance >
   "Face pops up on its own" turns it down or off.

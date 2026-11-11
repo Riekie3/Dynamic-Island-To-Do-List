@@ -826,3 +826,26 @@ and pushed (commits `3a54290`, `803745b`, `883fbb2`: reminder as a toast card, U
 then the owner cancelled the plan before any release and asked for it to be reverted. The three commits were undone with
 `git revert` (history kept; nothing was ever in a release). The code is still reachable in git history at `883fbb2` if it
 is ever wanted again. Unrelated fix kept: `p5b.ps1`'s About check no longer hard-codes version 0.1.0.
+
+### Release 1.0.5 — software rendering and row layout (2026-11-11, Sonnet 5.5)
+
+From the owner's performance audit (`TaskIsland_Performance_Audit.md`, measured on 1.0.3), re-measured here on 1.0.4.
+The see-through (layered) island window keeps about 60 MB of D3D surfaces alive after each morph on the GPU path
+(forced GC, 30 fps, BitmapCache, no shadow: none of them freed it). `RenderOptions.ProcessRenderMode = SoftwareOnly`,
+set in `App.OnStartup` before any window exists, removes it. Same look (25 of 64,200 sampled pixels differ in a
+screenshot of the open panel), transparency unchanged.
+
+| 10 open/close cycles, 1080p @125 % | 1.0.4 (GPU) | 1.0.5 |
+|---|---|---|
+| Private memory start / after | 64 / 122 MB | 49 / 55 MB (flat from cycle 3) |
+| CPU per open+close | 502 ms | 1,083 ms |
+| Handles | 663 | 528 |
+
+Switching only the island window (`HwndSource.CompositionTarget.RenderMode` in `OnSourceInitialized`) was tried and
+rejected: 68 MB, because the first frame is already drawn on the GPU. Process-wide is better. Not measured yet: cold
+start, 4K / second monitor, scroll CPU, 200-cycle soak. PLAN section 6.7's total-working-set target (70 MB) is mostly
+shared framework pages; private bytes (50 MB) is the number that matters.
+
+Also fixed: pointing at a task row showed the edit/delete buttons and squeezed the title into a thin column. The due
+date moved under the title and the buttons use `Visibility.Hidden` (space reserved). `p5a.ps1` "pulse after the pill is
+wide" fails the same way on 1.0.4 (not caused by this release).
