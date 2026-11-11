@@ -48,6 +48,21 @@ public static class IslandPlacement
     }
 
     /// <summary>
+    /// Drag to place: the horizontal offset (DIPs from the monitor centre) that puts the island's centre at
+    /// <paramref name="centreX"/> (physical pixels), clamped the same way as <see cref="Compute"/> so the 420-wide panel
+    /// still fits on the monitor. The saved value is therefore always exactly where the island is drawn.
+    /// </summary>
+    public static int OffsetForCentre(PixelRect monitor, double scale, double centreX, double panelWidthDip)
+    {
+        if (scale <= 0 || double.IsNaN(scale)) scale = 1;
+        double half = panelWidthDip / 2 * scale;
+        double lo = monitor.Left + half, hi = monitor.Right - half;
+        double mid = monitor.Left + monitor.Width / 2.0;
+        double x = lo <= hi ? Math.Clamp(centreX, lo, hi) : mid;
+        return (int)Math.Round((x - mid) / scale);
+    }
+
+    /// <summary>
     /// On-screen width (DIPs) of the reminder pill: <paramref name="percent"/> of the monitor width, kept on the monitor
     /// around the island's centre (the same centre and clamp as <see cref="Compute"/>, with an 8 DIP gap to each edge) and
     /// never narrower than <paramref name="minDip"/>. Percent 0 (or less) means <paramref name="minDip"/>.

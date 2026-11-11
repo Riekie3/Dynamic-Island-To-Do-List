@@ -33,6 +33,7 @@ public partial class IslandWindow : Window
     private readonly ReactionDirector _director;
     private readonly EfficiencyMode _efficiency;
     private readonly IslandPositioner _positioner;
+    private readonly ISettingsStore _store;
     private readonly FaceRig _face = new();
     private readonly DispatcherTimer _peekTimer, _alertTimer, _tuckTimer, _autoCollapseTimer;
     private readonly TranslateTransform _tuckSlide = new();
@@ -49,10 +50,11 @@ public partial class IslandWindow : Window
     private static readonly TimeSpan AlertTime = TimeSpan.FromSeconds(5);
 
     public IslandWindow(IslandViewModel vm, AppSettings settings, MotionPolicy motion, ReactionDirector director,
-        EfficiencyMode efficiency, IslandPositioner positioner)
+        EfficiencyMode efficiency, IslandPositioner positioner, ISettingsStore store)
     {
         _vm = vm;
         _settings = settings;
+        _store = store;
         _motion = motion;
         _director = director;
         _efficiency = efficiency;
@@ -67,6 +69,10 @@ public partial class IslandWindow : Window
         Host.MouseEnter += OnHostMouseEnter;
         Host.MouseLeave += OnHostMouseLeave;
         Host.MouseLeftButtonUp += OnHostClick;
+        Host.PreviewMouseLeftButtonDown += OnPlacePress;
+        Host.PreviewMouseMove += OnPlaceMove;
+        Host.PreviewMouseLeftButtonUp += OnPlaceRelease;
+        Host.LostMouseCapture += OnPlaceCaptureLost;
 
         _peekTimer = new DispatcherTimer(DispatcherPriority.Normal);
         _peekTimer.Tick += (_, _) => { _peekTimer.Stop(); StartPeek(); };
@@ -602,6 +608,124 @@ public partial class IslandWindow : Window
             return;
         }
         Expand();
+    }
+
+    // ---- drag to place (docs/DRAG-PLACE-PLAN.md): the collapsed pill slides along the top edge ----
+
+    private const double PlaceThresholdPx = 6;
+    private Point? _pressAt;          // screen pixels where the button went down on the pill
+    private bool _placing;            // the pill is being carried
+    private double _pressCentre;      // island centre (screen pixels) at the press
+    private int _offsetBefore;        // HorizontalOffset before the drag, restored if the drag is cancelled
+    private DateTime _lastExcited;
+
+    public bool IsPlacing => _placing;
+
+    private bool CanPlace => !_expanded && _alert is null && !_tucked && !_fullScreen && _hwnd != IntPtr.Zero
+        && _positioner is { Monitor: not null, LastRect: not null };
+
+    private void OnPlacePress(object sender, MouseButtonEventArgs e)
+    {
+        _pressAt = CanPlace ? Host.PointToScreen(e.GetPosition(Host)) : null;
+        // Hold the mouse from the press on, so a quick flick that leaves the pill before the 6 px threshold still drags.
+        if (_pressAt is not null) Host.CaptureMouse();
+    }
+
+    private void OnPlaceMove(object sender, MouseEventArgs e)
+    {
+        if (_pressAt is not { } start) return;
+        if (e.LeftButton != MouseButtonState.Pressed) { _pressAt = null; return; }
+        var now = Host.PointToScreen(e.GetPosition(Host));
+        if (!_placing)
+        {
+            if (Math.Abs(now.X - start.X) < PlaceThresholdPx || !CanPlace) return;
+            BeginPlace();
+        }
+        var m = _positioner.Monitor!;
+        int offset = IslandPlacement.OffsetForCentre(IslandPositioner.Bounds(m), m.Scale, _pressCentre + (now.X - start.X),
+            IslandPositioner.PanelWidthDip);
+        if (offset != _settings.HorizontalOffset)
+        {
+            _settings.HorizontalOffset = offset;
+            Reposition(); // moves the window only (same size): no layout, no resize
+        }
+        // Keep the excited face up while it is carried (restarting its hold at most every 400 ms).
+        if (Mascot && DateTime.UtcNow - _lastExcited > TimeSpan.FromMilliseconds(400))
+        {
+            _lastExcited = DateTime.UtcNow;
+            _director.Keep(Reaction.Excited);
+        }
+        e.Handled = true;
+    }
+
+    private void BeginPlace()
+    {
+        var r = _positioner.LastRect!.Value;
+        _pressCentre = r.Left + r.Width / 2.0;
+        _offsetBefore = _settings.HorizontalOffset;
+        _placing = true;
+        _peekTimer.Stop();
+        _director.NoteInteraction();
+        if (!Host.IsMouseCaptured) Host.CaptureMouse();
+        _lastExcited = DateTime.UtcNow;
+        if (Mascot) _director.Request(Reaction.Excited);
+        Hop(lift: true);
+        FileLogger.Info("island drag started");
+    }
+
+    private void OnPlaceRelease(object sender, MouseButtonEventArgs e)
+    {
+        _pressAt = null;
+        if (!_placing)
+        {
+            // A plain click: let go of the mouse after the click has been handled (OnHostClick opens the panel as before).
+            if (Host.IsMouseCaptured) Dispatcher.BeginInvoke(() => { if (!_placing) Host.ReleaseMouseCapture(); });
+            return;
+        }
+        e.Handled = true;      // a drag is not a click
+        EndPlace(keep: true);
+    }
+
+    private void OnPlaceCaptureLost(object sender, MouseEventArgs e)
+    {
+        // Capture taken away (Alt+Tab, another window, a lock screen): put the pill back where it was.
+        // Before the drag starts, a control inside the pill may take the capture; its moves still pass through the host.
+        if (_placing && !Host.IsMouseCaptureWithin) EndPlace(keep: false);
+    }
+
+    private void EndPlace(bool keep)
+    {
+        _placing = false;
+        if (Host.IsMouseCaptured) Host.ReleaseMouseCapture();
+        if (!keep)
+        {
+            _settings.HorizontalOffset = _offsetBefore;
+            Reposition();
+            FileLogger.Info("island drag cancelled");
+            return;
+        }
+        Hop(lift: false);
+        if (Mascot) _director.Request(Reaction.Happy);
+        int offset = _settings.HorizontalOffset;
+        FileLogger.Info($"island moved: offset {offset} on {_positioner.Monitor?.DeviceName}");
+        if (offset != _offsetBefore) _ = SavePlaceAsync(offset);
+    }
+
+    private async Task SavePlaceAsync(int offset)
+    {
+        try { await _store.SetAsync(AppSettings.Keys.HorizontalOffset, offset.ToString(System.Globalization.CultureInfo.InvariantCulture)); }
+        catch (Exception ex) { FileLogger.Error("could not save the island position", ex); }
+    }
+
+    /// <summary>
+    /// Pick-up: a quick dip; drop: a small bounce. Render-only (the slide transform), so it costs nothing at rest. Works with
+    /// the face on or off; Reduced motion skips it.
+    /// </summary>
+    private void Hop(bool lift)
+    {
+        if (_motion.IsReduced) return;
+        if (lift) Anim.Keys(_tuckSlide, TranslateTransform.YProperty, FluentEase.Decelerate, null, (0, 0), (90, 3), (180, 0));
+        else Anim.Keys(_tuckSlide, TranslateTransform.YProperty, null, null, (0, 0), (80, 4), (170, -1), (260, 1), (340, 0));
     }
 
     private void RestartPeekTimer(TimeSpan delay)

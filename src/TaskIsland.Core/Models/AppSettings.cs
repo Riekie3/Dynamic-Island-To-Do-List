@@ -142,7 +142,7 @@ public sealed class AppSettings
         s.AlwaysShowNotch = B(Keys.AlwaysShowNotch, s.AlwaysShowNotch);
         s.Theme = E(Keys.Theme, s.Theme);
         s.NotchWidth = I(Keys.NotchWidth, s.NotchWidth, 160, 280);
-        s.HorizontalOffset = I(Keys.HorizontalOffset, s.HorizontalOffset, -400, 400);
+        s.HorizontalOffset = I(Keys.HorizontalOffset, s.HorizontalOffset, -2000, 2000);
         s.TopMargin = I(Keys.TopMargin, s.TopMargin, 0, 40);
         s.PanelOpacity = D(Keys.PanelOpacity, s.PanelOpacity, 0.70, 1.00);
         s.AnimationsEnabled = B(Keys.AnimationsEnabled, s.AnimationsEnabled);

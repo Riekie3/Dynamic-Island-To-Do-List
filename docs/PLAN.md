@@ -357,7 +357,7 @@ Rules (unit-tested):
 | `AlwaysShowNotch` | `true` | General | if false, pill slides up to a 6 px sliver and reveals when the mouse touches it |
 | `Theme` | `Dark` | Appearance | Dark / Light / System (follow Windows app theme via registry `AppsUseLightTheme` + `UserPreferenceChanged`) |
 | `NotchWidth` | `200` | Appearance | slider 160–280 |
-| `HorizontalOffset` | `0` | Appearance | slider −400…+400 px from centre ("Notch position") |
+| `HorizontalOffset` | `0` | Appearance | slider −2000…+2000 px from centre ("Notch position"), or drag the pill along the top (docs/DRAG-PLACE-PLAN.md) |
 | `TopMargin` | `0` | Appearance | 0–40 px; 0 = flush notch (flat top, rounded bottom corners), more = floating pill |
 | `PanelOpacity` | `0.94` | Appearance | 0.70–1.00 |
 | `AnimationsEnabled` | `true` | Appearance | false → durations become 0 (reduced motion also turns on automatically, §6.7) |

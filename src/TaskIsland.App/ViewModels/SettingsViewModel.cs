@@ -101,7 +101,7 @@ public sealed partial class SettingsViewModel : ObservableObject
     public double HorizontalOffset
     {
         get => _s.HorizontalOffset;
-        set => Set(_s.HorizontalOffset, (int)Math.Round(Math.Clamp(value, -400, 400)), v => _s.HorizontalOffset = v, AppSettings.Keys.HorizontalOffset, debounce: true);
+        set => Set(_s.HorizontalOffset, (int)Math.Round(Math.Clamp(value, -2000, 2000)), v => _s.HorizontalOffset = v, AppSettings.Keys.HorizontalOffset, debounce: true);
     }
 
     public double TopMargin

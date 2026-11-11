@@ -105,9 +105,9 @@
                                 </StackPanel>
                             </c:SettingRow>
                             <Rectangle Style="{StaticResource CardDivider}"/>
-                            <c:SettingRow Title="Position" Description="Left or right of the screen centre.">
+                            <c:SettingRow Title="Position" Description="Left or right of the screen centre. You can also drag the pill along the top.">
                                 <StackPanel Orientation="Horizontal">
-                                    <Slider Style="{StaticResource SettingsSlider}" Minimum="-400" Maximum="400" SmallChange="1" LargeChange="20" Value="{Binding HorizontalOffset}"/>
+                                    <Slider Style="{StaticResource SettingsSlider}" Minimum="-2000" Maximum="2000" SmallChange="1" LargeChange="20" Value="{Binding HorizontalOffset}"/>
                                     <TextBlock Width="52" TextAlignment="Right" VerticalAlignment="Center" Style="{StaticResource MutedText}" Text="{Binding HorizontalOffset, StringFormat='{}{0:+0;-0;0} px'}"/>
                                 </StackPanel>
                             </c:SettingRow>
