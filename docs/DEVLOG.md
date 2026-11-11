@@ -819,88 +819,10 @@ deleted rows are gone from disk; Reset no longer restarts the Tasks id counter (
 3 new tests, each confirmed to fail on the 1.0.3 code. 454 tests green, `backupui.ps1` 12/12, installer test 29 pass
 (real-install check skipped), Defender clean. Built `1.0.4+dde6e2b`; release v1.0.4, hashes in RELEASE_NOTES.
 
-### Sileo S1 — toast shape, spring and demo (2026-11-11, Opus 5.5)
+### Sileo-style notifications: tried and cancelled (2026-11-11, Opus 5.5 / Sonnet 5.5)
 
-Plan: `docs/SILEO-PLAN.md` (owner chose TaskIsland as the target; scope, snooze and classic-style questions still open,
-to be asked before S2). No user-visible change in this phase.
-
-**Implemented:**
-- `TaskIsland.Core.Toasts.ToastOutline`: the tab + body outline as pure data (lines and arcs). Concave fillets join the
-  tab to the body (the shape Sileo gets from its gooey SVG filter); body corners and fillets grow with the body so the
-  join melts open; a narrow gap is shared so corner and fillet never overlap; flush sides become one straight edge.
-- `TaskIsland.Core.Toasts.Spring`: damped-spring easing, settled at t = 1. Sileo's bounce 0.25 overshoots about 2.8 %.
-- `TaskIsland.App.Controls.SileoToast` (+ `SpringEase`): 350 px wide, 40 px tab, radius 16, 600 ms spring. One frozen
-  `StreamGeometry` per frame is shared by the fill and the body's clip; content is laid out once (no per-frame layout).
-  Header swap crossfades with a temporary blur (removed when done); the tab width springs to the new title; the
-  loading badge spins only while shown. Reduced motion makes every change instant.
-- Toast colours in `Controls.xaml` (dark fill in both themes; Sileo's oklch states converted to sRGB: success
-  `#3AC530`, error `#FB2C36`, warning `#F0B100`, info `#00A6F4`, action `#2B7FFF`; loading text lightened to `#9A9A9A`
-  for contrast on the dark fill).
-- DEBUG only: `--demo toast [--snap file.png --snap-delay ms]` opens `ToastDemoWindow` (gallery + a live toast looping
-  open / close / loading / success) and can save a PNG of itself.
-
-**Bug found and fixed while testing:** the body was measured once and then reused (WPF keeps a cached DesiredSize for
-elements outside a layout pass), and the measure included the 40 px top margin. Now every level is invalidated before
-measuring and the margin is subtracted. Visible as clipped buttons in the first screenshot.
-
-**Tests performed:** 14 new Core tests (`ToastShapeTests`: closed tab, open outline closed/inside/clockwise for left,
-centre and right tabs, two fillets when centred, one when left, melt-open growth, narrow gap, clamping, spring ends,
-overshoot range, no-bounce monotonic, more bounce = more overshoot). 468 tests green (329 Core + 139 Data). Debug and
-Release builds 0 warnings. Demo screenshots: `docs/screenshots/sileo-s1-gallery.png` (all states) and
-`sileo-s1-melt.png` (live toast at 300 / 380 / 460 ms: body melting out, overshoot, settled).
-
-**Not done / next (S2):** the toast is not used anywhere in the app yet. CPU cost per animation frame not measured
-(planned in S5). Light theme not checked separately (the toast is dark in both themes by design).
-
-### Sileo S2 + S3 + S4 — reminder, Undo/notice and Settings toasts (2026-11-11, Opus 5.5)
-
-Owner chose **all four places** (reminder, Undo, notices, Settings data messages). Defaults used for the open questions
-(told to the owner): no Snooze button yet (own phase later); the new style **replaces** the old one.
-
-**S2 – reminder alert** (`IslandWindow.xaml.cs`, `Core/Toasts/ReminderToastText.cs`):
-- The reminder is now a `SileoToast` at the top centre in place of the notch: tab "Due now" / "Overdue" / "In 5 minutes"
-  (info, or warning when overdue), body = task title + list name + **Open** button, black like the notch. Body opens 150 ms
-  after the tab; hovering opens it and keeps it; ends after 5 s (longer while hovered), body folds, then a fade.
-- The resting island is hidden underneath (`Host.Opacity` 0, not hit-testable) and the window is grown to the tall size
-  **before** the toast shows and shrunk **after** it has faded (rule: never resize during an animation). A second
-  reminder while one shows swaps the content in place (Sileo refresh).
-- "Blink" now means the toast flashes twice (none under reduced motion). The old widening pill, the red border and the
-  reminder-width setting are gone from the UI (the stored setting key stays in `AppSettings` and is ignored).
-  `PulseReminder` still plays for the fallback path (setting off / panel open).
-- Log lines keep their old form (`reminder pill alert: "<pill text>" toast <State> "<tab>"`, `reminder pill alert ended`)
-  so the older UI tests still read them.
-- `ReminderToastText` (pure, 6 tests): splits a `ReminderNotice` into tab, body and state.
-
-**S3 – Undo and notices** (`PanelView.xaml(.cs)`, `ToastPresenter`, `SileoToast.ExpandsUp`):
-- The two bars are replaced by one toast over the footer that opens **upward** (tab at the bottom, body above, flipped
-  outline). Priority: error notice, then Undo, then info notice. Undo = action look with an **Undo** button; notices have
-  a **Dismiss** button; a tap on a notice dismisses it. The view model's 5 s timers still drive it. In-panel toasts use
-  `PanelToastFillBrush` (lighter than the dark panel, dark on the light panel) with a faint outline.
-- New `ToastPresenter` (Controls): show / hide / auto-hide / swap-in-place / fold-then-fade for a toast in a panel.
-
-**S4 – Settings** (`SettingsWindow.xaml(.cs)`, `SettingsViewModel.Data.cs`): the status line under Data is replaced by a
-toast: loading ("Backing Up", "Restoring", "Importing", "Exporting", "Deleting Backups", "Resetting") that morphs into
-the result ("Backup saved", ... or red "Didn't Work") with the message, hides after 6 s.
-
-**Settings text:** "Widen the island when a reminder fires" → "Show reminders as a card on the island"; "Blink a red border"
-→ "Flash the card"; the "Reminder width" row was removed (p5b/p5c updated for the new toggle name).
-
-**Bugs found while testing:** (1) first Undo-toast screenshot: toast fill almost the panel colour, hard to see → lighter
-fill + outline. (2) p5a's own check for "no 'Due now' in the pill text" matched the new tab text in the same log line →
-pattern now looks only inside the quoted title.
-
-**Debug only:** `--demo undo|notice|error` (panel with each toast), `--settings data --demo settings-ok|settings-error|
-settings-loading --snap-settings f.png`.
-
-**Tests:** 335 Core + 139 Data = 474 unit tests green (6 new). UI (Debug, test data folders): new `toastalert.ps1`
-**13/13** (toast shown, window grown, Open button on screen, ends after 5 s, window back to 80 px, panel did not open
-by itself, second reminder: Open click opens the panel on that task's list); `chipdrag` and `rowdrag` pass (panel
-layout changed); `t1` 23/23 and `t2` pass (Undo toast shown / restores / gone after 5 s); `backupui` 12/12 (status text
-is read from the toast); `p5c` 22/22; `p5a` all but one check, which was the test's pattern (fixed, verified against the
-log of that run). Screenshots: `docs/screenshots/sileo-s2-reminder.png`, `sileo-s3-panel-toasts.png`,
-`sileo-s4-settings-toasts.png`.
-
-**Not done / known:** README, TESTING.md and the old reminder screenshots still describe the red-blink widening reminder
-(to be rewritten with the 1.1.0 release, S5). CPU per animation frame, light theme and 150/200 % scaling not measured yet
-(S5). Snooze not built. The real mouse hover/click on the reminder toast was tested through UI Automation (Invoke), not a
-physical mouse. Release build not made.
+The owner asked to adapt the Sileo toast look (github.com/hiaaryan/sileo, MIT) for TaskIsland. Phases S1-S4 were built
+and pushed (commits `3a54290`, `803745b`, `883fbb2`: reminder as a toast card, Undo/notice toasts, Settings data toasts),
+then the owner cancelled the plan before any release and asked for it to be reverted. The three commits were undone with
+`git revert` (history kept; nothing was ever in a release). The code is still reachable in git history at `883fbb2` if it
+is ever wanted again. Unrelated fix kept: `p5b.ps1`'s About check no longer hard-codes version 0.1.0.

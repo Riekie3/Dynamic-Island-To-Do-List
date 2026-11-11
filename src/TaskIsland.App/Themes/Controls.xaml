@@ -22,22 +22,6 @@
     <SolidColorBrush x:Key="IslandTextBrush" Color="#F3F4F6" po:Freeze="True"/>
     <SolidColorBrush x:Key="IslandTextSecondaryBrush" Color="#9AA1AD" po:Freeze="True"/>
 
-    <!-- Sileo-style toasts (SILEO-PLAN.md section 3): dark in both themes, like the island. State colours are Sileo's
-         oklch values converted to sRGB; the Soft variants are the badge backgrounds (20 % alpha). -->
-    <SolidColorBrush x:Key="ToastFillBrush" Color="#18191C" po:Freeze="True"/>
-    <SolidColorBrush x:Key="ToastSuccessBrush" Color="#3AC530" po:Freeze="True"/>
-    <SolidColorBrush x:Key="ToastSuccessSoftBrush" Color="#333AC530" po:Freeze="True"/>
-    <SolidColorBrush x:Key="ToastErrorBrush" Color="#FB2C36" po:Freeze="True"/>
-    <SolidColorBrush x:Key="ToastErrorSoftBrush" Color="#33FB2C36" po:Freeze="True"/>
-    <SolidColorBrush x:Key="ToastWarningBrush" Color="#F0B100" po:Freeze="True"/>
-    <SolidColorBrush x:Key="ToastWarningSoftBrush" Color="#33F0B100" po:Freeze="True"/>
-    <SolidColorBrush x:Key="ToastInfoBrush" Color="#00A6F4" po:Freeze="True"/>
-    <SolidColorBrush x:Key="ToastInfoSoftBrush" Color="#3300A6F4" po:Freeze="True"/>
-    <SolidColorBrush x:Key="ToastActionBrush" Color="#2B7FFF" po:Freeze="True"/>
-    <SolidColorBrush x:Key="ToastActionSoftBrush" Color="#332B7FFF" po:Freeze="True"/>
-    <SolidColorBrush x:Key="ToastLoadingBrush" Color="#9A9A9A" po:Freeze="True"/>
-    <SolidColorBrush x:Key="ToastLoadingSoftBrush" Color="#33737373" po:Freeze="True"/>
-
     <!-- 2 px accent focus ring for keyboard users. -->
     <Style x:Key="AccentFocusVisual">
         <Setter Property="Control.Template">

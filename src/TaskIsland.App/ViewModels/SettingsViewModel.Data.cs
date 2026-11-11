@@ -22,9 +22,6 @@ public sealed partial class SettingsViewModel
     [ObservableProperty] private string _dataStatus = "";
     [ObservableProperty] private bool _dataStatusIsError;
     [ObservableProperty] private bool _busy;
-    /// <summary>Title of the loading toast while a data action runs ("Backing up") and of its success toast ("Backup saved").</summary>
-    [ObservableProperty] private string _dataOperation = "Working";
-    [ObservableProperty] private string _dataDoneTitle = "Done";
     [ObservableProperty] private string _lastBackupText = "";
 
     public bool DailyBackupEnabled
@@ -40,37 +37,8 @@ public sealed partial class SettingsViewModel
             : "No automatic backup yet. The newest 3 are kept; pre-delete copies are removed after 24 hours.";
     }
 
-    /// <summary>A data action starts: the Settings window shows a loading toast with <paramref name="working"/> until it ends.</summary>
-    private void Begin(string working, string done)
-    {
-        DataOperation = working;
-        DataDoneTitle = done;
-        Busy = true;
-    }
-
-#if DEBUG
-    /// <summary>Debug screenshots (<c>--demo settings-ok|settings-error|settings-loading</c>): fakes a data action result.</summary>
-    public void DebugStatus(string? demo)
-    {
-        switch (demo)
-        {
-            case "settings-loading":
-                Begin("Backing Up", "Backup saved");
-                break;
-            case "settings-error":
-                Status("Windows blocked saving here (Controlled folder access may be on). Choose another folder, such as Downloads.", error: true);
-                break;
-            case "settings-ok":
-                DataDoneTitle = "Backup saved";
-                Status(@"Backup saved to C:\Users\you\Downloads\taskisland-backup-20261111-1030.db");
-                break;
-        }
-    }
-#endif
-
     private void Status(string text, bool error = false)
     {
-        if (text.Length == 0) DataDoneTitle = "Done";
         DataStatus = text;
         DataStatusIsError = error;
     }
@@ -113,7 +81,7 @@ public sealed partial class SettingsViewModel
         if (dialog.ShowDialog(Owner) != true) return;
         try
         {
-            Begin("Exporting", "Export saved");
+            Busy = true;
             var json = JsonTransfer.Export(await _listsRepo.GetAllAsync(), await _tasks.GetAllAsync(), _clock.UtcNow, only);
             await File.WriteAllTextAsync(dialog.FileName, json, new System.Text.UTF8Encoding(false));
             FileLogger.Info($"exported {(only is null ? "all lists" : "one list")} to {Path.GetFileName(dialog.FileName)}");
@@ -173,7 +141,7 @@ public sealed partial class SettingsViewModel
         bool backedUp = false;
         try
         {
-            Begin("Importing", "Import done");
+            Busy = true;
             if (mode == 1)
             {
                 if (!DialogWindow.Confirm(Owner, "Replace everything?",
@@ -232,7 +200,7 @@ public sealed partial class SettingsViewModel
         if (dialog.ShowDialog(Owner) != true) return;
         try
         {
-            Begin("Backing Up", "Backup saved");
+            Busy = true;
             var path = await _backup.BackupAsync(dialog.FileName);
             FileLogger.Info($"manual backup written: {Path.GetFileName(path)}");
             Status($"Backup saved to {path}");
@@ -262,7 +230,7 @@ public sealed partial class SettingsViewModel
         if (dialog.ShowDialog(Owner) != true) return;
         try
         {
-            Begin("Restoring", "Backup restored");
+            Busy = true;
             try { await BackupService.ValidateBackupAsync(dialog.FileName); }
             catch (InvalidDataException ex)
             {
@@ -315,7 +283,7 @@ public sealed partial class SettingsViewModel
                 "Delete all backups", destructive: true)) return;
         try
         {
-            Begin("Deleting Backups", "Backups deleted");
+            Busy = true;
             int deleted = _backup.DeleteAllBackups();
             FileLogger.Info($"deleted all backups: {deleted} file(s)");
             Status($"Deleted {deleted} backup {(deleted == 1 ? "file" : "files")}.");
@@ -341,7 +309,7 @@ public sealed partial class SettingsViewModel
                 "Reset everything", destructive: true)) return;
         try
         {
-            Begin("Resetting", "Reset done");
+            Busy = true;
             _apply.CancelPending();   // a slider's 300 ms save must not land after the reset
             int deleted = await _maintenance.ResetToFirstRunAsync();
             var fresh = await _store.LoadAsync();

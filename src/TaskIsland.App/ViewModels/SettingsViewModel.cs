@@ -59,6 +59,8 @@ public sealed partial class SettingsViewModel : ObservableObject
     public IReadOnlyList<string> CompanionOptions { get; } = ["Off", "Calm", "Lively"];
     public IReadOnlyList<string> PillScopeOptions { get; } = ["All lists", "Selected list"];
     public IReadOnlyList<string> LeadOptions { get; } = ["Off", "5 minutes", "15 minutes", "30 minutes", "1 hour", "2 hours", "1 day"];
+    public IReadOnlyList<string> AlertWidthOptions { get; } =
+        ["Compact", "30% of the screen", "40% of the screen", "50% of the screen", "60% of the screen", "75% of the screen", "Full width"];
     public IReadOnlyList<string> MonitorOptions { get; private set; } = [];
     public IReadOnlyList<string> AutoCollapseOptions { get; private set; } = [];
 
@@ -128,7 +130,18 @@ public sealed partial class SettingsViewModel : ObservableObject
     public bool ReminderPillAlert { get => _s.ReminderPillAlert; set => Set(_s.ReminderPillAlert, value, v => _s.ReminderPillAlert = v, AppSettings.Keys.ReminderPillAlert); }
     public bool ReminderBlink { get => _s.ReminderBlink; set => Set(_s.ReminderBlink, value, v => _s.ReminderBlink = v, AppSettings.Keys.ReminderBlink); }
 
-    /// <summary>The flash option only matters while reminders show as a card.</summary>
+    /// <summary>"Reminder width": index into <see cref="AlertWidthOptions"/> (Compact, 30 %, 40 %, 50 %, 60 %, 75 %, Full width).</summary>
+    public int AlertWidthIndex
+    {
+        get => Math.Max(0, AppSettings.ReminderAlertWidthChoices.ToList().IndexOf(_s.ReminderAlertWidthPercent));
+        set
+        {
+            int pct = AppSettings.ReminderAlertWidthChoices[Math.Clamp(value, 0, AppSettings.ReminderAlertWidthChoices.Count - 1)];
+            Set(_s.ReminderAlertWidthPercent, pct, v => _s.ReminderAlertWidthPercent = v, AppSettings.Keys.ReminderAlertWidthPercent);
+        }
+    }
+
+    /// <summary>The width and blink options only matter while the island widens for reminders.</summary>
     public bool AlertOptionsEnabled => ReminderPillAlert;
 
     /// <summary>"Remind me before due time": index into <see cref="LeadOptions"/> (Off, 5, 15, 30, 1 hour, 2 hours, 1 day).</summary>

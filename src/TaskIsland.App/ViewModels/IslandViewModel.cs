@@ -487,16 +487,6 @@ public sealed partial class IslandViewModel : ObservableObject, ITaskRowHost
         await RunAsync("remove the deleted tasks", () => _tasksRepo.PurgeDeletedAsync());
     }
 
-#if DEBUG
-    /// <summary>Debug screenshots (<c>--demo undo|notice|error</c>): shows the Undo or notice toast without a real action.</summary>
-    public void DebugShowToast(string kind)
-    {
-        if (kind == "undo") ShowUndo("Task deleted", []);
-        else ShowNotice(kind == "error" ? "Something went wrong. It was written to the log; your tasks are safe." : "No completed tasks to clear.",
-            error: kind == "error");
-    }
-#endif
-
     /// <summary>Drops the Undo bar without restoring anything (the whole database was replaced or reset).</summary>
     public void CancelUndo()
     {

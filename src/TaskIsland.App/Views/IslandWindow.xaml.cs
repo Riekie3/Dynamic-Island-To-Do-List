@@ -12,7 +12,6 @@ using TaskIsland.App.ViewModels;
 using TaskIsland.Core.Mascot;
 using TaskIsland.Core.Models;
 using TaskIsland.Core.Services;
-using TaskIsland.Core.Toasts;
 using TaskIsland.Windows;
 
 namespace TaskIsland.App.Views;
@@ -47,10 +46,6 @@ public partial class IslandWindow : Window
     private DateTime _lastAutoCollapse = DateTime.MinValue;
     private ReminderNotice? _alert;                // the widening reminder pill is showing (PLAN.md section 7.9)
     private bool _alertHeld;                       // 5 s are over but the mouse is on it
-    private bool _alertHover;                      // the mouse is on the reminder toast
-    private SileoToast? _toast;                    // the Sileo-style reminder toast (SILEO-PLAN.md S2), created on first use
-    private DispatcherTimer? _toastOpenTimer, _toastHideTimer;
-    private bool _toastWindow;                     // the window was grown to hold the toast
     private static readonly TimeSpan AlertTime = TimeSpan.FromSeconds(5);
 
     public IslandWindow(IslandViewModel vm, AppSettings settings, MotionPolicy motion, ReactionDirector director,
@@ -80,7 +75,7 @@ public partial class IslandWindow : Window
         _alertTimer.Tick += (_, _) =>
         {
             _alertTimer.Stop();
-            if (_alertHover) _alertHeld = true; // hover keeps it open until the mouse leaves
+            if (_hovering) _alertHeld = true; // hover keeps it open until the mouse leaves
             else EndAlert();
         };
 
@@ -311,13 +306,12 @@ public partial class IslandWindow : Window
     public double IslandWidth => Host.IslandRect.Width / IslandHost.CompactScale;
 
     /// <summary>
-    /// The reminder appears as a Sileo-style toast (SILEO-PLAN.md S2) in place of the notch: a tab with the state ("Due now",
-    /// "Overdue", "In 5 minutes") and, 150 ms later, a body melting out of it with the task title, its list and an Open
-    /// button. It holds 5 s (longer while the mouse is on it) and folds away; a click opens the task's list. Returns false
-    /// (the caller then falls back to the face) when the setting is off, the panel is open or the island is hidden.
-    /// While it shows, the resting island is hidden underneath and the window is tall enough for the body; both are put
-    /// back after the toast has faded (never resized during an animation). With <see cref="AppSettings.ReminderBlink"/>
-    /// the toast also flashes twice. Reduced motion: no animation, the toast just appears.
+    /// The collapsed island widens to show "⏰ title" with the list colour dot, holds 5 s (longer while the mouse is on it)
+    /// and shrinks back; a click opens the task's list. Returns false (the caller then falls back to the face) when the setting
+    /// is off, the panel is open or the island is hidden. Reduced motion: no tween, the text swaps in place.
+    /// Width: <see cref="AppSettings.ReminderAlertWidthPercent"/> of the screen (the window widens for the alert and narrows
+    /// again once the island has rested). With <see cref="AppSettings.ReminderBlink"/> a red border blinks around it
+    /// (steady in reduced motion) instead of the accent pulse.
     /// </summary>
     public bool ShowReminderAlert(ReminderNotice notice)
     {
@@ -327,153 +321,61 @@ public partial class IslandWindow : Window
         _tuckTimer.Stop();
         if (_tucked) SlideTo(tucked: false);
         _director.End();
-        _toastHideTimer?.Stop();
-        bool replacing = _alert is not null && _toast is { Visibility: Visibility.Visible };
         _alert = notice;
         _alertHeld = false;
-
-        var content = ReminderToastText.From(notice);
-        var toast = EnsureToast();
-        if (!replacing)
-        {
-            // Grow the window first (nothing is moving), then show the tab.
-            GrowWindowForToast();
-            Anim.Stop(Host, OpacityProperty, 0);
-            Host.IsHitTestVisible = false;
-            toast.Close(animate: false);
-            toast.Opacity = 1;
-            toast.IsHitTestVisible = true;
-            toast.SetContent(content.State, content.Tab, content.Body, "Open", animate: false);
-            toast.Visibility = Visibility.Visible;
-        }
-        else
-        {
-            toast.SetContent(content.State, content.Tab, content.Body, "Open");   // swaps in place, like Sileo's refresh
-        }
+        double w = AlertDesignWidth();
+        SetWindowWidth(w * IslandHost.CompactScale);
+        InfoGrid.Width = Math.Max(420, w);
+        AlertText.Text = notice.PillText;
+        AlertText.MaxWidth = w - 40;
+        AlertText.FontSize = w >= 600 ? 15 : 13;
         bool blink = _settings.ReminderBlink;
-        FileLogger.Info($"reminder pill alert: \"{notice.PillText}\" toast {content.State} \"{content.Tab}\"" +
-            $" (window {_windowWidth:0}x{(_windowLarge ? IslandPositioner.ExpandedHeightDip : IslandPositioner.CollapsedHeightDip):0}" +
-            $"{(blink ? ", flash" : "")})");
-        AutomationProperties.SetName(toast, "TaskIsland reminder: " + notice.PillText);
-        _toastOpenTimer!.Stop();
-        _toastOpenTimer.Start();   // Sileo opens the body 150 ms after the tab appears
-        if (blink) toast.Flash();
+        if (blink) Host.StartAlertBorder(blink: !_motion.IsReduced);
+        AlertDot.Fill = _vm.ReminderDotBrush(notice.ListId);
+        InfoAlert.Visibility = Visibility.Visible;
+        InfoAlert.Opacity = 1;
+        Anim.Stop(InfoCount, OpacityProperty, 0);
+        InfoCount.Opacity = 0;
+        var morph = _motion.IsReduced ? TimeSpan.Zero : _motion.MorphExpand;
+        string border = !blink ? "" : _motion.IsReduced ? ", red border steady" : ", red border blinking";
+        FileLogger.Info($"reminder pill alert: \"{notice.PillText}\" width {w:0}" +
+            $" ({_settings.ReminderAlertWidthPercent}% setting, window {_windowWidth:0}){border}");
+        Host.AnimateTo(IslandState.Info, w, 36, morph, FluentEase.Decelerate, () =>
+        {
+            if (_alert == notice && !blink) PulseReminder();
+        });
+        AutomationProperties.SetName(Host, "TaskIsland reminder: " + notice.PillText);
         _alertTimer.Stop();
         _alertTimer.Start();
         return true;
     }
 
-    private SileoToast EnsureToast()
-    {
-        if (_toast is not null) return _toast;
-        var toast = new SileoToast
-        {
-            Align = ToastAlign.Center,
-            HorizontalAlignment = HorizontalAlignment.Center,
-            VerticalAlignment = VerticalAlignment.Top,
-            FillKey = "PillBrush",   // the same black as the notch it replaces
-            Visibility = Visibility.Collapsed,
-        };
-        _toast = toast;
-        toast.Clicked += (_, _) => OpenFromReminder();
-        toast.ButtonClick += (_, _) => OpenFromReminder();
-        toast.MouseEnter += (_, _) =>
-        {
-            _alertHover = true;
-            if (_alert is not null) toast.Open();   // hover opens the body, like Sileo
-        };
-        toast.MouseLeave += (_, _) =>
-        {
-            _alertHover = false;
-            if (_alert is not null && _alertHeld) EndAlert();
-        };
-        Root.Children.Add(toast);
-        _toastOpenTimer = new DispatcherTimer(DispatcherPriority.Normal) { Interval = TimeSpan.FromMilliseconds(150) };
-        _toastOpenTimer.Tick += (_, _) =>
-        {
-            _toastOpenTimer.Stop();
-            if (_alert is not null) toast.Open();
-        };
-        _toastHideTimer = new DispatcherTimer(DispatcherPriority.Normal);
-        _toastHideTimer.Tick += (_, _) =>
-        {
-            _toastHideTimer.Stop();
-            HideToast(settle: true);
-        };
-        return toast;
-    }
-
-    /// <summary>Click on the toast or its Open button: the panel opens on that task's list.</summary>
-    private void OpenFromReminder()
-    {
-        if (_alert is not { } alert || _expanded) return;
-        _director.NoteInteraction();
-        EndAlert(settle: false);
-        _vm.ShowList(alert.ListId);
-        Expand();
-    }
-
-    /// <summary>Taller window for the body, done before the toast shows. The island above it does not move.</summary>
-    private void GrowWindowForToast()
-    {
-        if (_toastWindow || _hwnd == IntPtr.Zero) return;
-        _toastWindow = true;   // from now on the toast owns shrinking the window back
-        if (_windowLarge) return;   // still tall from a panel that is folding away; Collapse leaves it alone while a toast shows
-        _windowLarge = true;
-        _positioner.Apply(_hwnd, expanded: true, _windowWidth);
-    }
-
-    /// <summary>
-    /// Back to the resting notch. <paramref name="settle"/> false: the panel is about to open, so the toast goes at once
-    /// and nothing animates here. Otherwise the toast folds (body first, then it fades) and is removed afterwards.
-    /// </summary>
+    /// <summary>Back to the resting notch. <paramref name="settle"/> false: the panel is about to open, so nothing animates here.</summary>
     private void EndAlert(bool settle = true)
     {
         if (_alert is null) return;
         _alert = null;
         _alertHeld = false;
-        _alertHover = false;
         _alertTimer.Stop();
-        _toastOpenTimer?.Stop();
+        InfoAlert.Visibility = Visibility.Collapsed;
+        InfoAlert.Opacity = 0;
+        Anim.Stop(InfoCount, OpacityProperty, 1);
+        InfoCount.Opacity = 1;
+        InfoGrid.Width = 420;
+        Host.StopAlertBorder();
         FileLogger.Info("reminder pill alert ended");
-        if (_toast is not { Visibility: Visibility.Visible } toast) return;
-        if (!settle || _expanded)
-        {
-            HideToast(settle: false);
-            return;
-        }
-        toast.IsHitTestVisible = false;
-        toast.Close();
-        var fade = _motion.IsReduced ? TimeSpan.Zero : TimeSpan.FromMilliseconds(380);
-        Anim.To(toast, OpacityProperty, 0, fade, FluentEase.Accelerate,
-            delay: _motion.IsReduced ? TimeSpan.Zero : TimeSpan.FromMilliseconds(260));
-        _toastHideTimer!.Interval = _motion.IsReduced ? TimeSpan.FromMilliseconds(30) : TimeSpan.FromMilliseconds(700);
-        _toastHideTimer.Start();
+        if (settle && !_expanded) GoResting(animate: true);
     }
 
-    /// <summary>The toast is gone: the island is shown again and the window gets its small size back.</summary>
-    private void HideToast(bool settle)
+    /// <summary>Reminder pill width in design units (the island draws them at <see cref="IslandHost.CompactScale"/>).</summary>
+    private double AlertDesignWidth()
     {
-        _toastHideTimer?.Stop();
-        if (_toast is { } toast)
-        {
-            toast.Visibility = Visibility.Collapsed;
-            toast.Close(animate: false);
-            toast.Opacity = 1;
-        }
-        Host.IsHitTestVisible = true;
-        Anim.To(Host, OpacityProperty, 1, settle && !_motion.IsReduced ? _motion.Fast : TimeSpan.Zero, FluentEase.Decelerate);
-        if (_toastWindow)
-        {
-            _toastWindow = false;
-            // settle false: the panel is about to open and wants the tall window anyway, so do not shrink and regrow.
-            if (settle && !_expanded)
-            {
-                _windowLarge = false;
-                if (_hwnd != IntPtr.Zero) _positioner.Apply(_hwnd, expanded: false, _windowWidth);
-            }
-        }
-        if (settle && !_expanded) GoResting(animate: true);
+        double compact = Math.Min(_settings.NotchWidth + 200, 420);
+        var m = _positioner.Monitor;
+        if (m is null || _settings.ReminderAlertWidthPercent <= 0) return compact;
+        double dip = IslandPlacement.AlertWidthDip(IslandPositioner.Bounds(m), m.Scale, _settings.ReminderAlertWidthPercent,
+            _settings.HorizontalOffset, IslandPositioner.PanelWidthDip, compact * IslandHost.CompactScale);
+        return Math.Round(dip / IslandHost.CompactScale);
     }
 
     /// <summary>
@@ -778,11 +680,8 @@ public partial class IslandWindow : Window
         void Done()
         {
             if (_expanded) return; // re-expanded during the collapse
-            if (!_toastWindow)   // a reminder toast that appeared during the collapse still needs the tall window
-            {
-                _windowLarge = false;
-                _positioner.Apply(_hwnd, expanded: false, _windowWidth); // shrink after, while nothing moves
-            }
+            _windowLarge = false;
+            _positioner.Apply(_hwnd, expanded: false, _windowWidth); // shrink after, while nothing moves
             WindowStyler.SetNoActivate(_hwnd, true);
             _director.SetSuppressed(Suppression.PanelOpen, false);
             ApplyVisibility(); // hidden again if Hide, Pause or a full-screen app is still in effect
@@ -1061,13 +960,6 @@ public partial class IslandWindow : Window
                         if (demo == "calendar") _panel?.OpenFirstCalendar();
                     }
                 }, DispatcherPriority.ApplicationIdle);
-                break;
-            case "undo":       // Sileo S3 screenshots: the panel with the Undo / notice toast
-            case "notice":
-            case "error":
-                _director.End();
-                Expand();
-                Dispatcher.BeginInvoke(() => _vm.DebugShowToast(demo.ToLowerInvariant()), DispatcherPriority.ApplicationIdle);
                 break;
             case "sleepy":
                 _director.End();

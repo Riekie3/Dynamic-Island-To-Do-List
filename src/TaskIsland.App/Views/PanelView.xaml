@@ -23,6 +23,19 @@
                 <DataTrigger Binding="{Binding}" Value="{x:Null}"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger>
             </Style.Triggers>
         </Style>
+        <Style x:Key="BarStyle" TargetType="Border">
+            <Setter Property="Height" Value="40"/>
+            <Setter Property="CornerRadius" Value="12"/>
+            <Setter Property="Margin" Value="0,6,0,0"/>
+            <Setter Property="Padding" Value="14,0,6,0"/>
+            <Setter Property="Background" Value="{DynamicResource SurfaceRaisedBrush}"/>
+        </Style>
+        <Style x:Key="LinkButton" TargetType="Button" BasedOn="{StaticResource TextButton}">
+            <Setter Property="Height" Value="28"/>
+            <Setter Property="Padding" Value="10,0"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+        </Style>
     </UserControl.Resources>
 
     <Grid>
@@ -213,8 +226,40 @@
                 </StackPanel>
             </Grid>
 
-            <!-- 5/6. The footer: progress bar · counts · segmented filter. Undo and notices are Sileo-style toasts (ToastLayer below). -->
+            <!-- 5/6. Undo bar and notices, then the footer: progress bar · counts · segmented filter -->
             <StackPanel Grid.Row="4" Margin="0,4,0,0">
+                <Border x:Name="UndoBar" Style="{StaticResource BarStyle}" Visibility="Collapsed">
+                    <Border.RenderTransform><TranslateTransform x:Name="UndoSlide"/></Border.RenderTransform>
+                    <Grid>
+                        <TextBlock Text="{Binding UndoText}" FontSize="13" VerticalAlignment="Center"/>
+                        <Button Style="{StaticResource LinkButton}" Content="Undo" HorizontalAlignment="Right"
+                                Command="{Binding UndoCommand}" AutomationProperties.Name="Undo"/>
+                    </Grid>
+                </Border>
+                <Border x:Name="NoticeBar" Style="{StaticResource BarStyle}" Visibility="Collapsed">
+                    <Border.RenderTransform><TranslateTransform x:Name="NoticeSlide"/></Border.RenderTransform>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="{Binding NoticeText}" FontSize="13" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"
+                                   ToolTip="{Binding NoticeText}">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding NoticeIsError}" Value="True">
+                                            <Setter Property="Foreground" Value="{DynamicResource OverdueBrush}"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                        <Button Grid.Column="1" Style="{StaticResource IconButton}" Width="28" Height="28" FontSize="11" Content="&#xE711;"
+                                Command="{Binding DismissNoticeCommand}" ToolTip="Dismiss" AutomationProperties.Name="Dismiss message"/>
+                    </Grid>
+                </Border>
                 <Border Height="2" CornerRadius="1" Margin="0,8,0,0" Background="{DynamicResource SurfaceRaisedBrush}">
                     <Border x:Name="ProgressBar" Background="{DynamicResource AccentBrush}" CornerRadius="1" RenderTransformOrigin="0,0.5">
                         <Border.RenderTransform><ScaleTransform x:Name="ProgressScale" ScaleX="0"/></Border.RenderTransform>
@@ -242,9 +287,6 @@
                 </Grid>
             </StackPanel>
         </Grid>
-
-        <!-- Undo and notices (SILEO-PLAN.md S3): one toast above the footer, opening upward. Created in PanelView.xaml.cs. -->
-        <Grid x:Name="ToastLayer" VerticalAlignment="Bottom" Margin="0,0,0,58"/>
 
         <!-- ===== Cards over the panel: list editor, delete list, confirm ===== -->
         <Grid x:Name="Overlay" Background="#8C000000" Visibility="{Binding HasOverlay, Converter={StaticResource Vis}}">

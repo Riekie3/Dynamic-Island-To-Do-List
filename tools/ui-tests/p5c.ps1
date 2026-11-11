@@ -45,7 +45,7 @@ function Pill-Toggle([bool]$on) {
     [void](Tray-Menu 'Settings*')
     $nav = Find-TI 'Behaviour' 'RadioButton'
     $nav.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select(); Start-Sleep -Milliseconds 500
-    $e = Find-TI 'Show reminders as a card on the island' 'CheckBox'
+    $e = Find-TI 'Widen the island when a reminder fires' 'CheckBox'
     $t = $e.GetCurrentPattern([System.Windows.Automation.TogglePattern]::Pattern)
     if (($t.Current.ToggleState -eq 'On') -ne $on) { $t.Toggle(); Start-Sleep -Milliseconds 600 }
     $w = Find-TI 'TaskIsland Settings' 'Window'
@@ -66,8 +66,8 @@ $p = Start-TI $root @('--full-motion','--pop-seconds','3600') $Config
 # A: pill on (default)
 WaitUntil $seed.AddSeconds(37)
 $log = Log
-Check 'A: pill alert shown for a task due now' ($log -match 'reminder pill alert: ".*Task A" toast \w+ "')
-Check 'A: the toast tab says Due now' ($log -match 'toast Info "Due now"')
+Check 'A: pill alert shown for a task due now' ($log -match 'reminder pill alert: ".*Task A" width \d+')
+Check 'A: the pill text is just the title (list colour dot, no "Due now")' (-not ($log -match 'reminder pill alert: ".*Due now'))
 Check 'A: notification still shown' ($log -match 'balloon: Personal / .*Due now: Task A')
 Start-Sleep -Seconds 6
 Check 'A: alert ended after 5 s' ((Count (Log) 'reminder pill alert ended') -eq 1)

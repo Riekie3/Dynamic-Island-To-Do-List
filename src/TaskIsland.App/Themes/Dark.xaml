@@ -4,9 +4,6 @@
                     xmlns:sys="clr-namespace:System;assembly=System.Runtime">
     <!-- PLAN.md section 6.1, Dark. Same keys as Light.xaml; every brush frozen (section 6.7 rule 4). -->
     <SolidColorBrush x:Key="PillBrush" Color="#000000" po:Freeze="True"/>
-    <!-- Undo / notice toasts over the panel (SILEO-PLAN.md S3): lighter than the dark panel, with a faint outline. -->
-    <SolidColorBrush x:Key="PanelToastFillBrush" Color="#2B2E37" po:Freeze="True"/>
-    <SolidColorBrush x:Key="PanelToastStrokeBrush" Color="#2EFFFFFF" po:Freeze="True"/>
     <SolidColorBrush x:Key="PillHoverBrush" Color="#121418" po:Freeze="True"/>
     <SolidColorBrush x:Key="SurfaceBrush" Color="#15171C" po:Freeze="True"/>
     <SolidColorBrush x:Key="SurfaceRaisedBrush" Color="#0FFFFFFF" po:Freeze="True"/>
