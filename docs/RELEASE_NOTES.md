@@ -1,20 +1,19 @@
-# TaskIsland 1.0.5 (installer + portable)
+# TaskIsland 1.0.6 (installer + portable)
 
 A Dynamic Island-style to-do list for Windows 11 (x64), by **RieSources** (https://rie-sources.com).
 
-## What's new since 1.0.4
+## What's new since 1.0.5
 
-- **Memory no longer grows when you open the panel.** The see-through island window used to leave about 60 MB of
-  graphics memory behind after each open and close (64 MB at start, 120+ MB after a few opens). TaskIsland now draws
-  its windows in software: 49-55 MB private memory, flat, and about 130 fewer handles. It looks the same (transparency,
-  shadow and panel opacity are unchanged).
-- **Long task titles no longer get squeezed when you point at a row.** The due date now sits under the title, and the
-  space for the edit and delete buttons is kept free, so the title stays on its lines instead of breaking into a thin
-  column.
-- Trade-off: opening and closing the panel uses about twice the CPU for that moment (about 0.5 s of one core per open
-  and close, measured at 1920x1080). Idle CPU is unchanged.
+- **Drag the island to place it.** Press on the closed pill and move it sideways: it follows the mouse along the top of
+  the screen and stays where you drop it (it stops where the open list still fits, so it cannot get lost off the
+  edge). The place is remembered after a restart. Settings > Appearance > Position shows the same value and still
+  works too; its range is now wider (-2000 to +2000).
+- **The face reacts.** While you carry it the face looks excited, and when you drop it it is happy. The pill also dips
+  when picked up and bounces when dropped (also with the face turned off; skipped when animations are reduced).
+- A plain click still opens the list, exactly as before.
 
-Everything else is the same as 1.0.4.
+Also in this version (new in 1.0.5): memory stays flat at about 50-55 MB however often the panel opens, and long task
+titles no longer get squeezed when you point at a row.
 
 ## Upgrading
 
@@ -24,7 +23,7 @@ folder, `%LocalAppData%\TaskIsland`). The installer refuses to run while TaskIsl
 ## Install (recommended)
 
 1. **If you run an older portable copy:** Exit it from the tray menu first (the installer asks you to close it anyway).
-2. Run `TaskIsland-Setup-1.0.5-x64.exe`. It is **not code-signed**, so SmartScreen may say "Windows protected your
+2. Run `TaskIsland-Setup-1.0.6-x64.exe`. It is **not code-signed**, so SmartScreen may say "Windows protected your
    PC": click **More info**, then **Run anyway**. (Smart App Control, if turned on, can block unsigned apps.)
 3. It installs to `%LocalAppData%\Programs\TaskIsland`, adds a Start menu entry (desktop icon optional) and starts
    TaskIsland at the end. Your tasks from an older version are found again: the data folder is the same
@@ -36,7 +35,7 @@ Upgrading later: run a newer installer over the top; tasks and settings stay.
 
 ## Or portable
 
-Unzip `TaskIsland-1.0.5-win-x64-portable.zip` somewhere permanent and run `TaskIsland.exe` (same SmartScreen note).
+Unzip `TaskIsland-1.0.6-win-x64-portable.zip` somewhere permanent and run `TaskIsland.exe` (same SmartScreen note).
 "Start with Windows" is on by default and points at that folder, so do not move it afterwards.
 
 No administrator rights, no internet connection, no .NET install needed (the runtime is included) either way.
@@ -52,19 +51,15 @@ No administrator rights, no internet connection, no .NET install needed (the run
 
 ## Checks done for this release
 
-- 454 automated tests green (no new ones: the change is in how windows are drawn and in the row layout).
-- UI tests `t1` to `t6`, `chipdrag.ps1` and `rowdrag.ps1` passed on the software-rendering build (temporary data
-  folders). `p5a.ps1` has one failure ("pulse after the pill is wide") that happens the same way on 1.0.4.
-- A/B measurement, 10 open/close cycles, 1920x1080 at 125 %: private memory 64 -> 122 MB (1.0.4) against 49 -> 55 MB
-  (1.0.5); CPU per open and close 502 ms against 1,083 ms; handles 663 against 528. A screenshot of the open panel
-  differs in 25 of 64,200 sampled pixels (0.04 %).
-- The installer test passed 29 checks (install without administrator mode, upgrade over the top with tasks kept,
-  uninstall with the "Also delete your tasks and backups?" question, reinstall). The check against the real installed
-  copy was skipped because TaskIsland is already installed on this PC.
-- The installer test passed (install without administrator mode, upgrade over the top with tasks kept, uninstall,
-  reinstall). The check against the real installed copy was skipped because TaskIsland is already installed on this PC.
-- Built from a clean, committed tree (`1.0.5+3c28bdc`). Microsoft Defender scanned the portable zip and the installer
-  with no threats found. The 10-minute Defender soak was **not** repeated.
+- 462 automated tests green (8 new for the drag: where the pill lands at 100-200 % scaling, on a monitor left of the
+  main one, at the screen edges, and that the saved place puts it back in the same spot).
+- New real-mouse UI test `tools/ui-tests/dragplace.ps1`: 12/12 passed (drag left saves the place and moves the window,
+  the drag does not open the list, the face shows Excited then Happy, a click still opens the list, a fast drag far
+  right stops at the edge, the place is kept after a restart).
+- UI tests `t1` to `t6`, `chipdrag.ps1`, `rowdrag.ps1` and `p5b.ps1` passed (temporary data folders). `p5a.ps1` has one
+  failure ("pulse after the pill is wide") that happens the same way on 1.0.4.
+- INSTALLER_LINE
+- BUILD_LINE
 
 ## Known limits (please tell us what you see)
 

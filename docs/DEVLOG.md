@@ -849,3 +849,16 @@ shared framework pages; private bytes (50 MB) is the number that matters.
 Also fixed: pointing at a task row showed the edit/delete buttons and squeezed the title into a thin column. The due
 date moved under the title and the buttons use `Visibility.Hidden` (space reserved). `p5a.ps1` "pulse after the pill is
 wide" fails the same way on 1.0.4 (not caused by this release).
+
+### Release 1.0.6 — drag to place (2026-11-11, Opus 5.5)
+
+Idea from looking at another notch app (Layzee, inspected statically only). The owner asked for only the drag and a face
+reaction; snap marks, dragging to another monitor and reset buttons were dropped. Details: `docs/DRAG-PLACE-PLAN.md`.
+The pill follows the pointer along the top edge (window position only, no resize or layout per move), clamped by the new
+`IslandPlacement.OffsetForCentre` so the open panel still fits; one `HorizontalOffset` write on release (range now
+±2000). Face: Excited while carried (kept up every 400 ms), Happy on drop; a dip/bounce on the slide transform.
+Found while testing: a fast flick left the pill before the 6 px threshold, so the press now captures the mouse; and a
+control inside the pill can take that capture, so a lost capture before the drag starts is ignored.
+Tests: 462 unit (8 new), `dragplace.ps1` 12/12, t1-t6, chipdrag, rowdrag, p5b green; p5a's old pulse failure unchanged.
+Testing note: a TaskIsland test copy left running from a failed script makes the next run of the same script fail at
+random places (single instance). Close leftover `bin\Debug` copies first.
