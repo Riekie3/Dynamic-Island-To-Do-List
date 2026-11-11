@@ -1,9 +1,12 @@
+using System.ComponentModel;
 using System.Windows;
 using System.Windows.Interop;
 using System.Windows.Media;
+using TaskIsland.App.Controls;
 using TaskIsland.App.Logging;
 using TaskIsland.App.Services;
 using TaskIsland.App.ViewModels;
+using TaskIsland.Core.Toasts;
 using TaskIsland.Windows;
 
 namespace TaskIsland.App.Views;
@@ -17,6 +20,7 @@ public partial class SettingsWindow : Window
     private readonly SettingsViewModel _vm;
     private readonly SettingsApplier _apply;
     private bool _mica;
+    private ToastPresenter? _toasts;
 
     public SettingsWindow(SettingsViewModel vm, SettingsApplier apply)
     {
@@ -27,6 +31,9 @@ public partial class SettingsWindow : Window
         vm.Owner = this;
         HotkeyBox.Validator = vm.TryRebindHotkey;
         SourceInitialized += OnSourceInitialized;
+        _toasts = new ToastPresenter(ToastLayer, expandsUp: true, "PanelToastFillBrush", "PanelToastStrokeBrush");
+        _toasts.Clicked += (_, _) => _toasts.Hide();
+        vm.PropertyChanged += OnViewModelChanged;
         ((App)Application.Current).ThemeChanged += OnThemeChanged;
         Closed += OnClosed;
     }
@@ -47,17 +54,39 @@ public partial class SettingsWindow : Window
         FileLogger.Info($"settings window opened (backdrop: {(_mica ? "Mica" : "solid")})");
     }
 
+    /// <summary>
+    /// Data actions (SILEO-PLAN.md S4): while one runs a loading toast ("Backing Up") shows; when it ends the same toast
+    /// morphs into the result ("Backup Saved" with the message, or "Didn't Work" in red) and hides itself after 6 s.
+    /// </summary>
+    private void OnViewModelChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName is not (nameof(SettingsViewModel.Busy) or nameof(SettingsViewModel.DataStatus) or nameof(SettingsViewModel.DataStatusIsError)))
+            return;
+        if (_toasts is not { } toasts) return;
+        if (_vm.Busy)
+            toasts.Show(ToastState.Loading, _vm.DataOperation, null, null);
+        else if (_vm.DataStatus.Length > 0)
+            toasts.Show(_vm.DataStatusIsError ? ToastState.Error : ToastState.Success,
+                _vm.DataStatusIsError ? "Didn't Work" : _vm.DataDoneTitle, _vm.DataStatus, null, TimeSpan.FromSeconds(6));
+        else
+            toasts.Hide();
+    }
+
     private void OnThemeChanged(bool light) => Dwm.SetDarkTitleBar(Handle, !light);
 
     private void OnClosed(object? sender, EventArgs e)
     {
         ((App)Application.Current).ThemeChanged -= OnThemeChanged;
+        _vm.PropertyChanged -= OnViewModelChanged;
         _vm.Owner = null;
         _apply.FlushPending();
         FileLogger.Info("settings window closed");
     }
 
 #if DEBUG
+    /// <summary>Debug screenshots: shows the data-action toast for <c>--demo settings-ok|settings-error|settings-loading</c>.</summary>
+    public void DebugToast(string? demo) => Dispatcher.BeginInvoke(() => _vm.DebugStatus(demo), System.Windows.Threading.DispatcherPriority.ApplicationIdle);
+
     /// <summary>Debug: jump to a page by name.</summary>
     public void SelectPage(string name)
     {

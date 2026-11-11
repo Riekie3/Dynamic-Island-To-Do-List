@@ -1,7 +1,7 @@
 # Plan: Sileo-style notifications for TaskIsland
 
-Status: **S1 done** (2026-11-11: shape, spring, control, debug demo; not used in the app yet). Target confirmed: TaskIsland.
-Decisions 2-4 in section 7 are still open and are asked before S2. Source studied: github.com/hiaaryan/sileo at `b70fd82`
+Status: **S1-S4 done** (2026-11-11), **S5 (measure, docs, release 1.1.0) open**. Target: TaskIsland; scope: all four places.
+Defaults used: no Snooze yet, the new style replaces the old. See DEVLOG for details. Source studied: github.com/hiaaryan/sileo at `b70fd82`
 (2026-10-14), npm package `sileo` 0.1.6, live demo https://sileo.aaryan.design. Licence: **MIT**.
 
 ## 1. What Sileo is

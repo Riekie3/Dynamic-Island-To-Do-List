@@ -240,9 +240,9 @@ Check 'lead choices: Off, 5, 15, 30, 1 hour, 2 hours, 1 day' (($leadItems -join 
 Combo-Pick 'Remind me before the due time' '1 hour'
 Check 'ReminderLeadMinutes saved as 60' ((Setting 'ReminderLeadMinutes') -eq '60')
 Check 'lead change recomputes reminders' ((Log) -match 'setting ReminderLeadMinutes = 60')
-Set-Toggle 'Widen the island when a reminder fires' $false
+Set-Toggle 'Show reminders as a card on the island' $false
 Check 'ReminderPillAlert saved' ((Setting 'ReminderPillAlert') -eq 'false')
-Set-Toggle 'Widen the island when a reminder fires' $true
+Set-Toggle 'Show reminders as a card on the island' $true
 Set-Toggle 'Reminders' $false
 Check 'RemindersEnabled saved' ((Setting 'RemindersEnabled') -eq 'false')
 Check 'lead picker is disabled while reminders are off' (-not (El 'Remind me before the due time' 'ComboBox').Current.IsEnabled)
@@ -399,7 +399,7 @@ Check 'open data folder runs Explorer on our folder' (@(Get-Process explorer -Er
 
 # ======== About ========
 Nav 'About'
-Check 'About: version, runtime, credit and privacy lines' ((Has-Text '0.1.0*') -and (Has-Text '*.NET*') -and (Has-Text 'Developed by RieSources') -and (Has-Text '*No data leaves this PC*'))
+Check 'About: version, runtime, credit and privacy lines' ((Has-Text '1.0.*') -and (Has-Text '*.NET*') -and (Has-Text 'Developed by RieSources') -and (Has-Text '*No data leaves this PC*'))
 Check 'About: links are buttons that wait for a click' ((Find-TI 'Open rie-sources.com' 'Button') -ne $null)
 
 # ======== close, restart, persistence ========

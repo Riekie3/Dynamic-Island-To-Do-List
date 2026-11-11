@@ -9,6 +9,7 @@ using TaskIsland.App.Services;
 using TaskIsland.App.ViewModels;
 using TaskIsland.Core.Mascot;
 using TaskIsland.Core.Models;
+using TaskIsland.Core.Toasts;
 
 namespace TaskIsland.App.Views;
 
@@ -35,8 +36,8 @@ public partial class PanelView : UserControl
 
         vm.PropertyChanged += OnVmChanged;
         vm.AddRejected += (_, _) => Shake();
-        SyncBar(UndoBar, UndoSlide, vm.HasUndo, animate: false);
-        SyncBar(NoticeBar, NoticeSlide, vm.HasNotice, animate: false);
+        BuildToast();
+        SyncToast(animate: false);
         Loaded += (_, _) =>
         {
             SyncFilter(animate: false);
@@ -95,10 +96,11 @@ public partial class PanelView : UserControl
                     Anim.Keys(NewPriorityChip, OpacityProperty, FluentEase.Decelerate, null, (0, 0.25), (150, 1));
                 break;
             case nameof(IslandViewModel.HasUndo):
-                SyncBar(UndoBar, UndoSlide, _vm.HasUndo, animate: true);
-                break;
+            case nameof(IslandViewModel.UndoText):
             case nameof(IslandViewModel.HasNotice):
-                SyncBar(NoticeBar, NoticeSlide, _vm.HasNotice, animate: true);
+            case nameof(IslandViewModel.NoticeText):
+            case nameof(IslandViewModel.NoticeIsError):
+                SyncToast(animate: true);
                 break;
             case nameof(IslandViewModel.ListEditor):
                 if (_vm.ListEditor is not null)
@@ -145,20 +147,53 @@ public partial class PanelView : UserControl
         Anim.To(ProgressScale, ScaleTransform.ScaleXProperty, _vm.ScopeFraction, d, FluentEase.Decelerate);
     }
 
-    /// <summary>The Undo bar and the notice slide up and fade in (normal token) when they appear.</summary>
-    private static void SyncBar(Border bar, TranslateTransform slide, bool show, bool animate)
+    // ---- Undo and notices as a Sileo-style toast (SILEO-PLAN.md S3) ----
+
+    private ToastPresenter? _toasts;
+    private int _toastKind;   // 0 none, 1 undo, 2 notice: what the toast shows now (a Dismiss click must not undo)
+
+    private void BuildToast()
     {
-        if (!show)
+        var toasts = new ToastPresenter(ToastLayer, expandsUp: true, "PanelToastFillBrush", "PanelToastStrokeBrush");
+        toasts.ButtonClick += (_, _) =>
         {
-            bar.Visibility = Visibility.Collapsed;
-            return;
+            if (_toastKind == 1) _vm.UndoCommand.Execute(null);
+            else if (_toastKind == 2) _vm.DismissNoticeCommand.Execute(null);
+        };
+        toasts.Clicked += (_, _) =>
+        {
+            if (_toastKind == 2) _vm.DismissNoticeCommand.Execute(null);   // a tap on a message dismisses it; Undo needs its button
+        };
+        _toasts = toasts;
+    }
+
+    /// <summary>
+    /// Shows the newest of: an error notice, the Undo for a delete, an informational notice. The view model owns the
+    /// timers (5 s); this only mirrors them.
+    /// </summary>
+    private void SyncToast(bool animate)
+    {
+        if (_toasts is not { } toasts) return;
+        if (_vm.HasNotice && _vm.NoticeIsError)
+        {
+            _toastKind = 2;
+            toasts.Show(ToastState.Error, "Error", _vm.NoticeText, "Dismiss", animate: animate);
         }
-        bool wasHidden = bar.Visibility != Visibility.Visible;
-        bar.Visibility = Visibility.Visible;
-        var d = animate && wasHidden ? MotionPolicy.Current?.Normal ?? TimeSpan.Zero : TimeSpan.Zero;
-        if (d <= TimeSpan.Zero) return;
-        Anim.Keys(bar, OpacityProperty, FluentEase.Decelerate, null, (0, 0), (d.TotalMilliseconds, 1));
-        Anim.Keys(slide, TranslateTransform.YProperty, FluentEase.Decelerate, null, (0, 8), (d.TotalMilliseconds, 0));
+        else if (_vm.HasUndo)
+        {
+            _toastKind = 1;
+            toasts.Show(ToastState.Action, _vm.UndoText, null, "Undo", animate: animate);
+        }
+        else if (_vm.HasNotice)
+        {
+            _toastKind = 2;
+            toasts.Show(ToastState.Info, "Notice", _vm.NoticeText, "Dismiss", animate: animate);
+        }
+        else
+        {
+            _toastKind = 0;
+            toasts.Hide(animate);
+        }
     }
 
     /// <summary>Empty title: a subtle shake instead of an error.</summary>

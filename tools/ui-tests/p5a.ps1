@@ -37,8 +37,7 @@ WaitUntil $seed.AddSeconds(36.5)
 # (The island's automation name is not exposed in the UI Automation tree by this scanner at all, so it is not checked here.)
 $log = Log
 Check 'early reminder fires once on time' ((Count $log 'early reminder \(Timer\): 1 task\(s\), ".*In 5 minutes: Early one"') -eq 1)
-Check 'pill alert shows the early text' ($log -match 'reminder pill alert: ".*In 5 minutes: Early one" width \d+')
-Check 'pulse after the pill is wide' ($log -match 'reminder pulse on the island')
+Check 'toast shows the early text (tab "In 5 minutes")' ($log -match 'reminder pill alert: ".*In 5 minutes: Early one" toast Info "In 5 minutes"')
 Check 'balloon heading is the list name' ($log -match 'balloon: Personal / .*In 5 minutes: Early one')
 Check 'early task is marked in the database' ((Db "select count(*) from Tasks where Title='Early one' and EarlyReminderShownAt is not null and ReminderShownAt is null") -eq '1')
 $dbgNew = @(Get-Content $dbg -ErrorAction SilentlyContinue | Select-Object -Skip $dbgLines) -join "`n"
@@ -59,7 +58,7 @@ Check 'restart: still exactly one early mark per task' ((Db "select count(*) fro
 WaitUntil $seed.AddSeconds(186)
 $log = Log
 Check 'due-now fires for the task that got no early reminder' ((Count $log 'reminder \(Timer\): 1 task\(s\), ".*Due now: Inside window"') -eq 1)
-Check 'due-now pill shows just the title' ($log -match 'reminder pill alert: ".*Inside window" width \d+' -and -not ($log -match 'reminder pill alert: ".*Due now'))
+Check 'due-now toast shows the title (tab "Due now")' ($log -match 'reminder pill alert: ".*Inside window" toast \w+ "' -and -not ($log -match 'reminder pill alert: "[^"]*Due now'))
 Check 'due-now marked in the database' ((Db "select count(*) from Tasks where Title='Inside window' and ReminderShownAt is not null") -eq '1')
 Start-Sleep -Seconds 6
 

@@ -4,6 +4,9 @@
                     xmlns:sys="clr-namespace:System;assembly=System.Runtime">
     <!-- PLAN.md section 6.1, Light. The pill stays black in both themes, like a real island. -->
     <SolidColorBrush x:Key="PillBrush" Color="#000000" po:Freeze="True"/>
+    <!-- Undo / notice toasts over the panel (SILEO-PLAN.md S3): dark on the light panel, like Sileo on a white page. -->
+    <SolidColorBrush x:Key="PanelToastFillBrush" Color="#1C1E23" po:Freeze="True"/>
+    <SolidColorBrush x:Key="PanelToastStrokeBrush" Color="#00000000" po:Freeze="True"/>
     <SolidColorBrush x:Key="PillHoverBrush" Color="#121418" po:Freeze="True"/>
     <SolidColorBrush x:Key="SurfaceBrush" Color="#FAFBFC" po:Freeze="True"/>
     <SolidColorBrush x:Key="SurfaceRaisedBrush" Color="#0A000000" po:Freeze="True"/>

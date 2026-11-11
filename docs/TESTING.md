@@ -281,3 +281,20 @@ New in Phase 6:
 8. **Sharp faces at other scales (M9):** at 100 %, 150 % and 200 % display scaling the face and text stay sharp (not blurry).
 9. **Memory in Task Manager (P2):** Task Manager > Details > TaskIsland.exe > add the columns "Memory (private working set)" and "Commit size".
    Tell me both numbers after the island has been collapsed for a minute (the agent measured them; Task Manager's default column is a different, smaller number).
+
+## Sileo-style toasts (S2-S4, 2026-11-11)
+
+Supersedes the wide-pill wording of T15b above: the reminder is now a toast card (tab + body + Open button), see
+`docs/SILEO-PLAN.md` and the DEVLOG entry.
+
+| # | What | Kind | Result | Notes |
+|---|---|---|---|---|
+| S2a | A due reminder shows the toast ("Due now" tab, task + list, Open), the window grows for it, it ends after 5 s and the window returns to its small size | A | ✅ | `tools/ui-tests/toastalert.ps1` 13/13 (Debug, test data folder, UI Automation + window rects) |
+| S2b | Clicking Open opens the panel on that task's list; the toast is gone | A | ✅ | same script, second task |
+| S2c | The old reminder tests still hold with the toast (setting off, panel open, notch hidden, early reminder, restart) | A | ✅ | `p5a` (one pattern in the test needed fixing), `p5b` 0 failures on the second run (first run: stale About version check and one timing flake), `p5c` 22/22 |
+| S3 | Undo toast shown after a delete, Undo restores the row, toast gone after 5 s; notices and errors show with Dismiss | A | ✅ | `t1` 23/23, `t2` pass; screenshots via `--demo undo\|notice\|error` |
+| S3b | Dragging rows and list chips still works with the new layout | A | ✅ | `rowdrag.ps1`, `chipdrag.ps1` |
+| S4 | Settings > Data actions show "Backing Up" → result toast; message readable through UI Automation | A | ✅ | `backupui.ps1` 12/12; screenshots via `--settings data --demo settings-ok\|settings-error\|settings-loading` |
+| S5a | CPU while a reminder toast shows (Release build, test folder) | A | ✅ | 172 ms CPU over the 7 s sequence (2.45 % of one core averaged), 0.83 % of one core 3-18 s afterwards; private 85.5 MB, working set 134 MB. The first 20 s after start-up (5 %) is start-up work, not the toast. |
+| S5b | Light theme, 150 % and 200 % scaling, Windows animations off | 👤 | ⏳ | not checked yet |
+| S5c | Real mouse: hover keeps the reminder toast open, click opens the list; the toast looks right on your monitor(s) | 👤 | ⏳ | tested through UI Automation only |

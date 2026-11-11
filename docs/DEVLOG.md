@@ -851,3 +851,56 @@ Release builds 0 warnings. Demo screenshots: `docs/screenshots/sileo-s1-gallery.
 
 **Not done / next (S2):** the toast is not used anywhere in the app yet. CPU cost per animation frame not measured
 (planned in S5). Light theme not checked separately (the toast is dark in both themes by design).
+
+### Sileo S2 + S3 + S4 — reminder, Undo/notice and Settings toasts (2026-11-11, Opus 5.5)
+
+Owner chose **all four places** (reminder, Undo, notices, Settings data messages). Defaults used for the open questions
+(told to the owner): no Snooze button yet (own phase later); the new style **replaces** the old one.
+
+**S2 – reminder alert** (`IslandWindow.xaml.cs`, `Core/Toasts/ReminderToastText.cs`):
+- The reminder is now a `SileoToast` at the top centre in place of the notch: tab "Due now" / "Overdue" / "In 5 minutes"
+  (info, or warning when overdue), body = task title + list name + **Open** button, black like the notch. Body opens 150 ms
+  after the tab; hovering opens it and keeps it; ends after 5 s (longer while hovered), body folds, then a fade.
+- The resting island is hidden underneath (`Host.Opacity` 0, not hit-testable) and the window is grown to the tall size
+  **before** the toast shows and shrunk **after** it has faded (rule: never resize during an animation). A second
+  reminder while one shows swaps the content in place (Sileo refresh).
+- "Blink" now means the toast flashes twice (none under reduced motion). The old widening pill, the red border and the
+  reminder-width setting are gone from the UI (the stored setting key stays in `AppSettings` and is ignored).
+  `PulseReminder` still plays for the fallback path (setting off / panel open).
+- Log lines keep their old form (`reminder pill alert: "<pill text>" toast <State> "<tab>"`, `reminder pill alert ended`)
+  so the older UI tests still read them.
+- `ReminderToastText` (pure, 6 tests): splits a `ReminderNotice` into tab, body and state.
+
+**S3 – Undo and notices** (`PanelView.xaml(.cs)`, `ToastPresenter`, `SileoToast.ExpandsUp`):
+- The two bars are replaced by one toast over the footer that opens **upward** (tab at the bottom, body above, flipped
+  outline). Priority: error notice, then Undo, then info notice. Undo = action look with an **Undo** button; notices have
+  a **Dismiss** button; a tap on a notice dismisses it. The view model's 5 s timers still drive it. In-panel toasts use
+  `PanelToastFillBrush` (lighter than the dark panel, dark on the light panel) with a faint outline.
+- New `ToastPresenter` (Controls): show / hide / auto-hide / swap-in-place / fold-then-fade for a toast in a panel.
+
+**S4 – Settings** (`SettingsWindow.xaml(.cs)`, `SettingsViewModel.Data.cs`): the status line under Data is replaced by a
+toast: loading ("Backing Up", "Restoring", "Importing", "Exporting", "Deleting Backups", "Resetting") that morphs into
+the result ("Backup saved", ... or red "Didn't Work") with the message, hides after 6 s.
+
+**Settings text:** "Widen the island when a reminder fires" → "Show reminders as a card on the island"; "Blink a red border"
+→ "Flash the card"; the "Reminder width" row was removed (p5b/p5c updated for the new toggle name).
+
+**Bugs found while testing:** (1) first Undo-toast screenshot: toast fill almost the panel colour, hard to see → lighter
+fill + outline. (2) p5a's own check for "no 'Due now' in the pill text" matched the new tab text in the same log line →
+pattern now looks only inside the quoted title.
+
+**Debug only:** `--demo undo|notice|error` (panel with each toast), `--settings data --demo settings-ok|settings-error|
+settings-loading --snap-settings f.png`.
+
+**Tests:** 335 Core + 139 Data = 474 unit tests green (6 new). UI (Debug, test data folders): new `toastalert.ps1`
+**13/13** (toast shown, window grown, Open button on screen, ends after 5 s, window back to 80 px, panel did not open
+by itself, second reminder: Open click opens the panel on that task's list); `chipdrag` and `rowdrag` pass (panel
+layout changed); `t1` 23/23 and `t2` pass (Undo toast shown / restores / gone after 5 s); `backupui` 12/12 (status text
+is read from the toast); `p5c` 22/22; `p5a` all but one check, which was the test's pattern (fixed, verified against the
+log of that run). Screenshots: `docs/screenshots/sileo-s2-reminder.png`, `sileo-s3-panel-toasts.png`,
+`sileo-s4-settings-toasts.png`.
+
+**Not done / known:** README, TESTING.md and the old reminder screenshots still describe the red-blink widening reminder
+(to be rewritten with the 1.1.0 release, S5). CPU per animation frame, light theme and 150/200 % scaling not measured yet
+(S5). Snooze not built. The real mouse hover/click on the reminder toast was tested through UI Automation (Invoke), not a
+physical mouse. Release build not made.

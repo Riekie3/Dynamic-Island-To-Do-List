@@ -55,6 +55,8 @@ public sealed class SileoToast : Grid
     private double _bodyHeight;
     private ToastAlign _align = ToastAlign.Left;
     private bool _hasBody;
+    private bool _up;                                   // opens upward: tab at the bottom, body above (Sileo expand="top")
+    private readonly MatrixTransform _flip = new(Matrix.Identity);
 
     public SileoToast()
     {
@@ -63,7 +65,7 @@ public sealed class SileoToast : Grid
         VerticalAlignment = VerticalAlignment.Top;
         ClipToBounds = false;
 
-        _fill = new Path { IsHitTestVisible = true };
+        _fill = new Path { IsHitTestVisible = true, Cursor = System.Windows.Input.Cursors.Hand };
         _fill.SetResourceReference(Shape.FillProperty, "ToastFillBrush");
         Children.Add(_fill);
 
@@ -96,9 +98,16 @@ public sealed class SileoToast : Grid
             Padding = new Thickness(14, 8, 14, 14),
             VerticalAlignment = VerticalAlignment.Top,
             Opacity = 0,
+            Background = Brushes.Transparent,   // so the whole body (not just its text) takes mouse input
             Child = new StackPanel { Children = { _description, _button } },
         };
         Children.Add(_body);
+        MouseLeftButtonUp += (_, e) =>
+        {
+            if (State == ToastState.Loading) return;
+            e.Handled = true;
+            Clicked?.Invoke(this, EventArgs.Empty);
+        };
 
         SetContent(ToastState.Success, "Done", null, null, animate: false);
     }
@@ -116,6 +125,25 @@ public sealed class SileoToast : Grid
         set { _align = value; UpdateShape(); }
     }
 
+    /// <summary>
+    /// True: the tab sits at the bottom and the body opens upward (for toasts at the bottom of a panel). The control
+    /// still reserves its full height, so nothing around it moves.
+    /// </summary>
+    public bool ExpandsUp
+    {
+        get => _up;
+        set
+        {
+            if (_up == value) return;
+            _up = value;
+            _headerHost.VerticalAlignment = value ? VerticalAlignment.Bottom : VerticalAlignment.Top;
+            _body.Margin = value ? new Thickness(0, 0, 0, TabHeight) : new Thickness(0, TabHeight, 0, 0);
+            _fill.RenderTransform = value ? _flip : Transform.Identity;
+            MeasureBody();
+            UpdateShape();
+        }
+    }
+
     public ToastState State { get; private set; }
     public string Title { get; private set; } = "";
     public bool HasBody => _hasBody;
@@ -125,6 +153,32 @@ public sealed class SileoToast : Grid
     public double OpenHeight => TabHeight + _bodyHeight;
 
     public event EventHandler? ButtonClick;
+
+    /// <summary>The toast itself (not its button) was clicked.</summary>
+    public event EventHandler? Clicked;
+
+    /// <summary>Resource key of the fill brush (default <c>ToastFillBrush</c>; the reminder toast uses the notch black).</summary>
+    public string FillKey
+    {
+        set => _fill.SetResourceReference(Shape.FillProperty, value);
+    }
+
+    /// <summary>Resource key of the outline brush (1 px, none by default).</summary>
+    public string StrokeKey
+    {
+        set
+        {
+            _fill.SetResourceReference(Shape.StrokeProperty, value);
+            _fill.StrokeThickness = 1;
+        }
+    }
+
+    /// <summary>Two quick dips in opacity to draw the eye (the old "blink" setting). Instant no-op under reduced motion.</summary>
+    public void Flash()
+    {
+        if (Reduced) return;
+        Anim.Keys(this, OpacityProperty, null, null, (0, 1), (150, 0.45), (300, 1), (450, 0.45), (600, 1));
+    }
 
     /// <summary>
     /// Shows new content. When the toast is open it closes first, then the header crossfades in place (the old title
@@ -165,7 +219,7 @@ public sealed class SileoToast : Grid
         AnimateOpenness(1, animate ? SpringEase.Default : null);
         Anim.To(_body, OpacityProperty, 1, Duration(animate, 0.5), FluentEase.Decelerate);
         // Sileo nudges the title down and shrinks it a touch while open.
-        Anim.To(_headerShift, TranslateTransform.YProperty, 3, Duration(animate, 1), SpringEase.Default);
+        Anim.To(_headerShift, TranslateTransform.YProperty, _up ? -3 : 3, Duration(animate, 1), SpringEase.Default);
         Anim.To(_headerScale, ScaleTransform.ScaleXProperty, 0.9, Duration(animate, 1), SpringEase.Default);
         Anim.To(_headerScale, ScaleTransform.ScaleYProperty, 0.9, Duration(animate, 1), SpringEase.Default);
     }
@@ -196,16 +250,19 @@ public sealed class SileoToast : Grid
         var outline = ToastOutline.Build(ToastWidth, tabX, _tabWidth, TabHeight, body, Roundness);
         var geo = ToGeometry(outline);
         _fill.Data = geo;
-        _body.Clip = geo.Bounds.IsEmpty ? _empty : ShiftedClip(geo);
+        _body.Clip = geo.Bounds.IsEmpty ? _empty : BodyClip(geo);
         _headerHost.Margin = new Thickness(tabX, 0, 0, 0);
         _headerHost.Width = _tabWidth;
     }
 
-    /// <summary>The body sits below the tab, so its clip is the outline moved up by the tab height.</summary>
-    private static Geometry ShiftedClip(Geometry outline)
+    /// <summary>
+    /// The body's clip is the outline in the body's own coordinates: moved up by the tab height when the tab is above
+    /// it, or flipped about the control's height when the toast opens upward.
+    /// </summary>
+    private Geometry BodyClip(Geometry outline)
     {
         var clip = outline.Clone();
-        clip.Transform = new TranslateTransform(0, -TabHeight);
+        clip.Transform = _up ? new MatrixTransform(1, 0, 0, -1, 0, Height) : new TranslateTransform(0, -TabHeight);
         clip.Freeze();
         return clip;
     }
@@ -238,9 +295,10 @@ public sealed class SileoToast : Grid
         ((UIElement)_body.Child).InvalidateMeasure();
         _body.InvalidateMeasure();
         _body.Measure(new Size(ToastWidth, double.PositiveInfinity));
-        double content = _body.DesiredSize.Height - _body.Margin.Top;   // the margin is the tab's room, not body
+        double content = _body.DesiredSize.Height - _body.Margin.Top - _body.Margin.Bottom;   // the margin is the tab's room
         _bodyHeight = _hasBody ? Math.Max(MinBody, content) : 0;
         Height = TabHeight + _bodyHeight;
+        _flip.Matrix = new Matrix(1, 0, 0, -1, 0, Height);
     }
 
     // ---- header ----

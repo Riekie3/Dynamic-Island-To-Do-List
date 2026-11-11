@@ -162,6 +162,7 @@ public partial class App : Application
                 var launcher = _services.GetRequiredService<SettingsLauncher>();
                 launcher.Show();
                 launcher.Window?.SelectPage(page);
+                launcher.Window?.DebugToast(options.Demo);
                 if (options.SnapSettings is { } snapSettings) launcher.Window?.SnapAndExit(snapSettings, TimeSpan.FromSeconds(1.5));
             }
 #endif

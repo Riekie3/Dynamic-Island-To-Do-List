@@ -203,16 +203,11 @@
                                           IsEnabled="{Binding LeadEnabled}" x:Name="LeadBox"/>
                             </c:SettingRow>
                             <Rectangle Style="{StaticResource CardDivider}"/>
-                            <c:SettingRow Title="Widen the island when a reminder fires" Description="Shows the task title for 5 seconds. Off: just the pulse, the face and the notification.">
+                            <c:SettingRow Title="Show reminders as a card on the island" Description="A card drops from the notch with the task, its list and an Open button for 5 seconds. Off: just the pulse, the face and the notification.">
                                 <CheckBox Style="{StaticResource ToggleSwitch}" IsChecked="{Binding ReminderPillAlert}"/>
                             </c:SettingRow>
                             <Rectangle Style="{StaticResource CardDivider}"/>
-                            <c:SettingRow Title="Reminder width" Description="How wide the island grows for a reminder. Compact is the small pill.">
-                                <ComboBox Style="{StaticResource SettingsCombo}" ItemsSource="{Binding AlertWidthOptions}" SelectedIndex="{Binding AlertWidthIndex}"
-                                          IsEnabled="{Binding AlertOptionsEnabled}" x:Name="AlertWidthBox"/>
-                            </c:SettingRow>
-                            <Rectangle Style="{StaticResource CardDivider}"/>
-                            <c:SettingRow Title="Blink a red border" Description="A red light blinks around the island while the reminder shows. Steady when animations are off.">
+                            <c:SettingRow Title="Flash the card" Description="The card flashes twice when it appears. Not shown when animations are off.">
                                 <CheckBox Style="{StaticResource ToggleSwitch}" IsChecked="{Binding ReminderBlink}" IsEnabled="{Binding AlertOptionsEnabled}"/>
                             </c:SettingRow>
                         </StackPanel>
@@ -333,7 +328,6 @@
                         </c:SettingRow>
                     </Border>
 
-                    <TextBlock Style="{StaticResource HintText}" Text="{Binding DataStatus}" x:Name="DataStatusText"/>
                     <Border Margin="0,8,0,0" CornerRadius="10" Padding="12,8" Background="{DynamicResource AccentSoftBrush}"
                             Visibility="{Binding Island.HasUndo, Converter={StaticResource Vis}}">
                         <DockPanel>
@@ -385,5 +379,8 @@
                 </StackPanel>
             </Grid>
         </ScrollViewer>
+
+        <!-- Results of data actions (SILEO-PLAN.md S4): a Sileo-style toast over the page, created in SettingsWindow.xaml.cs. -->
+        <Grid x:Name="ToastLayer" Grid.Column="1" VerticalAlignment="Bottom" Margin="0,0,0,18"/>
     </Grid>
 </Window>
