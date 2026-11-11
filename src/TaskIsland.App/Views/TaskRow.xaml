@@ -8,7 +8,8 @@
         <BooleanToVisibilityConverter x:Key="Vis"/>
         <!-- Row actions show on hover and on keyboard focus (PLAN.md section 6.0). -->
         <Style x:Key="Actions" TargetType="StackPanel">
-            <Setter Property="Visibility" Value="Collapsed"/>
+            <!-- Hidden, not Collapsed: the space stays reserved so the title never re-wraps when the buttons appear. -->
+            <Setter Property="Visibility" Value="Hidden"/>
             <Style.Triggers>
                 <DataTrigger Binding="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType=UserControl}}" Value="True">
                     <Setter Property="Visibility" Value="Visible"/>
@@ -99,24 +100,23 @@
                             <Ellipse Width="6" Height="6" Fill="{Binding ListBrush}" VerticalAlignment="Center"/>
                             <TextBlock Text="{Binding ListName}" Margin="5,0,0,0" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}"/>
                         </StackPanel>
-                    </StackPanel>
-
-                    <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="8,0,10,0"
-                                Visibility="{Binding HasDue, Converter={StaticResource Vis}}">
-                        <StackPanel.Resources>
-                            <Style TargetType="TextBlock">
-                                <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
-                                <Setter Property="FontSize" Value="12"/>
-                                <Setter Property="VerticalAlignment" Value="Center"/>
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding IsOverdue}" Value="True">
-                                        <Setter Property="Foreground" Value="{DynamicResource OverdueBrush}"/>
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </StackPanel.Resources>
-                        <TextBlock Text="&#xE823;" FontFamily="{StaticResource IconFont}" FontSize="11" Margin="0,1,4,0"/>
-                        <TextBlock Text="{Binding DueText}"/>
+                        <!-- The due date sits under the title, not in a column of its own, so the title keeps its width. -->
+                        <StackPanel Orientation="Horizontal" Margin="0,2,0,0" Visibility="{Binding HasDue, Converter={StaticResource Vis}}">
+                            <StackPanel.Resources>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
+                                    <Setter Property="FontSize" Value="12"/>
+                                    <Setter Property="VerticalAlignment" Value="Center"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsOverdue}" Value="True">
+                                            <Setter Property="Foreground" Value="{DynamicResource OverdueBrush}"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </StackPanel.Resources>
+                            <TextBlock Text="&#xE823;" FontFamily="{StaticResource IconFont}" FontSize="11" Margin="0,1,4,0"/>
+                            <TextBlock Text="{Binding DueText}"/>
+                        </StackPanel>
                     </StackPanel>
 
                     <c:PriorityChip x:Name="Chip" Grid.Column="3" Priority="{Binding Priority}" VerticalAlignment="Center"/>
