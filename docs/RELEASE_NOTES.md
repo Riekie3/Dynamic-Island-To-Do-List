@@ -58,8 +58,10 @@ No administrator rights, no internet connection, no .NET install needed (the run
   right stops at the edge, the place is kept after a restart).
 - UI tests `t1` to `t6`, `chipdrag.ps1`, `rowdrag.ps1` and `p5b.ps1` passed (temporary data folders). `p5a.ps1` has one
   failure ("pulse after the pill is wide") that happens the same way on 1.0.4.
-- INSTALLER_LINE
-- BUILD_LINE
+- The installer test passed (install without administrator mode, upgrade over the top with tasks kept, uninstall,
+  reinstall). The check against the real installed copy was skipped because TaskIsland is already installed on this PC.
+- Built from a clean, committed tree (`1.0.6+23ed963`). Microsoft Defender scanned the portable zip and the installer
+  with no threats found. The 10-minute Defender soak was **not** repeated.
 
 ## Known limits (please tell us what you see)
 
@@ -83,8 +85,8 @@ No administrator rights, no internet connection, no .NET install needed (the run
 
 ## SHA-256
 
-- `TaskIsland-Setup-1.0.5-x64.exe`: `099D6D60A8C854D3F2DE0A386E3A66971D87D167CA38CDCEB6556B59E023BCA0`
-- `TaskIsland-1.0.5-win-x64-portable.zip`: `5C0C8B152B7245A5533898FAC27C4A25C8A7A52CF6D143C30DF3A749C9B281DE`
+- `TaskIsland-Setup-1.0.6-x64.exe`: `D10CB242EB7A96B9E690BA15F100A1B1391A7A7996DC5B8D24F68BA732228E45`
+- `TaskIsland-1.0.6-win-x64-portable.zip`: `12B6338835A3F7C9BF9D411541C97BCF9910E9F27AA0D3C1316C5157D6C80494`
 
 ---
 
