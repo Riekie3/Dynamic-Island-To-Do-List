@@ -810,3 +810,44 @@ re-downloaded from GitHub and their SHA-256 hashes matched. Hashes and checks in
 
 **Commit:** `739f4da` (retention, reset, tests and docs), `5bdd484` (Version 1.0.3), `1886cdb` (release notes, README,
 hashes).
+
+### Release 1.0.4 — review fixes (2026-11-10, Opus 5.5)
+
+Review of 1.0.2/1.0.3 found three small issues, all fixed in `3760ff9`: a locked old backup no longer stops the daily
+backup (pruning skips files it cannot delete); Reset compacts the database (`VACUUM` + `wal_checkpoint(TRUNCATE)`) so
+deleted rows are gone from disk; Reset no longer restarts the Tasks id counter (the reminder service remembers ids).
+3 new tests, each confirmed to fail on the 1.0.3 code. 454 tests green, `backupui.ps1` 12/12, installer test 29 pass
+(real-install check skipped), Defender clean. Built `1.0.4+dde6e2b`; release v1.0.4, hashes in RELEASE_NOTES.
+
+### Sileo S1 — toast shape, spring and demo (2026-11-11, Opus 5.5)
+
+Plan: `docs/SILEO-PLAN.md` (owner chose TaskIsland as the target; scope, snooze and classic-style questions still open,
+to be asked before S2). No user-visible change in this phase.
+
+**Implemented:**
+- `TaskIsland.Core.Toasts.ToastOutline`: the tab + body outline as pure data (lines and arcs). Concave fillets join the
+  tab to the body (the shape Sileo gets from its gooey SVG filter); body corners and fillets grow with the body so the
+  join melts open; a narrow gap is shared so corner and fillet never overlap; flush sides become one straight edge.
+- `TaskIsland.Core.Toasts.Spring`: damped-spring easing, settled at t = 1. Sileo's bounce 0.25 overshoots about 2.8 %.
+- `TaskIsland.App.Controls.SileoToast` (+ `SpringEase`): 350 px wide, 40 px tab, radius 16, 600 ms spring. One frozen
+  `StreamGeometry` per frame is shared by the fill and the body's clip; content is laid out once (no per-frame layout).
+  Header swap crossfades with a temporary blur (removed when done); the tab width springs to the new title; the
+  loading badge spins only while shown. Reduced motion makes every change instant.
+- Toast colours in `Controls.xaml` (dark fill in both themes; Sileo's oklch states converted to sRGB: success
+  `#3AC530`, error `#FB2C36`, warning `#F0B100`, info `#00A6F4`, action `#2B7FFF`; loading text lightened to `#9A9A9A`
+  for contrast on the dark fill).
+- DEBUG only: `--demo toast [--snap file.png --snap-delay ms]` opens `ToastDemoWindow` (gallery + a live toast looping
+  open / close / loading / success) and can save a PNG of itself.
+
+**Bug found and fixed while testing:** the body was measured once and then reused (WPF keeps a cached DesiredSize for
+elements outside a layout pass), and the measure included the 40 px top margin. Now every level is invalidated before
+measuring and the margin is subtracted. Visible as clipped buttons in the first screenshot.
+
+**Tests performed:** 14 new Core tests (`ToastShapeTests`: closed tab, open outline closed/inside/clockwise for left,
+centre and right tabs, two fillets when centred, one when left, melt-open growth, narrow gap, clamping, spring ends,
+overshoot range, no-bounce monotonic, more bounce = more overshoot). 468 tests green (329 Core + 139 Data). Debug and
+Release builds 0 warnings. Demo screenshots: `docs/screenshots/sileo-s1-gallery.png` (all states) and
+`sileo-s1-melt.png` (live toast at 300 / 380 / 460 ms: body melting out, overshoot, settled).
+
+**Not done / next (S2):** the toast is not used anywhere in the app yet. CPU cost per animation frame not measured
+(planned in S5). Light theme not checked separately (the toast is dark in both themes by design).

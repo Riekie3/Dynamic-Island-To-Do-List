@@ -1,6 +1,7 @@
 # Plan: Sileo-style notifications for TaskIsland
 
-Status: **planning only, nothing built yet** (2026-11-11). Source studied: github.com/hiaaryan/sileo at `b70fd82`
+Status: **S1 done** (2026-11-11: shape, spring, control, debug demo; not used in the app yet). Target confirmed: TaskIsland.
+Decisions 2-4 in section 7 are still open and are asked before S2. Source studied: github.com/hiaaryan/sileo at `b70fd82`
 (2026-10-14), npm package `sileo` 0.1.6, live demo https://sileo.aaryan.design. Licence: **MIT**.
 
 ## 1. What Sileo is
@@ -71,7 +72,7 @@ Each phase ends with build + all tests green, a DEVLOG entry and a push, like th
 
 1. **S1 – The control.** `SileoShape` geometry builder (pure function, unit-tested: outline at closed / half / open,
    fillets never overlap, left/centre/right tab positions), `SpringEase` (unit-tested: starts at 0, ends at 1,
-   overshoot about 3-4 % for bounce 0.25), toast colours in both themes, a DEBUG-only `--demo toast` switch to show it.
+   overshoot about 3 % for bounce 0.25), toast colours in both themes, a DEBUG-only `--demo toast` switch to show it.
    No user-visible change yet.
 2. **S2 – Reminder alert.** Rebuild the notch reminder as a Sileo toast. The island window must grow to fit the body
    before the animation starts and shrink after it ends (section 6.2 rule: never resize during an animation). Keep the

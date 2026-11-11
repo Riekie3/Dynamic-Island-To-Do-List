@@ -147,8 +147,16 @@ public partial class App : Application
 
             if (!options.Startup && !settings.StartCollapsed) window.OpenFromOutside();
 #if DEBUG
-            if (options.Demo is { } demo) window.RunDemo(demo);
-            if (options.Snap is { } snap) window.SnapAndExit(snap, TimeSpan.FromMilliseconds(options.SnapDelayMs));
+            if (string.Equals(options.Demo, "toast", StringComparison.OrdinalIgnoreCase))
+            {
+                // SILEO-PLAN.md phase S1: the toast gallery in its own window (it snaps itself when --snap is given).
+                new Views.ToastDemoWindow(options.Snap, TimeSpan.FromMilliseconds(options.SnapDelayMs)).Show();
+            }
+            else
+            {
+                if (options.Demo is { } demo) window.RunDemo(demo);
+                if (options.Snap is { } snap) window.SnapAndExit(snap, TimeSpan.FromMilliseconds(options.SnapDelayMs));
+            }
             if (options.SettingsPage is { } page)
             {
                 var launcher = _services.GetRequiredService<SettingsLauncher>();
