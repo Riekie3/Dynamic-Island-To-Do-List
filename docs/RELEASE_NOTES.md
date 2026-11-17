@@ -59,8 +59,10 @@ No administrator rights, no internet connection, no .NET install needed (the run
   opens the list editor, order kept after switching back).
 - UI tests `t1` to `t6`, `chipdrag.ps1`, `rowdrag.ps1`, `dragplace.ps1` and `p5b.ps1` passed (temporary data folders).
 - Screenshots of both styles checked in the dark theme. The light theme was not checked by eye.
-- INSTALLER_LINE
-- BUILD_LINE
+- The installer test passed (install without administrator mode, upgrade over the top with tasks kept, uninstall,
+  reinstall). The check against the real installed copy was skipped because TaskIsland is already installed on this PC.
+- Built from a clean, committed tree (`1.0.7+5b267d5`). Microsoft Defender scanned the portable zip and the installer
+  with no threats found. The 10-minute Defender soak was **not** repeated.
 
 ## Known limits (please tell us what you see)
 
@@ -84,8 +86,8 @@ No administrator rights, no internet connection, no .NET install needed (the run
 
 ## SHA-256
 
-- `TaskIsland-Setup-1.0.6-x64.exe`: `D10CB242EB7A96B9E690BA15F100A1B1391A7A7996DC5B8D24F68BA732228E45`
-- `TaskIsland-1.0.6-win-x64-portable.zip`: `12B6338835A3F7C9BF9D411541C97BCF9910E9F27AA0D3C1316C5157D6C80494`
+- `TaskIsland-Setup-1.0.7-x64.exe`: `F91D33835C61300D864026AA11A7C960E54317FE8FE6EEB722A2EDA38554E2E1`
+- `TaskIsland-1.0.7-win-x64-portable.zip`: `E94B809C65B668C160994C09E161E5E62707F811C2E5D720D364936788CAB796`
 
 ---
 
