@@ -80,7 +80,7 @@ public sealed class SettingsApplier
 
     private static readonly string[] AllKeys =
     [
-        AppSettings.Keys.Theme, AppSettings.Keys.AccentSource, AppSettings.Keys.Density, AppSettings.Keys.MascotEnabled,
+        AppSettings.Keys.Theme, AppSettings.Keys.AccentSource, AppSettings.Keys.Density, AppSettings.Keys.ListSwitcher, AppSettings.Keys.MascotEnabled,
         AppSettings.Keys.NotchWidth, AppSettings.Keys.PanelOpacity, AppSettings.Keys.TopMargin, AppSettings.Keys.HorizontalOffset,
         AppSettings.Keys.MonitorDeviceName, AppSettings.Keys.Companion,
         AppSettings.Keys.AnimationsEnabled, AppSettings.Keys.FollowWindowsAnimations, AppSettings.Keys.IdleReactions,
@@ -103,6 +103,7 @@ public sealed class SettingsApplier
             case nameof(AppSettings.Density):
                 app.ApplyAppearance();
                 break;
+            case nameof(AppSettings.ListSwitcher):
             case nameof(AppSettings.NotchWidth):
             case nameof(AppSettings.PanelOpacity):
             case nameof(AppSettings.MascotEnabled):

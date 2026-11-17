@@ -37,6 +37,7 @@ public partial class PanelView : UserControl
         vm.AddRejected += (_, _) => Shake();
         SyncBar(UndoBar, UndoSlide, vm.HasUndo, animate: false);
         SyncBar(NoticeBar, NoticeSlide, vm.HasNotice, animate: false);
+        InitListSwitcher();
         Loaded += (_, _) =>
         {
             SyncFilter(animate: false);
@@ -54,7 +55,7 @@ public partial class PanelView : UserControl
     public bool QuickAddHasText => QuickAddBox.Text.Length > 0;
 
     /// <summary>A calendar popup (a window of its own) is open; the island must not treat that as a click outside.</summary>
-    public bool IsPopupOpen => FindRows().Any(r => r.IsPopupOpen);
+    public bool IsPopupOpen => ListPopup.IsOpen || FindRows().Any(r => r.IsPopupOpen);
 
     public void ClearQuickAdd() => QuickAddBox.Clear();
 
@@ -87,6 +88,7 @@ public partial class PanelView : UserControl
                 SyncProgress(animate: true);
                 break;
             case nameof(IslandViewModel.SelectedListId):
+                SyncDropdown();
                 CrossfadeList();
                 break;
             case nameof(IslandViewModel.NewPriority):
@@ -101,6 +103,7 @@ public partial class PanelView : UserControl
                 SyncBar(NoticeBar, NoticeSlide, _vm.HasNotice, animate: true);
                 break;
             case nameof(IslandViewModel.ListEditor):
+                SyncDropdown(); // a rename shows at once (the screen-reader name too)
                 if (_vm.ListEditor is not null)
                     Dispatcher.BeginInvoke(() =>
                     {
@@ -216,21 +219,25 @@ public partial class PanelView : UserControl
 
     private void ChipRename_Click(object sender, RoutedEventArgs e)
     {
+        ListPopup.IsOpen = false;
         if (ChipOf(sender) is { } chip) _vm.RenameListCommand.Execute(chip);
     }
 
     private void ChipLeft_Click(object sender, RoutedEventArgs e)
     {
+        ListPopup.IsOpen = false;
         if (ChipOf(sender) is { } chip) _ = _vm.MoveListAsync(chip, -1);
     }
 
     private void ChipRight_Click(object sender, RoutedEventArgs e)
     {
+        ListPopup.IsOpen = false;
         if (ChipOf(sender) is { } chip) _ = _vm.MoveListAsync(chip, +1);
     }
 
     private void ChipDelete_Click(object sender, RoutedEventArgs e)
     {
+        ListPopup.IsOpen = false;
         if (ChipOf(sender) is { } chip) _vm.OpenDeleteListCommand.Execute(chip);
     }
 

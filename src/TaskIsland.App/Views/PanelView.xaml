@@ -143,6 +143,135 @@
                 </StackPanel>
             </ScrollViewer>
 
+            <!-- 2b. List switcher, drop-down style (docs/LIST-SWITCHER-PLAN.md). Only one of the two styles is visible. -->
+            <Grid x:Name="ListDropdown" Grid.Row="1" Margin="0,6,0,0" Visibility="Collapsed">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <Button x:Name="ListDropdownButton" Style="{StaticResource ListDropdownButton}" Click="ListDropdown_Click"
+                        ToolTip="Choose a list">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <Ellipse Width="8" Height="8" Fill="{Binding ColorBrush}" VerticalAlignment="Center" Margin="0,0,8,0">
+                            <Ellipse.Style>
+                                <Style TargetType="Ellipse">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsAll}" Value="True">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Ellipse.Style>
+                        </Ellipse>
+                        <TextBlock Grid.Column="1" TextTrimming="CharacterEllipsis" VerticalAlignment="Center">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Text" Value="{Binding Name}"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsAll}" Value="True">
+                                            <Setter Property="Text" Value="All lists"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                        <TextBlock Grid.Column="2" Text="{Binding Count}" Margin="8,0,10,0" Foreground="{DynamicResource TextSecondaryBrush}"
+                                   Typography.NumeralAlignment="Tabular" VerticalAlignment="Center"/>
+                        <TextBlock Grid.Column="3" Text="&#xE70D;" FontFamily="{StaticResource IconFont}" FontSize="10"
+                                   Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center"/>
+                    </Grid>
+                </Button>
+                <Button Grid.Column="1" Style="{StaticResource IconButton}" Width="32" Height="32" FontSize="11" Content="&#xE710;" Margin="6,0,0,0"
+                        Command="{Binding NewListCommand}" ToolTip="New list" AutomationProperties.Name="New list"/>
+                <Popup x:Name="ListPopup" PlacementTarget="{Binding ElementName=ListDropdownButton}" Placement="Bottom" VerticalOffset="4"
+                       StaysOpen="False" AllowsTransparency="True" PopupAnimation="None" Opened="ListPopup_Opened">
+                    <Border Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource StrokeBrush}"
+                            BorderThickness="1" CornerRadius="12" Padding="6" PreviewKeyDown="ListPopup_KeyDown"
+                            Width="{Binding ActualWidth, ElementName=ListDropdownButton}">
+                        <StackPanel>
+                            <ScrollViewer MaxHeight="264" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Focusable="False">
+                                <ItemsControl x:Name="ListMenuItems" Focusable="False" KeyboardNavigation.DirectionalNavigation="Cycle">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Button Style="{StaticResource ListMenuItem}" Click="ListMenuItem_Click" AutomationProperties.Name="{Binding Name}"
+                                                    ContextMenuOpening="Chip_ContextMenuOpening">
+                                                <Button.ContextMenu>
+                                                    <ContextMenu>
+                                                        <MenuItem Header="Rename…" Click="ChipRename_Click" AutomationProperties.Name="Rename list"/>
+                                                        <MenuItem Header="Change colour…" Click="ChipRename_Click" AutomationProperties.Name="Change list colour"/>
+                                                        <MenuItem Header="Move up" Click="ChipLeft_Click" AutomationProperties.Name="Move list up"/>
+                                                        <MenuItem Header="Move down" Click="ChipRight_Click" AutomationProperties.Name="Move list down"/>
+                                                        <MenuItem Header="Delete list…" Click="ChipDelete_Click" AutomationProperties.Name="Delete list"/>
+                                                    </ContextMenu>
+                                                </Button.ContextMenu>
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="18"/>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                        <ColumnDefinition Width="28"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <Ellipse Width="8" Height="8" Fill="{Binding ColorBrush}" HorizontalAlignment="Left" VerticalAlignment="Center">
+                                                        <Ellipse.Style>
+                                                            <Style TargetType="Ellipse">
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding IsAll}" Value="True">
+                                                                        <Setter Property="Visibility" Value="Hidden"/>
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </Ellipse.Style>
+                                                    </Ellipse>
+                                                    <TextBlock Grid.Column="1" TextTrimming="CharacterEllipsis" VerticalAlignment="Center">
+                                                        <TextBlock.Style>
+                                                            <Style TargetType="TextBlock">
+                                                                <Setter Property="Text" Value="{Binding Name}"/>
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding IsAll}" Value="True">
+                                                                        <Setter Property="Text" Value="All lists"/>
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </TextBlock.Style>
+                                                    </TextBlock>
+                                                    <TextBlock Grid.Column="2" Text="{Binding Count}" Margin="8,0,4,0" Foreground="{DynamicResource TextSecondaryBrush}"
+                                                               Typography.NumeralAlignment="Tabular" VerticalAlignment="Center"/>
+                                                    <Button Grid.Column="3" Width="24" Height="24" FontSize="11" Content="&#xE712;"
+                                                            ToolTip="List options" AutomationProperties.Name="List options" Click="ListMenuMore_Click" Focusable="False">
+                                                        <Button.Style>
+                                                            <Style TargetType="Button" BasedOn="{StaticResource IconButton}">
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding IsAll}" Value="True">
+                                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </Button.Style>
+                                                    </Button>
+                                                </Grid>
+                                            </Button>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </ScrollViewer>
+                            <Rectangle Height="1" Margin="4,6" Fill="{DynamicResource StrokeBrush}"/>
+                            <Button Style="{StaticResource ListMenuItem}" Click="ListPopupNew_Click" AutomationProperties.Name="New list from menu">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="&#xE710;" FontFamily="{StaticResource IconFont}" FontSize="11" Width="18" VerticalAlignment="Center"/>
+                                    <TextBlock Text="New list" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
+                        </StackPanel>
+                    </Border>
+                </Popup>
+            </Grid>
+
             <!-- 3. Quick add -->
             <Border x:Name="QuickAdd" Grid.Row="2" Margin="0,10,0,8" Height="50" CornerRadius="14" Padding="14,0,7,0"
                     Background="{DynamicResource SurfaceRaisedBrush}">

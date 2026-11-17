@@ -827,6 +827,7 @@ public partial class IslandWindow : Window
     {
         if (_panel is not null) return;
         _panel = new PanelView(_vm, Mascot);
+        _panel.SetListSwitcher(_settings.ListSwitcher);
         _panel.CollapseRequested += (_, _) => Collapse();
         _panel.ExitRequested += (_, _) => ((App)Application.Current).ExitApp();
         _panel.SettingsRequested += (_, _) =>
@@ -864,6 +865,12 @@ public partial class IslandWindow : Window
     private bool HandlePanelKey(KeyEventArgs e)
     {
         var mods = Keyboard.Modifiers;
+        // Esc with the list drop-down open closes only that menu.
+        if (e.Key == Key.Escape && _panel?.CloseListMenu() == true)
+        {
+            e.Handled = true;
+            return true;
+        }
         if (e.Key == Key.Escape && _settings.CollapseOnEscape)
         {
             e.Handled = true;
@@ -923,6 +930,7 @@ public partial class IslandWindow : Window
         Host.Flush = _settings.TopMargin == 0;
         Host.PanelOpacity = _settings.PanelOpacity;
         _panel?.SetMascot(Mascot);
+        _panel?.SetListSwitcher(_settings.ListSwitcher);
         _director.SettingsChanged();
         if (!_expanded) GoResting(animate: false);
         if (_expanded) StartAutoCollapse();

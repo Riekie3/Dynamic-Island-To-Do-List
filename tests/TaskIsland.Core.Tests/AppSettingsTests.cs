@@ -157,4 +157,25 @@ public class AppSettingsTests
         Assert.Equal(8, TodoList.Palette.Count);
         Assert.All(TodoList.Palette, c => Assert.Matches("^#[0-9A-F]{6}$", c));
     }
+
+    // ---- list switcher style (docs/LIST-SWITCHER-PLAN.md) ----
+
+    [Fact]
+    public void List_switcher_defaults_to_chips()
+        => Assert.Equal(ListSwitcherStyle.Chips, AppSettings.FromDictionary(new Dictionary<string, string>()).ListSwitcher);
+
+    [Fact]
+    public void List_switcher_round_trips()
+    {
+        var s = new AppSettings { ListSwitcher = ListSwitcherStyle.Dropdown };
+        Assert.Equal("Dropdown", s.ToDictionary()[AppSettings.Keys.ListSwitcher]);
+        Assert.Equal(ListSwitcherStyle.Dropdown, AppSettings.FromDictionary(s.ToDictionary()).ListSwitcher);
+    }
+
+    [Theory]
+    [InlineData("dropdown", ListSwitcherStyle.Dropdown)]
+    [InlineData("Combo", ListSwitcherStyle.Chips)]
+    [InlineData("", ListSwitcherStyle.Chips)]
+    public void List_switcher_reads_any_case_and_falls_back_to_chips(string stored, ListSwitcherStyle expected)
+        => Assert.Equal(expected, From((AppSettings.Keys.ListSwitcher, stored)).ListSwitcher);
 }

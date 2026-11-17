@@ -862,3 +862,15 @@ control inside the pill can take that capture, so a lost capture before the drag
 Tests: 462 unit (8 new), `dragplace.ps1` 12/12, t1-t6, chipdrag, rowdrag, p5b green; p5a's old pulse failure unchanged.
 Testing note: a TaskIsland test copy left running from a failed script makes the next run of the same script fail at
 random places (single instance). Close leftover `bin\Debug` copies first.
+
+### List switcher: chips or drop-down (2026-11-17, Opus 5.5)
+
+Owner's request, plan in `docs/LIST-SWITCHER-PLAN.md` (owner chose: full-width button; Move up/down is enough, no
+dragging in the menu). New setting `ListSwitcher` (Chips | Dropdown, default Chips) with a "Lists at the top" row in
+Settings > Appearance; it applies live through `SettingsApplier` → `IslandWindow.ApplyLookSettings` →
+`PanelView.SetListSwitcher`. The drop-down (`PanelView.ListSwitcher.cs`) is a full-width button bound to the selected
+chip plus a `Popup` whose items are the same `Chips`; each row's ⋯ / right-click menu reuses the chip handlers
+(Move left/right become Move up/down). `PanelView.IsPopupOpen` includes the menu so it never collapses the panel, and
+`IslandWindow.HandlePanelKey` lets Esc close only the menu. Opening the menu focuses the selected list (arrows + Enter).
+Tests: 467 unit (5 new: default, round trip, any case, fallback), new `tools/ui-tests/listswitcher.ps1` (26 checks:
+live switch both ways, pick, Esc, Ctrl+1/Ctrl+0, Move down + greyed Move up, New list, order kept).

@@ -152,6 +152,10 @@ portable folder.
 - **＋** at the end of the chips creates a list (name and colour). **Right-click** a chip to rename it, change its
   colour, move it left or right, or delete it. The same is in Settings > **Lists**.
 - **Ctrl+1…9** jumps to list 1-9, **Ctrl+0** to All, **Ctrl+Tab** / **Ctrl+Shift+Tab** to the next or previous list.
+- **Prefer a drop-down?** Settings > Appearance > **Lists at the top** > **Drop-down** replaces the chips with one
+  button that shows the current list. Click it to see all lists (arrow keys and Enter work too, Esc closes it). Each
+  list in the menu has a **⋯** button (or right-click it) to rename, change colour, **Move up** / **Move down** or
+  delete it, and **New list** sits at the bottom. Switch back to **Chips** any time; the order and the selected list stay.
 
 ### Due dates and reminders
 
@@ -173,7 +177,7 @@ Open them from the tray icon (right-click > **Settings…**) or from the panel's
 | Page | What you can change |
 |---|---|
 | **General** | Start with Windows, open expanded at start, collapse when clicking outside, collapse with Esc, always show the notch (off: it tucks into a thin sliver until you point at it). |
-| **Appearance** | Theme (Dark, Light, System), accent colour, row size, notch width and position, gap from the top, panel opacity, the mascot face, how often it pops up, companion, animations. |
+| **Appearance** | Theme (Dark, Light, System), accent colour, row size, lists at the top (chips side by side, or one drop-down menu), notch width and position, gap from the top, panel opacity, the mascot face, how often it pops up, companion, animations. |
 | **Behaviour** | Which display, hide in full-screen apps, collapse by itself, come back after sleep, peek on hover, slide out ticked tasks, the open/close shortcut, and **Reminders**: on/off, early reminder, widen the island, **reminder width** (Compact, 30-75 % of the screen or full width) and **blink a red border**. |
 | **Lists** | Your lists, where new tasks go (default list), what the notch counts. |
 | **Data** | Daily backup, export and import (JSON), back up now, restore a backup, delete all backups, open the data folder, clear completed tasks, reset TaskIsland. |

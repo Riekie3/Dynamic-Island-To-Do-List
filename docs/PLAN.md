@@ -367,6 +367,7 @@ Rules (unit-tested):
 | `Companion` | `Calm` | Appearance | Idle life of the face (§6.8 Companion): `Off` / `Calm` / `Lively`. New key, 2026-11-03 |
 | `AccentSource` | `Default` | Appearance | `Default` (TaskIsland blue) / `Windows` (Windows accent colour). New key, add to `AppSettings` + tests in Phase 5 |
 | `Density` | `Comfortable` | Appearance | Comfortable (row 52 px) / Compact (row 38 px) |
+| `ListSwitcher` | `Chips` | Appearance | "Lists at the top": Chips (side by side, scroll) / Drop-down (one button with a menu of lists); docs/LIST-SWITCHER-PLAN.md |
 | `HideInFullScreen` | `true` | Behaviour | |
 | `MonitorDeviceName` | `""` | Behaviour | empty = primary. Missing monitor → primary |
 | `AutoCollapseSeconds` | `0` | Behaviour | 0 = off. Else collapse after N s with mouse outside and no focus in the text box |

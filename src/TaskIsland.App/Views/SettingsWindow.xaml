@@ -92,6 +92,11 @@
                             <c:SettingRow Title="Row size">
                                 <c:SegmentedControl Options="{Binding DensityOptions}" SelectedIndex="{Binding DensityIndex, Mode=TwoWay}"/>
                             </c:SettingRow>
+                            <Rectangle Style="{StaticResource CardDivider}"/>
+                            <c:SettingRow Title="Lists at the top" Description="Chips side by side (scroll when they do not fit), or one drop-down menu.">
+                                <c:SegmentedControl Options="{Binding ListSwitcherOptions}" SelectedIndex="{Binding ListSwitcherIndex, Mode=TwoWay}"
+                                                    AutomationProperties.Name="Lists at the top"/>
+                            </c:SettingRow>
                         </StackPanel>
                     </Border>
 

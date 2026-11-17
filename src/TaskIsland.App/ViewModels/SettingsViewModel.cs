@@ -55,6 +55,7 @@ public sealed partial class SettingsViewModel : ObservableObject
     public IReadOnlyList<string> ThemeOptions { get; } = ["Dark", "Light", "System"];
     public IReadOnlyList<string> AccentOptions { get; } = ["TaskIsland blue", "Windows accent"];
     public IReadOnlyList<string> DensityOptions { get; } = ["Comfortable", "Compact"];
+    public IReadOnlyList<string> ListSwitcherOptions { get; } = ["Chips", "Drop-down"];
     public IReadOnlyList<string> IdleOptions { get; } = ["Off", "Rare", "Normal", "Lively"];
     public IReadOnlyList<string> CompanionOptions { get; } = ["Off", "Calm", "Lively"];
     public IReadOnlyList<string> PillScopeOptions { get; } = ["All lists", "Selected list"];
@@ -89,6 +90,7 @@ public sealed partial class SettingsViewModel : ObservableObject
     public int ThemeIndex { get => (int)_s.Theme; set => Set((int)_s.Theme, value, v => _s.Theme = (TaskIsland.Core.Models.ThemeMode)v, AppSettings.Keys.Theme); }
     public int AccentIndex { get => (int)_s.AccentSource; set => Set((int)_s.AccentSource, value, v => _s.AccentSource = (AccentSource)v, AppSettings.Keys.AccentSource); }
     public int DensityIndex { get => (int)_s.Density; set => Set((int)_s.Density, value, v => _s.Density = (DensityMode)v, AppSettings.Keys.Density); }
+    public int ListSwitcherIndex { get => (int)_s.ListSwitcher; set => Set((int)_s.ListSwitcher, value, v => _s.ListSwitcher = (ListSwitcherStyle)v, AppSettings.Keys.ListSwitcher); }
     public int IdleIndex { get => (int)_s.IdleReactions; set => Set((int)_s.IdleReactions, value, v => _s.IdleReactions = (IdleReactions)v, AppSettings.Keys.IdleReactions); }
     public int CompanionIndex { get => (int)_s.Companion; set => Set((int)_s.Companion, value, v => _s.Companion = (CompanionLevel)v, AppSettings.Keys.Companion); }
 

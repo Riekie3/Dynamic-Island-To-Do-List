@@ -13,6 +13,9 @@ public enum CompanionLevel { Off, Calm, Lively }
 /// <summary>Where the accent colour comes from (PLAN.md section 5).</summary>
 public enum AccentSource { Default, Windows }
 
+/// <summary>How the lists show at the top of the panel (docs/LIST-SWITCHER-PLAN.md).</summary>
+public enum ListSwitcherStyle { Chips, Dropdown }
+
 /// <summary>
 /// Strongly typed view of the key/value Settings table (PLAN.md section 5). Unknown, missing or invalid
 /// values fall back to the defaults below; numeric values are clamped to their allowed range.
@@ -37,6 +40,7 @@ public sealed class AppSettings
         public const string IdleReactions = nameof(IdleReactions);
         public const string Companion = nameof(Companion);
         public const string Density = nameof(Density);
+        public const string ListSwitcher = nameof(ListSwitcher);
         public const string HideInFullScreen = nameof(HideInFullScreen);
         public const string MonitorDeviceName = nameof(MonitorDeviceName);
         public const string AutoCollapseSeconds = nameof(AutoCollapseSeconds);
@@ -80,6 +84,7 @@ public sealed class AppSettings
     public IdleReactions IdleReactions { get; set; } = IdleReactions.Normal;
     public CompanionLevel Companion { get; set; } = CompanionLevel.Calm;
     public DensityMode Density { get; set; } = DensityMode.Comfortable;
+    public ListSwitcherStyle ListSwitcher { get; set; } = ListSwitcherStyle.Chips;
     public AccentSource AccentSource { get; set; } = AccentSource.Default;
 
     // Behaviour
@@ -151,6 +156,7 @@ public sealed class AppSettings
         s.IdleReactions = E(Keys.IdleReactions, s.IdleReactions);
         s.Companion = E(Keys.Companion, s.Companion);
         s.Density = E(Keys.Density, s.Density);
+        s.ListSwitcher = E(Keys.ListSwitcher, s.ListSwitcher);
         s.AccentSource = E(Keys.AccentSource, s.AccentSource);
         s.HideInFullScreen = B(Keys.HideInFullScreen, s.HideInFullScreen);
         s.MonitorDeviceName = Get(Keys.MonitorDeviceName) ?? s.MonitorDeviceName;
@@ -210,6 +216,7 @@ public sealed class AppSettings
             [Keys.IdleReactions] = IdleReactions.ToString(),
             [Keys.Companion] = Companion.ToString(),
             [Keys.Density] = Density.ToString(),
+            [Keys.ListSwitcher] = ListSwitcher.ToString(),
             [Keys.AccentSource] = AccentSource.ToString(),
             [Keys.HideInFullScreen] = B(HideInFullScreen),
             [Keys.MonitorDeviceName] = MonitorDeviceName ?? "",
