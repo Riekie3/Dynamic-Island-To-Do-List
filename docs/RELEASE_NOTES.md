@@ -1,19 +1,19 @@
-# TaskIsland 1.0.6 (installer + portable)
+# TaskIsland 1.0.7 (installer + portable)
 
 A Dynamic Island-style to-do list for Windows 11 (x64), by **RieSources** (https://rie-sources.com).
 
-## What's new since 1.0.5
+## What's new since 1.0.6
 
-- **Drag the island to place it.** Press on the closed pill and move it sideways: it follows the mouse along the top of
-  the screen and stays where you drop it (it stops where the open list still fits, so it cannot get lost off the
-  edge). The place is remembered after a restart. Settings > Appearance > Position shows the same value and still
-  works too; its range is now wider (-2000 to +2000).
-- **The face reacts.** While you carry it the face looks excited, and when you drop it it is happy. The pill also dips
-  when picked up and bounces when dropped (also with the face turned off; skipped when animations are reduced).
-- A plain click still opens the list, exactly as before.
+- **Choose how your lists show at the top.** Settings > Appearance > **Lists at the top**:
+  - **Chips** (as before, the default): All, Personal, Office Work… side by side; scroll sideways when they do not fit.
+  - **Drop-down**: one full-width button shows the current list with its count. Click it to see every list, pick one
+    to view it. Arrow keys and Enter work, Esc closes the menu (not the panel).
+- In the drop-down each list has a **⋯** button (or right-click it): Rename, Change colour, **Move up**, **Move down**,
+  Delete. **New list** is at the bottom of the menu and on the **+** next to the button.
+- The setting applies at once. Ctrl+1…9, Ctrl+0 and Ctrl+Tab work the same in both styles, and switching back keeps
+  your list order and the selected list.
 
-Also in this version (new in 1.0.5): memory stays flat at about 50-55 MB however often the panel opens, and long task
-titles no longer get squeezed when you point at a row.
+Also in this version: drag the island along the top to place it (1.0.6), memory stays flat (1.0.5).
 
 ## Upgrading
 
@@ -23,7 +23,7 @@ folder, `%LocalAppData%\TaskIsland`). The installer refuses to run while TaskIsl
 ## Install (recommended)
 
 1. **If you run an older portable copy:** Exit it from the tray menu first (the installer asks you to close it anyway).
-2. Run `TaskIsland-Setup-1.0.6-x64.exe`. It is **not code-signed**, so SmartScreen may say "Windows protected your
+2. Run `TaskIsland-Setup-1.0.7-x64.exe`. It is **not code-signed**, so SmartScreen may say "Windows protected your
    PC": click **More info**, then **Run anyway**. (Smart App Control, if turned on, can block unsigned apps.)
 3. It installs to `%LocalAppData%\Programs\TaskIsland`, adds a Start menu entry (desktop icon optional) and starts
    TaskIsland at the end. Your tasks from an older version are found again: the data folder is the same
@@ -35,7 +35,7 @@ Upgrading later: run a newer installer over the top; tasks and settings stay.
 
 ## Or portable
 
-Unzip `TaskIsland-1.0.6-win-x64-portable.zip` somewhere permanent and run `TaskIsland.exe` (same SmartScreen note).
+Unzip `TaskIsland-1.0.7-win-x64-portable.zip` somewhere permanent and run `TaskIsland.exe` (same SmartScreen note).
 "Start with Windows" is on by default and points at that folder, so do not move it afterwards.
 
 No administrator rights, no internet connection, no .NET install needed (the runtime is included) either way.
@@ -51,17 +51,16 @@ No administrator rights, no internet connection, no .NET install needed (the run
 
 ## Checks done for this release
 
-- 462 automated tests green (8 new for the drag: where the pill lands at 100-200 % scaling, on a monitor left of the
-  main one, at the screen edges, and that the saved place puts it back in the same spot).
-- New real-mouse UI test `tools/ui-tests/dragplace.ps1`: 12/12 passed (drag left saves the place and moves the window,
-  the drag does not open the list, the face shows Excited then Happy, a click still opens the list, a fast drag far
-  right stops at the edge, the place is kept after a restart).
-- UI tests `t1` to `t6`, `chipdrag.ps1`, `rowdrag.ps1` and `p5b.ps1` passed (temporary data folders). `p5a.ps1` has one
-  failure ("pulse after the pill is wide") that happens the same way on 1.0.4.
-- The installer test passed (install without administrator mode, upgrade over the top with tasks kept, uninstall,
-  reinstall). The check against the real installed copy was skipped because TaskIsland is already installed on this PC.
-- Built from a clean, committed tree (`1.0.6+23ed963`). Microsoft Defender scanned the portable zip and the installer
-  with no threats found. The 10-minute Defender soak was **not** repeated.
+- 467 automated tests green (5 new for the setting: default Chips, saved and read back, any letter case, unknown values
+  fall back to Chips).
+- New UI test `tools/ui-tests/listswitcher.ps1`: 26/26 passed (switch to Drop-down and back in Settings while running,
+  the menu lists every list, picking a list switches and is saved, Esc closes only the menu, the panel stays open while
+  the menu is open, Ctrl+1 and Ctrl+0, Move down from the ⋯ menu with Move up greyed out on the first list, New list
+  opens the list editor, order kept after switching back).
+- UI tests `t1` to `t6`, `chipdrag.ps1`, `rowdrag.ps1`, `dragplace.ps1` and `p5b.ps1` passed (temporary data folders).
+- Screenshots of both styles checked in the dark theme. The light theme was not checked by eye.
+- INSTALLER_LINE
+- BUILD_LINE
 
 ## Known limits (please tell us what you see)
 

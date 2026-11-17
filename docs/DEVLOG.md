@@ -874,3 +874,8 @@ chip plus a `Popup` whose items are the same `Chips`; each row's ⋯ / right-cli
 `IslandWindow.HandlePanelKey` lets Esc close only the menu. Opening the menu focuses the selected list (arrows + Enter).
 Tests: 467 unit (5 new: default, round trip, any case, fallback), new `tools/ui-tests/listswitcher.ps1` (26 checks:
 live switch both ways, pick, Esc, Ctrl+1/Ctrl+0, Move down + greyed Move up, New list, order kept).
+
+### Release 1.0.7 — list switcher (2026-11-17, Opus 5.5)
+
+Released the chips / drop-down setting above. 467 unit tests, all UI tests green (listswitcher 26/26). Build, Defender
+scan and installer test as for 1.0.6.
