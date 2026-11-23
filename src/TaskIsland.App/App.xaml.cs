@@ -144,6 +144,9 @@ public partial class App : Application
             }
             var backup = _services.GetRequiredService<BackupService>();
             _ = RunDailyBackupAsync(backup, store, settings);
+            // The one-shot due refresh fires when the local date changes; a day boundary left without a backup (the app
+            // slept through midnight) is caught on the next wake in RecoveryCoordinator.
+            vm.DayChanged += () => _ = RunDailyBackupAsync(backup, store, settings);
             _preDeleteCleanup = new DispatcherTimer(DispatcherPriority.Background) { Interval = TimeSpan.FromHours(1) };
             _preDeleteCleanup.Tick += (_, _) => PruneExpiredPreDeleteBackups(backup);
             _preDeleteCleanup.Start();

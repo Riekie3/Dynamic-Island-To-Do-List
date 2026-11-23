@@ -3,6 +3,7 @@ using System.Windows.Interop;
 using System.Windows.Threading;
 using Microsoft.Win32;
 using TaskIsland.App.Logging;
+using TaskIsland.App.ViewModels;
 using TaskIsland.App.Views;
 using TaskIsland.Core.Mascot;
 using TaskIsland.Core.Models;
@@ -27,6 +28,7 @@ public sealed class RecoveryCoordinator : IDisposable
     private readonly AppSettings _settings;
     private readonly ReactionDirector _director;
     private readonly ReminderService _reminders;
+    private readonly IslandViewModel _vm;
     private readonly BackupService _backup;
     private readonly ISettingsStore _store;
     private readonly TrayIconService _tray;
@@ -41,12 +43,13 @@ public sealed class RecoveryCoordinator : IDisposable
     private bool _disposed;
 
     public RecoveryCoordinator(IslandWindow window, AppSettings settings, ReactionDirector director, ReminderService reminders,
-        BackupService backup, ISettingsStore store, TrayIconService tray, IslandPositioner positioner)
+        IslandViewModel vm, BackupService backup, ISettingsStore store, TrayIconService tray, IslandPositioner positioner)
     {
         _window = window;
         _settings = settings;
         _director = director;
         _reminders = reminders;
+        _vm = vm;
         _backup = backup;
         _store = store;
         _tray = tray;
@@ -216,8 +219,9 @@ public sealed class RecoveryCoordinator : IDisposable
     private void OnTimeChanged(object? sender, EventArgs e) =>
         _window.Dispatcher.BeginInvoke(() =>
         {
-            FileLogger.Info("clock changed: reminders recomputed");
+            FileLogger.Info("clock changed: reminders and due labels recomputed");
             Guard("reminders after clock change", _reminders.Recompute);
+            Guard("due labels after clock change", _vm.RefreshTimeSensitiveState);
         });
 
     /// <summary>Several events usually arrive together after a wake; one recovery runs 750 ms after the last.</summary>
@@ -241,6 +245,7 @@ public sealed class RecoveryCoordinator : IDisposable
         Guard("3 tray icon", () => _tray.EnsureVisible(force: false));
         if (!_hotkey.IsRegistered) Guard("4 hotkey", () => RegisterHotkey());
         Guard("4 reminders", _reminders.Recompute);
+        Guard("4 due labels", _vm.RefreshTimeSensitiveState);
         try
         {
             var backup = await _backup.RunDailyBackupIfDueAsync(_store);

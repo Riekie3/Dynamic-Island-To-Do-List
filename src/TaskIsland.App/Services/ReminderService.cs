@@ -57,6 +57,11 @@ public sealed class ReminderService : IDisposable
     public void OnDataChanged(IReadOnlyList<TaskItem> tasks)
     {
         _tasks = tasks;
+        // The database stamps are authoritative after a reload. Drop marks whose reminder was cleared (a changed due
+        // date) or that no longer belong to a task, so moving a due date back can remind again and a restored backup
+        // shows the reminders it is actually missing.
+        ReminderMarks.Reconcile(_notified, _tasks, early: false);
+        ReminderMarks.Reconcile(_earlyNotified, _tasks, early: true);
         if (_started) Run(Check.DataChanged);
     }
 

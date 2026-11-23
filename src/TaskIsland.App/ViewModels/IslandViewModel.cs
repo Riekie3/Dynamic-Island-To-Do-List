@@ -37,11 +37,12 @@ public sealed partial class IslandViewModel : ObservableObject, ITaskRowHost
     private readonly TickStreak _streak = new();
     private readonly HashSet<long> _lingering = [];
     private readonly Dictionary<long, DispatcherTimer> _lingerTimers = [];
-    private readonly DispatcherTimer _undoTimer, _noticeTimer;
+    private readonly DispatcherTimer _undoTimer, _noticeTimer, _dueRefresh;
     private List<TodoList> _lists = [];
     private List<TaskItem> _tasks = [];
     private Dictionary<long, TaskItem> _tasksById = [];
     private readonly List<(string Text, List<long> Ids)> _undoBatches = [];
+    private DateTime _lastDay;
     private bool _internalSelect;
 
     public IslandViewModel(ITaskRepository tasks, ITodoListRepository lists, ISettingsStore settingsStore,
@@ -58,8 +59,11 @@ public sealed partial class IslandViewModel : ObservableObject, ITaskRowHost
         _selectedListId = settings.SelectedListId;
         _quickAddListId = settings.DefaultListId;
         Chips.Add(new ListChipViewModel(0, "All", AllColor) { IsSelected = _selectedListId == 0 });
+        _lastDay = _clock.Now.Date;
         _undoTimer = OneShot(UndoTime, () => _ = ExpireUndoAsync());
         _noticeTimer = OneShot(NoticeTime, HideNotice);
+        // Replaced by the real interval as soon as the first reload counts the tasks; a sane one-shot until then.
+        _dueRefresh = OneShot(TimeSpan.FromMinutes(1), RefreshTimeSensitiveState);
     }
 
     public ObservableCollection<ListChipViewModel> Chips { get; } = [];
@@ -70,6 +74,9 @@ public sealed partial class IslandViewModel : ObservableObject, ITaskRowHost
 
     /// <summary>Raised after every reload with the active (not deleted) tasks of all lists; reminders recompute from it.</summary>
     public event Action<IReadOnlyList<TaskItem>>? DataChanged;
+
+    /// <summary>Raised once when the local date changes while the app runs (midnight or a clock change).</summary>
+    public event Action? DayChanged;
 
     [ObservableProperty] private TaskFilter _filter;
     [ObservableProperty] private long _selectedListId;
@@ -748,6 +755,34 @@ public sealed partial class IslandViewModel : ObservableObject, ITaskRowHost
     private string ScopeName() =>
         SelectedListId != 0 && _lists.FirstOrDefault(l => l.Id == SelectedListId) is { } l ? l.Name : "all lists";
 
+    /// <summary>
+    /// Recomputes everything that depends on the clock: the rows' due labels and overdue styling, the counts and the
+    /// pill's overdue dot (PLAN.md section 6.4). The timer stops at each change point rather than polling; this is also
+    /// called after a wake or a clock change so a missed tick cannot leave the labels stale.
+    /// </summary>
+    public void RefreshTimeSensitiveState()
+    {
+        var nowLocal = _clock.Now;
+        foreach (var row in Tasks) row.UpdateDue(nowLocal);
+        RefreshCounts();
+
+        if (nowLocal.Date != _lastDay)
+        {
+            _lastDay = nowLocal.Date;
+            DayChanged?.Invoke();
+        }
+    }
+
+    /// <summary>Arms the one-shot refresh for the next due moment or the next local midnight, whichever is first.</summary>
+    private void ArmDueRefresh(DateTime nowLocal)
+    {
+        _dueRefresh.Stop();
+        var wait = DueRefresh.NextMoment(_tasks, nowLocal) - nowLocal;
+        if (wait <= TimeSpan.Zero) wait = TimeSpan.FromMilliseconds(250);
+        _dueRefresh.Interval = wait;
+        _dueRefresh.Start();
+    }
+
     private void RefreshCounts()
     {
         var nowLocal = _clock.Now;
@@ -773,5 +808,7 @@ public sealed partial class IslandViewModel : ObservableObject, ITaskRowHost
         TopTaskTitle = top?.Title ?? "";
         if (top is not null && _lists.FirstOrDefault(l => l.Id == top.ListId) is { } tl)
             TopTaskBrush = BrushCache.Frozen(BrushCache.Parse(tl.ColorHex), 1);
+
+        ArmDueRefresh(nowLocal);
     }
 }
