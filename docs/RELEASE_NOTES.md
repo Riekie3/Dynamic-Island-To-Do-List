@@ -1,19 +1,17 @@
-# TaskIsland 1.0.7 (installer + portable)
+# TaskIsland 1.0.8 (installer + portable)
 
 A Dynamic Island-style to-do list for Windows 11 (x64), by **RieSources** (https://rie-sources.com).
 
-## What's new since 1.0.6
+## What's new since 1.0.7
 
-- **Choose how your lists show at the top.** Settings > Appearance > **Lists at the top**:
-  - **Chips** (as before, the default): All, Personal, Office Work… side by side; scroll sideways when they do not fit.
-  - **Drop-down**: one full-width button shows the current list with its count. Click it to see every list, pick one
-    to view it. Arrow keys and Enter work, Esc closes the menu (not the panel).
-- In the drop-down each list has a **⋯** button (or right-click it): Rename, Change colour, **Move up**, **Move down**,
-  Delete. **New list** is at the bottom of the menu and on the **+** next to the button.
-- The setting applies at once. Ctrl+1…9, Ctrl+0 and Ctrl+Tab work the same in both styles, and switching back keeps
-  your list order and the selected list.
-
-Also in this version: drag the island along the top to place it (1.0.6), memory stays flat (1.0.5).
+- **Reminders recover correctly after a due date is changed.** If a reminder had already fired, the due date was moved,
+  and then moved back, the reminder can fire again. Restoring or importing a backup no longer leaves a stale "already
+  shown" mark that silently suppresses reminders: the state saved in the database is now authoritative.
+- **Due labels and the overdue dot follow the clock.** "Today 5:00 PM", "Tomorrow" and "Overdue · Yesterday" now update
+  by themselves when the due moment passes and at midnight, instead of waiting for the next task change. The pill's red
+  overdue dot does the same. Waking the PC or changing the clock refreshes everything immediately. This uses one-shot
+  timers; the app still never polls.
+- The daily backup check now also runs when the date changes while TaskIsland is open.
 
 ## Upgrading
 
@@ -23,7 +21,7 @@ folder, `%LocalAppData%\TaskIsland`). The installer refuses to run while TaskIsl
 ## Install (recommended)
 
 1. **If you run an older portable copy:** Exit it from the tray menu first (the installer asks you to close it anyway).
-2. Run `TaskIsland-Setup-1.0.7-x64.exe`. It is **not code-signed**, so SmartScreen may say "Windows protected your
+2. Run `TaskIsland-Setup-1.0.8-x64.exe`. It is **not code-signed**, so SmartScreen may say "Windows protected your
    PC": click **More info**, then **Run anyway**. (Smart App Control, if turned on, can block unsigned apps.)
 3. It installs to `%LocalAppData%\Programs\TaskIsland`, adds a Start menu entry (desktop icon optional) and starts
    TaskIsland at the end. Your tasks from an older version are found again: the data folder is the same
@@ -35,7 +33,7 @@ Upgrading later: run a newer installer over the top; tasks and settings stay.
 
 ## Or portable
 
-Unzip `TaskIsland-1.0.7-win-x64-portable.zip` somewhere permanent and run `TaskIsland.exe` (same SmartScreen note).
+Unzip `TaskIsland-1.0.8-win-x64-portable.zip` somewhere permanent and run `TaskIsland.exe` (same SmartScreen note).
 "Start with Windows" is on by default and points at that folder, so do not move it afterwards.
 
 No administrator rights, no internet connection, no .NET install needed (the runtime is included) either way.
@@ -51,18 +49,10 @@ No administrator rights, no internet connection, no .NET install needed (the run
 
 ## Checks done for this release
 
-- 467 automated tests green (5 new for the setting: default Chips, saved and read back, any letter case, unknown values
-  fall back to Chips).
-- New UI test `tools/ui-tests/listswitcher.ps1`: 26/26 passed (switch to Drop-down and back in Settings while running,
-  the menu lists every list, picking a list switches and is saved, Esc closes only the menu, the panel stays open while
-  the menu is open, Ctrl+1 and Ctrl+0, Move down from the ⋯ menu with Move up greyed out on the first list, New list
-  opens the list editor, order kept after switching back).
-- UI tests `t1` to `t6`, `chipdrag.ps1`, `rowdrag.ps1`, `dragplace.ps1` and `p5b.ps1` passed (temporary data folders).
-- Screenshots of both styles checked in the dark theme. The light theme was not checked by eye.
-- The installer test passed (install without administrator mode, upgrade over the top with tasks kept, uninstall,
-  reinstall). The check against the real installed copy was skipped because TaskIsland is already installed on this PC.
-- Built from a clean, committed tree (`1.0.7+5b267d5`). Microsoft Defender scanned the portable zip and the installer
-  with no threats found. The 10-minute Defender soak was **not** repeated.
+- 480 automated tests green (341 Core, 139 Data), including 13 new tests for the reminder-state reconciliation and the
+  next due-label refresh moment.
+INSTALLER_TEST_LINE
+BUILD_LINE
 
 ## Known limits (please tell us what you see)
 
@@ -86,8 +76,8 @@ No administrator rights, no internet connection, no .NET install needed (the run
 
 ## SHA-256
 
-- `TaskIsland-Setup-1.0.7-x64.exe`: `F91D33835C61300D864026AA11A7C960E54317FE8FE6EEB722A2EDA38554E2E1`
-- `TaskIsland-1.0.7-win-x64-portable.zip`: `E94B809C65B668C160994C09E161E5E62707F811C2E5D720D364936788CAB796`
+- `TaskIsland-Setup-1.0.8-x64.exe`: `SHA256_INSTALLER`
+- `TaskIsland-1.0.8-win-x64-portable.zip`: `SHA256_PORTABLE`
 
 ---
 

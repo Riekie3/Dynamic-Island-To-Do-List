@@ -879,3 +879,13 @@ live switch both ways, pick, Esc, Ctrl+1/Ctrl+0, Move down + greyed Move up, New
 
 Released the chips / drop-down setting above. 467 unit tests, all UI tests green (listswitcher 26/26). Build, Defender
 scan and installer test as for 1.0.6.
+
+### Release 1.0.8 — reminder and due-label fixes (2026-11-24, DeepSeek V4.1 Flash)
+
+Fixed the two findings selected from the audit. **M-1:** `ReminderService` kept in-memory "already reminded" marks
+forever, so after moving a due date away and back (or restoring a backup) a matching stale mark suppressed the next
+reminder. `ReminderMarks.Reconcile` now drops marks whose task is gone, whose database stamp was cleared, or whose due
+moment changed; the database is authoritative after every reload. **M-2:** row due labels and `HasOverdue` only changed
+on reload. `DueRefresh.NextMoment` finds the next due moment or local midnight, and `IslandViewModel` arms a one-shot
+`DispatcherTimer`; wake and `SystemEvents.TimeChanged` refresh as well, and a `DayChanged` event triggers the daily
+backup check at midnight. No polling. Tests: 480 unit (13 new: 6 reminder-mark tests, 7 refresh-moment tests).

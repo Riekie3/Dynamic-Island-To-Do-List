@@ -6,10 +6,10 @@
 ; tests never touch a real TaskIsland on the same PC. The [Setup], [Files], [Icons] and [Code] sections are the same for both.
 
 #ifndef AppVersion
-  #define AppVersion "1.0.7"
+  #define AppVersion "1.0.8"
 #endif
 #ifndef NumVersion
-  #define NumVersion "1.0.7.0"
+  #define NumVersion "1.0.8.0"
 #endif
 #ifndef SourceDir
   #define SourceDir "..\publish\win-x64"
