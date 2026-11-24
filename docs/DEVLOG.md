@@ -889,3 +889,8 @@ moment changed; the database is authoritative after every reload. **M-2:** row d
 on reload. `DueRefresh.NextMoment` finds the next due moment or local midnight, and `IslandViewModel` arms a one-shot
 `DispatcherTimer`; wake and `SystemEvents.TimeChanged` refresh as well, and a `DayChanged` event triggers the daily
 backup check at midnight. No polling. Tests: 480 unit (13 new: 6 reminder-mark tests, 7 refresh-moment tests).
+
+Release checks (2026-11-24): installer test 29/29 (the real-installer probe was skipped because TaskIsland is already
+installed); Defender signatures 1.463.443.0 clean on `publish\win-x64`, the portable zip and the installer; `t1.ps1`
+passed. `p4b.ps1` passed 37/38: the old "pill pulse" assertion fails because the default pill alert is on (the same
+behaviour on 1.0.7, not a regression).

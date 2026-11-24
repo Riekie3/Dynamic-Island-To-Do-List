@@ -51,8 +51,11 @@ No administrator rights, no internet connection, no .NET install needed (the run
 
 - 480 automated tests green (341 Core, 139 Data), including 13 new tests for the reminder-state reconciliation and the
   next due-label refresh moment.
-INSTALLER_TEST_LINE
-BUILD_LINE
+- UI smoke test `tools/ui-tests/t1.ps1` passed (add, edit, tick, undo, delete, filters and counts).
+- The installer test passed (install without administrator mode, upgrade over the top with tasks kept, uninstall,
+  reinstall). The check against the real installed copy was skipped because TaskIsland is already installed on this PC.
+- Built from a clean, committed tree (`1.0.8+43363e9`). Microsoft Defender scanned the portable zip, the publish
+  folder and the installer with no threats found. The 10-minute Defender soak was **not** repeated.
 
 ## Known limits (please tell us what you see)
 
@@ -76,8 +79,8 @@ BUILD_LINE
 
 ## SHA-256
 
-- `TaskIsland-Setup-1.0.8-x64.exe`: `SHA256_INSTALLER`
-- `TaskIsland-1.0.8-win-x64-portable.zip`: `SHA256_PORTABLE`
+- `TaskIsland-Setup-1.0.8-x64.exe`: `D0B74EB9BF79033BEC6C6C2640BED02B48345FC8CF44525626C5ABA2F3EA3034`
+- `TaskIsland-1.0.8-win-x64-portable.zip`: `6E232E6559D83B987C91E7E1C577A0D886151A09F6566EE75DC3964E6560DDD1`
 
 ---
 

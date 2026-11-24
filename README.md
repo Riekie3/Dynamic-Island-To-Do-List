@@ -54,8 +54,8 @@ Requirements: Windows 11 (or Windows 10 version 1809 or newer), 64-bit. Nothing 
 
 | File | SHA-256 |
 |---|---|
-| `TaskIsland-Setup-1.0.8-x64.exe` | `F91D33835C61300D864026AA11A7C960E54317FE8FE6EEB722A2EDA38554E2E1` |
-| `TaskIsland-1.0.8-win-x64-portable.zip` | `E94B809C65B668C160994C09E161E5E62707F811C2E5D720D364936788CAB796` |
+| `TaskIsland-Setup-1.0.8-x64.exe` | `D0B74EB9BF79033BEC6C6C2640BED02B48345FC8CF44525626C5ABA2F3EA3034` |
+| `TaskIsland-1.0.8-win-x64-portable.zip` | `6E232E6559D83B987C91E7E1C577A0D886151A09F6566EE75DC3964E6560DDD1` |
 
 The earlier rc.2 files were scanned on VirusTotal ([installer](https://www.virustotal.com/gui/file/e3ce55f9137a4a019e42bee2241e837dc53d5cf6bfb6808cd734e30929b771c1),
 [zip](https://www.virustotal.com/gui/file/8ace638d1d6be2010b817149a21c9d1c7e183893e9de883800d1c96a108fb5ea)). The 1.0.8 files have been scanned with Microsoft Defender
