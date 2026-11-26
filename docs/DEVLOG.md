@@ -940,3 +940,11 @@ does the same for the early reminder (the later "pill off" case still checks the
 capped to the room below and stays on the screen; its `PanelLog` reads the new `panel opened <h> DIP (limit ...)` line.
 README gained `readme-floating.png` and `readme-side.png`, made by `readme_shots.ps1` with the offsets preset in the
 throwaway database. Build clean; 505 unit tests green. Released as 1.1.0.
+
+Release (2026-11-26): version 1.1.0 at `17d4462`. `publish.ps1` built `1.1.0+17d4462` and the 66.7 MB portable zip;
+`build-installer.ps1` built the 50.8 MB `TaskIsland-Setup-1.1.0-x64.exe`; `installer-test.ps1` 29/29 with the
+real-installer probe skipped (TaskIsland is already installed). Defender signatures 1.463.471.0: custom scans of
+`publish\win-x64`, the zip and the installer found no threats. SHA-256 installer
+`AF5AAEA87E544025369155589D5033493442CF6BC2E88C957173AD7D769D5E13`, portable
+`4BB24D1BC1D22ECBFE76E3AB2D393F9CDC77CD316CBCAD6C412E22D28E0E5B86`. Tagged `v1.1.0` and published on GitHub with
+both files.

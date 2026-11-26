@@ -60,8 +60,11 @@ No administrator rights, no internet connection, no .NET install needed (the run
 - The four edge shapes and the open layouts were rendered with the app's `--snap` renderer; the mid-height panel
   overflow found that way is fixed, and the panels end at the screen edge or are capped to the room below with the
   task list scrolling.
-INSTALLER_TEST_LINE
-BUILD_LINE
+- The installer test passed (install without administrator mode, upgrade over the top with tasks kept, uninstall,
+  reinstall). The check against the real installed copy was skipped because TaskIsland is already installed on this PC.
+- Built from a clean, committed tree (`1.1.0+17d4462`). Microsoft Defender (signatures 1.463.471.0) scanned the
+  portable zip, the publish folder and the installer with no threats found. The 10-minute Defender soak was **not**
+  repeated.
 
 ## Known limits (please tell us what you see)
 
@@ -85,8 +88,8 @@ BUILD_LINE
 
 ## SHA-256
 
-- `TaskIsland-Setup-1.1.0-x64.exe`: `SHA256_INSTALLER`
-- `TaskIsland-1.1.0-win-x64-portable.zip`: `SHA256_PORTABLE`
+- `TaskIsland-Setup-1.1.0-x64.exe`: `AF5AAEA87E544025369155589D5033493442CF6BC2E88C957173AD7D769D5E13`
+- `TaskIsland-1.1.0-win-x64-portable.zip`: `4BB24D1BC1D22ECBFE76E3AB2D393F9CDC77CD316CBCAD6C412E22D28E0E5B86`
 
 ---
 
