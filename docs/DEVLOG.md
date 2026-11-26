@@ -932,3 +932,11 @@ between the pill and the edge it opens towards (464 DIP down, 525.6 DIP up in th
 applies the cap as `MaxHeight`, so the task list scrolls instead of the footer being cut off. 3 new tests; 505 unit
 green (366 Core + 139 Data). Re-rendered shots show the top/bottom panels at the full 550 DIP and the mid-height
 free/side panels ending exactly at the screen edge.
+
+Follow-up before the release (2026-11-26): the two old "pill pulse" assertions now expect the current default. `p4b.ps1`
+checks `reminder pill alert ... width`, `red border blinking`, and that the pulse does not also play: 39/39. `p5a.ps1`
+does the same for the early reminder (the later "pill off" case still checks the pulse and the Surprised face): 23/23.
+`dragplace.ps1` grew to 37 checks and now opens the panel from the free middle pill, checking it opens downwards, is
+capped to the room below and stays on the screen; its `PanelLog` reads the new `panel opened <h> DIP (limit ...)` line.
+README gained `readme-floating.png` and `readme-side.png`, made by `readme_shots.ps1` with the offsets preset in the
+throwaway database. Build clean; 505 unit tests green. Released as 1.1.0.

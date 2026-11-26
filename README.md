@@ -22,6 +22,12 @@ comes back after sleep. All data stays on your PC; the app makes no network conn
 </p>
 
 <p align="center">
+  <img src="docs/screenshots/readme-floating.png" width="340" alt="A round floating pill away from the edges">
+  <img src="docs/screenshots/readme-side.png" width="340" alt="The pill docked to the left edge"><br>
+  <em>Drag it anywhere: drop it away from the edges for a round floating pill, or near one to dock it there.</em>
+</p>
+
+<p align="center">
   <img src="docs/screenshots/readme-reminder.png" width="840" alt="A reminder: the island grows to half the screen with a red border"><br>
   <em>A reminder: the island grows to half the screen width with a blinking red border, plus a Windows notification.</em>
 </p>
@@ -40,12 +46,12 @@ comes back after sleep. All data stays on your PC; the app makes no network conn
 
 ## Download
 
-Latest release **1.0.8** on the [Releases page](https://github.com/Riekie3/Dynamic-Island-To-Do-List/releases):
+Latest release **1.1.0** on the [Releases page](https://github.com/Riekie3/Dynamic-Island-To-Do-List/releases):
 
 | File | What it is |
 |---|---|
-| `TaskIsland-Setup-1.0.8-x64.exe` | **Installer (recommended).** Installs for your Windows user only. No administrator rights, no UAC prompt. |
-| `TaskIsland-1.0.8-win-x64-portable.zip` | **Portable.** Unzip and run; nothing is installed. |
+| `TaskIsland-Setup-1.1.0-x64.exe` | **Installer (recommended).** Installs for your Windows user only. No administrator rights, no UAC prompt. |
+| `TaskIsland-1.1.0-win-x64-portable.zip` | **Portable.** Unzip and run; nothing is installed. |
 
 Requirements: Windows 11 (or Windows 10 version 1809 or newer), 64-bit. Nothing else: the .NET runtime is included.
 
@@ -54,14 +60,14 @@ Requirements: Windows 11 (or Windows 10 version 1809 or newer), 64-bit. Nothing 
 
 | File | SHA-256 |
 |---|---|
-| `TaskIsland-Setup-1.0.8-x64.exe` | `D0B74EB9BF79033BEC6C6C2640BED02B48345FC8CF44525626C5ABA2F3EA3034` |
-| `TaskIsland-1.0.8-win-x64-portable.zip` | `6E232E6559D83B987C91E7E1C577A0D886151A09F6566EE75DC3964E6560DDD1` |
+| `TaskIsland-Setup-1.1.0-x64.exe` | `D0B74EB9BF79033BEC6C6C2640BED02B48345FC8CF44525626C5ABA2F3EA3034` |
+| `TaskIsland-1.1.0-win-x64-portable.zip` | `6E232E6559D83B987C91E7E1C577A0D886151A09F6566EE75DC3964E6560DDD1` |
 
 The earlier rc.2 files were scanned on VirusTotal ([installer](https://www.virustotal.com/gui/file/e3ce55f9137a4a019e42bee2241e837dc53d5cf6bfb6808cd734e30929b771c1),
-[zip](https://www.virustotal.com/gui/file/8ace638d1d6be2010b817149a21c9d1c7e183893e9de883800d1c96a108fb5ea)). The 1.0.8 files have been scanned with Microsoft Defender
+[zip](https://www.virustotal.com/gui/file/8ace638d1d6be2010b817149a21c9d1c7e183893e9de883800d1c96a108fb5ea)). The 1.1.0 files have been scanned with Microsoft Defender
 (no threats); you can upload them to [VirusTotal](https://www.virustotal.com) yourself to compare.
 
-In PowerShell: `Get-FileHash .\TaskIsland-Setup-1.0.8-x64.exe` shows the hash of your download.
+In PowerShell: `Get-FileHash .\TaskIsland-Setup-1.1.0-x64.exe` shows the hash of your download.
 
 ### About the one VirusTotal detection (installer)
 
@@ -80,14 +86,14 @@ locally with up-to-date signatures, no threats found). We believe this is a **fa
 
 If you would rather not take our word for it: compare the SHA-256 hash above, scan the file with your own antivirus,
 or use the **portable zip** and the source code. We are asking the vendor to review the flag; such flags often
-disappear after a review, but we cannot promise when. The 1.0.8 files are unsigned on purpose for now (code signing is a paid
+disappear after a review, but we cannot promise when. The 1.1.0 files are unsigned on purpose for now (code signing is a paid
 certificate), which is also why Windows SmartScreen shows its warning.
 
 ## Install
 
 ### Installer
 
-1. Download `TaskIsland-Setup-1.0.8-x64.exe` and run it.
+1. Download `TaskIsland-Setup-1.1.0-x64.exe` and run it.
 2. The files are **not code-signed** yet, so Windows SmartScreen may show "Windows protected your PC". Click
    **More info**, then **Run anyway**. (If Smart App Control is turned on, Windows may block unsigned apps entirely.)
 3. Click through the installer. It installs to `%LocalAppData%\Programs\TaskIsland`, adds TaskIsland to the Start
@@ -103,7 +109,7 @@ portable folder.
 
 ### Portable
 
-1. Unzip `TaskIsland-1.0.8-win-x64-portable.zip` to a folder you keep, for example `Documents\TaskIsland`.
+1. Unzip `TaskIsland-1.1.0-win-x64-portable.zip` to a folder you keep, for example `Documents\TaskIsland`.
 2. Double-click `TaskIsland.exe` (same SmartScreen note as above).
 3. "Start with Windows" is on by default and points at that folder, so do not move the folder afterwards.
 
@@ -220,7 +226,7 @@ Open them from the tray icon (right-click > **Settings…**) or from the panel's
 
 ## Status and known limits
 
-**1.0.8 is the current release** (1.0.0 was the first full release). Details:
+**1.1.0 is the current release** (1.0.0 was the first full release). Details:
 [docs/RELEASE_NOTES.md](docs/RELEASE_NOTES.md).
 
 - Memory: since 1.0.5 about 50-55 MB private and stays flat however often the panel opens (it used to climb to

@@ -1,4 +1,4 @@
-# TaskIsland next release (draft — not released yet)
+# TaskIsland 1.1.0 (installer + portable)
 
 A Dynamic Island-style to-do list for Windows 11 (x64), by **RieSources** (https://rie-sources.com).
 
@@ -22,43 +22,10 @@ A Dynamic Island-style to-do list for Windows 11 (x64), by **RieSources** (https
 Exit TaskIsland from the tray menu, then run the new installer over the old one. Tasks and settings stay (same data
 folder, `%LocalAppData%\TaskIsland`). The installer refuses to run while TaskIsland is open.
 
-## Checks done for this release (draft)
-
-- 505 automated tests green (366 Core, 139 Data), including the new free-placement, snap, panel-height and window tests.
-- Build: 0 warnings, 0 errors.
-- Real-mouse UI test `tools/ui-tests/dragplace.ps1` 32/32; `t1.ps1`, `chipdrag.ps1`, `rowdrag.ps1` and `p5b.ps1` passed.
-- The four edge shapes and the open layouts were rendered with the app's `--snap` renderer; the mid-height panel
-  overflow found that way is fixed and the re-rendered panels end exactly at the screen edge.
-- A manual look at the shapes and the upward/side panels on the real desktop is still to do before this release is
-  published.
-- The installer, Defender scan, version tag and hashes are added when the release is cut.
-
----
-
-# TaskIsland 1.0.8 (installer + portable)
-
-A Dynamic Island-style to-do list for Windows 11 (x64), by **RieSources** (https://rie-sources.com).
-
-## What's new since 1.0.7
-
-- **Reminders recover correctly after a due date is changed.** If a reminder had already fired, the due date was moved,
-  and then moved back, the reminder can fire again. Restoring or importing a backup no longer leaves a stale "already
-  shown" mark that silently suppresses reminders: the state saved in the database is now authoritative.
-- **Due labels and the overdue dot follow the clock.** "Today 5:00 PM", "Tomorrow" and "Overdue · Yesterday" now update
-  by themselves when the due moment passes and at midnight, instead of waiting for the next task change. The pill's red
-  overdue dot does the same. Waking the PC or changing the clock refreshes everything immediately. This uses one-shot
-  timers; the app still never polls.
-- The daily backup check now also runs when the date changes while TaskIsland is open.
-
-## Upgrading
-
-Exit TaskIsland from the tray menu, then run the new installer over the old one. Tasks and settings stay (same data
-folder, `%LocalAppData%\TaskIsland`). The installer refuses to run while TaskIsland is open.
-
 ## Install (recommended)
 
 1. **If you run an older portable copy:** Exit it from the tray menu first (the installer asks you to close it anyway).
-2. Run `TaskIsland-Setup-1.0.8-x64.exe`. It is **not code-signed**, so SmartScreen may say "Windows protected your
+2. Run `TaskIsland-Setup-1.1.0-x64.exe`. It is **not code-signed**, so SmartScreen may say "Windows protected your
    PC": click **More info**, then **Run anyway**. (Smart App Control, if turned on, can block unsigned apps.)
 3. It installs to `%LocalAppData%\Programs\TaskIsland`, adds a Start menu entry (desktop icon optional) and starts
    TaskIsland at the end. Your tasks from an older version are found again: the data folder is the same
@@ -70,7 +37,7 @@ Upgrading later: run a newer installer over the top; tasks and settings stay.
 
 ## Or portable
 
-Unzip `TaskIsland-1.0.8-win-x64-portable.zip` somewhere permanent and run `TaskIsland.exe` (same SmartScreen note).
+Unzip `TaskIsland-1.1.0-win-x64-portable.zip` somewhere permanent and run `TaskIsland.exe` (same SmartScreen note).
 "Start with Windows" is on by default and points at that folder, so do not move it afterwards.
 
 No administrator rights, no internet connection, no .NET install needed (the runtime is included) either way.
@@ -86,13 +53,15 @@ No administrator rights, no internet connection, no .NET install needed (the run
 
 ## Checks done for this release
 
-- 480 automated tests green (341 Core, 139 Data), including 13 new tests for the reminder-state reconciliation and the
-  next due-label refresh moment.
-- UI smoke test `tools/ui-tests/t1.ps1` passed (add, edit, tick, undo, delete, filters and counts).
-- The installer test passed (install without administrator mode, upgrade over the top with tasks kept, uninstall,
-  reinstall). The check against the real installed copy was skipped because TaskIsland is already installed on this PC.
-- Built from a clean, committed tree (`1.0.8+43363e9`). Microsoft Defender scanned the portable zip, the publish
-  folder and the installer with no threats found. The 10-minute Defender soak was **not** repeated.
+- 505 automated tests green (366 Core, 139 Data), including the new free-placement, snap, panel-height and window tests.
+- Real-mouse UI test `tools/ui-tests/dragplace.ps1` 37/37 (free middle, all four edges, bottom open-up, side panel
+  on-screen, free-middle panel capped to the room below, restart). `p4b.ps1` 39/39 and `p5a.ps1` 23/23, both updated
+  to expect the default widening reminder pill; `t1.ps1`, `chipdrag.ps1`, `rowdrag.ps1` and `p5b.ps1` passed.
+- The four edge shapes and the open layouts were rendered with the app's `--snap` renderer; the mid-height panel
+  overflow found that way is fixed, and the panels end at the screen edge or are capped to the room below with the
+  task list scrolling.
+INSTALLER_TEST_LINE
+BUILD_LINE
 
 ## Known limits (please tell us what you see)
 
@@ -116,8 +85,8 @@ No administrator rights, no internet connection, no .NET install needed (the run
 
 ## SHA-256
 
-- `TaskIsland-Setup-1.0.8-x64.exe`: `D0B74EB9BF79033BEC6C6C2640BED02B48345FC8CF44525626C5ABA2F3EA3034`
-- `TaskIsland-1.0.8-win-x64-portable.zip`: `6E232E6559D83B987C91E7E1C577A0D886151A09F6566EE75DC3964E6560DDD1`
+- `TaskIsland-Setup-1.1.0-x64.exe`: `SHA256_INSTALLER`
+- `TaskIsland-1.1.0-win-x64-portable.zip`: `SHA256_PORTABLE`
 
 ---
 

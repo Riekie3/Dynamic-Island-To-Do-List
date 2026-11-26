@@ -56,6 +56,18 @@ function Pill {
         WinLeft = [int]$g[6].Value; WinTop = [int]$g[7].Value; WinW = [int]$g[8].Value; WinH = [int]$g[9].Value
     }
 }
+# The last "panel opened <h> DIP (limit <limit>, up|down)" line from the expand (IslandWindow.Expand).
+function PanelLog {
+    $pat = 'panel opened ([\d.]+) DIP \(limit ([\d.]+), (up|down)\)'
+    $m = [regex]::Matches((LogText), $pat)
+    if ($m.Count -eq 0) { return $null }
+    $g = $m[$m.Count - 1].Groups
+    [pscustomobject]@{
+        H = [double]::Parse($g[1].Value, $inv)
+        Limit = [double]::Parse($g[2].Value, $inv)
+        Dir = $g[3].Value
+    }
+}
 function Drag($fromX, $fromY, $toX, $toY) {
     Raise-Island
     [void][DP.M]::SetCursorPos($fromX, $fromY); Start-Sleep -Milliseconds 700
@@ -180,6 +192,20 @@ Check 'a middle drop is free (round pill)' ($middle.Edge -eq 'None') "edge $($mi
 Check 'a middle drop keeps its vertical place' ($middle.Top -gt $middle.MonTop + 100 -and $middle.Bottom -lt $middle.MonTop + $middle.MonH - 100) "top $($middle.Top) bottom $($middle.Bottom) monitor $($middle.MonTop)..$($middle.MonTop + $middle.MonH)"
 Check 'the vertical place is saved' ([int](Setting 'TopMargin') -gt 100) (Setting 'TopMargin')
 Check 'the window follows the floating pill' ([math]::Abs($middle.WinTop - $middle.Top) -le 2 -and $middle.WinH -le [int](70 * $middle.Scale)) "window $($middle.WinLeft),$($middle.WinTop) $($middle.WinW)x$($middle.WinH)"
+
+# A free pill near the middle opens downwards with the room it has: the panel must not run off the bottom.
+Check 'a free middle pill opens its panel' (Open-At $middle.X $middle.Y)
+$midOpen = Pill
+$panel = PanelLog
+if (-not $panel) { $panel = [pscustomobject]@{ H = 0; Limit = 0; Dir = '' } }
+$room = ($middle.MonTop + $middle.MonH - $middle.Top) / $middle.Scale
+$panelBottom = ($middle.Top - $middle.MonTop) + $panel.H * $middle.Scale
+Check 'the free panel opens downwards' ($midOpen.Dir -eq 'down' -and $panel.Dir -eq 'down') "dir $($midOpen.Dir) panel $($panel.Dir)"
+Check 'the free panel fits the room below' ($panel.H -le $panel.Limit + 1 -and $panel.Limit -le [math]::Min(550, $room) + 1) "panel $($panel.H) limit $($panel.Limit) room $room"
+Check 'the free panel stays on the screen' ($panelBottom -le $middle.MonH + 2) "panel bottom $panelBottom monitor $($middle.MonH)"
+Away; Esc
+Start-Sleep -Seconds 2
+Check 'the free panel closes' ((Find-TI 'Add a new task' 'Edit') -eq $null)
 
 # Bottom edge: flush, and the panel opens upwards from it.
 Drag $middle.X $middle.Y ($middle.MonLeft + [int]($middle.MonW / 2)) ($middle.MonTop + $middle.MonH - 10)

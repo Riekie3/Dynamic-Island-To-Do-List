@@ -63,7 +63,9 @@ Start-Sleep -Seconds 2
 $log = Log
 Check 'T15 due-now reminder fires on time' ($log -match 'reminder \(Timer\): 1 task\(s\), "â° Due now: Soon task"')
 Check 'T15 balloon heading is the list name' ($log -match 'balloon: Personal / â° Due now: Soon task')
-Check 'T15 pill pulse played' ($log -match 'reminder pulse on the island')
+Check 'T15 reminder pill alert shown' ($log -match 'reminder pill alert: "[^"]*Soon task" width \d+')
+Check 'T15 reminder red border blinks' ($log -match 'red border blinking')
+Check 'T15 blink replaces the pulse' (-not ($log -match 'reminder pulse on the island'))
 Check 'T15 soon task marked once' ((Db "select count(*) from Tasks where Title='Soon task' and ReminderShownAt is not null") -eq '1')
 Check 'T15 tomorrow task not reminded' ((Db "select count(*) from Tasks where Title='Tomorrow task' and ReminderShownAt is null") -eq '1')
 

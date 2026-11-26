@@ -38,7 +38,8 @@ WaitUntil $seed.AddSeconds(36.5)
 $log = Log
 Check 'early reminder fires once on time' ((Count $log 'early reminder \(Timer\): 1 task\(s\), ".*In 5 minutes: Early one"') -eq 1)
 Check 'pill alert shows the early text' ($log -match 'reminder pill alert: ".*In 5 minutes: Early one" width \d+')
-Check 'pulse after the pill is wide' ($log -match 'reminder pulse on the island')
+Check 'red border blinks around the pill' ($log -match 'red border blinking')
+Check 'blink replaces the pulse' (-not ($log -match 'reminder pulse on the island'))
 Check 'balloon heading is the list name' ($log -match 'balloon: Personal / .*In 5 minutes: Early one')
 Check 'early task is marked in the database' ((Db "select count(*) from Tasks where Title='Early one' and EarlyReminderShownAt is not null and ReminderShownAt is null") -eq '1')
 $dbgNew = @(Get-Content $dbg -ErrorAction SilentlyContinue | Select-Object -Skip $dbgLines) -join "`n"

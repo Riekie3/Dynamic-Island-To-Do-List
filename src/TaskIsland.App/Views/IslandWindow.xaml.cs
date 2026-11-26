@@ -836,7 +836,10 @@ public partial class IslandWindow : Window
         Activate();
         WindowStyler.BringToForeground(_hwnd);
 
-        double h = Host.MeasurePanel(_positioner.PanelHeightLimit(_openUp, MaxPanelHeight));
+        double panelLimit = _positioner.PanelHeightLimit(_openUp, MaxPanelHeight);
+        double h = Host.MeasurePanel(panelLimit);
+        FileLogger.Info(FormattableString.Invariant(
+            $"panel opened {h:0.#} DIP (limit {panelLimit:0.#}, {(_openUp ? "up" : "down")})"));
         DebugLog($"expand: measured {sw.ElapsedMilliseconds} ms");
         Host.AnimateTo(IslandState.Panel, IslandPositioner.PanelWidthDip, h, _motion.MorphExpand, FluentEase.Decelerate,
             () => { RestoreWindowWidth(); Host.ShowShadow(true, _motion.Fast); });
