@@ -6,10 +6,10 @@
 
 A Dynamic Island-style to-do list for Windows 11, by **RieSources** (https://rie-sources.com).
 
-A small notch with a friendly face sits at the top centre of your screen. Click it and it stretches into a full to-do
-list: add, edit, tick and prioritise tasks, sort them into lists, set due dates and get reminders. Click away and it
-folds back into the notch. It runs quietly from the system tray, starts with Windows and comes back after sleep. All
-data stays on your PC; the app makes no network connections.
+A small notch with a friendly face sits on your screen (top centre by default; drag it anywhere). Click it and it
+stretches into a full to-do list: add, edit, tick and prioritise tasks, sort them into lists, set due dates and get
+reminders. Click away and it folds back into the notch. It runs quietly from the system tray, starts with Windows and
+comes back after sleep. All data stays on your PC; the app makes no network connections.
 
 <p align="center">
   <img src="docs/screenshots/readme-panel-dark.png" width="400" alt="The TaskIsland panel, dark theme">
@@ -114,6 +114,7 @@ portable folder.
 | Do this | What happens |
 |---|---|
 | **Click** the notch | It opens into the to-do panel. |
+| **Drag** the notch | It follows the mouse anywhere on the screen. Drop it near an edge to stick there (top, bottom or a side); drop it in the middle for a round floating pill. |
 | **Hover** over it | It shows how many tasks are left; hover a little longer to peek at your next task. |
 | **Ctrl+Alt+T** (from any app) | Opens or closes the panel. You can change the shortcut in Settings. |
 | Click outside, press **Esc** or click **✕** | The panel folds back into the notch. |
@@ -177,7 +178,7 @@ Open them from the tray icon (right-click > **Settings…**) or from the panel's
 | Page | What you can change |
 |---|---|
 | **General** | Start with Windows, open expanded at start, collapse when clicking outside, collapse with Esc, always show the notch (off: it tucks into a thin sliver until you point at it). |
-| **Appearance** | Theme (Dark, Light, System), accent colour, row size, lists at the top (chips side by side, or one drop-down menu), notch width and position, gap from the top, panel opacity, the mascot face, how often it pops up, companion, animations. |
+| **Appearance** | Theme (Dark, Light, System), accent colour, row size, lists at the top (chips side by side, or one drop-down menu), notch width, horizontal and vertical position, panel opacity, the mascot face, how often it pops up, companion, animations. |
 | **Behaviour** | Which display, hide in full-screen apps, collapse by itself, come back after sleep, peek on hover, slide out ticked tasks, the open/close shortcut, and **Reminders**: on/off, early reminder, widen the island, **reminder width** (Compact, 30-75 % of the screen or full width) and **blink a red border**. |
 | **Lists** | Your lists, where new tasks go (default list), what the notch counts. |
 | **Data** | Daily backup, export and import (JSON), back up now, restore a backup, delete all backups, open the data folder, clear completed tasks, reset TaskIsland. |

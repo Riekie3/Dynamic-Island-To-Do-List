@@ -357,8 +357,8 @@ Rules (unit-tested):
 | `AlwaysShowNotch` | `true` | General | if false, pill slides up to a 6 px sliver and reveals when the mouse touches it |
 | `Theme` | `Dark` | Appearance | Dark / Light / System (follow Windows app theme via registry `AppsUseLightTheme` + `UserPreferenceChanged`) |
 | `NotchWidth` | `200` | Appearance | slider 160–280 |
-| `HorizontalOffset` | `0` | Appearance | slider −2000…+2000 px from centre ("Notch position"), or drag the pill along the top (docs/DRAG-PLACE-PLAN.md) |
-| `TopMargin` | `0` | Appearance | 0–40 px; 0 = flush notch (flat top, rounded bottom corners), more = floating pill |
+| `HorizontalOffset` | `0` | Appearance | slider −4000…+4000 px from the monitor centre ("Horizontal position"), or drag the pill anywhere (docs/DRAG-PLACE-PLAN.md) |
+| `TopMargin` | `0` | Appearance | 0–8000 px from the monitor top ("Vertical position"); 0 = flush top notch, more = floating pill; the drag saves it too |
 | `PanelOpacity` | `0.94` | Appearance | 0.70–1.00 |
 | `AnimationsEnabled` | `true` | Appearance | false → durations become 0 (reduced motion also turns on automatically, §6.7) |
 | `FollowWindowsAnimations` | `false` | Appearance | true → Windows "Animation effects" off also means reduced motion here. Default off (user's choice, 2026-11-04) |
@@ -453,10 +453,12 @@ jagged edges). A layered window re-uploads its pixels every frame it animates, s
   resize can never show the pill shifted for a frame. Room for the widest peek, 360, and for the mascot's Mini 120 × 32 and Reaction
   232 × 56 states with their top-right accessory, §6.8; all collapsed states share this window, no resize between them). **Expanded size: 452 × 600 DIP** (420 panel +
   16 px each side for the shadow, 550 max panel height + shadow below).
-- The island is always drawn **top-centred** in the window with **0 top inset** in both sizes, so the pill sits on the
-  exact same screen pixels in both. Resize only at two moments, with one `SetWindowPos` while nothing is moving:
-  just **before** the expand animation starts (grow to expanded size), and just **after** the collapse animation
-  ends (shrink to collapsed size). Never resize during an animation.
+- The collapsed window follows the resting pill (top-centre by default, but the pill can be dragged anywhere): the
+  pill keeps its exact screen pixels when the window switches size, through `IslandHost.CompactCentre` (the expanded
+  window slides inwards so the 420-wide panel stays on the monitor) and `BottomAnchored` (a bottom-edge pill or an
+  upward-opening panel is drawn against the window bottom). Resize only at two moments, with one `SetWindowPos` while
+  nothing is moving: just **before** the expand animation starts (grow to expanded size), and just **after** the
+  collapse animation ends (shrink to collapsed size). Never resize during an animation.
 - Fallback: if Phase 2 sees a one-frame flicker on the resize that can't be fixed, keep the fixed 452 × 600 window
   and log the decision in DEVLOG (idle cost is still zero; only animation frames get more expensive).
 - Fully transparent pixels in a layered window are click-through, so the space around the pill doesn't block the
@@ -466,11 +468,15 @@ jagged edges). A layered window re-uploads its pixels every frame it animates, s
 - `IslandHost` (custom `FrameworkElement`/`ContentControl`) has a `double Morph` DependencyProperty (0 = pill, 1 = panel).
 - It owns **one** `RectangleGeometry`. The background `Path` uses it as `Data` (fill `Pill` → `Surface`) and the content
   layer uses the same geometry as its `Clip`. On Morph change only the geometry's `Rect` and `RadiusX/RadiusY` are set:
-  width `NotchWidth → 420`, height `36 → panelHeight`, radius `18 → 24`, centred, top edge fixed. That is a
-  render-only change: **no measure/arrange per frame**.
+  width `NotchWidth → 420` (inset 16 DIP in the 452 host), height `36 → panelHeight`, radius `18 → 24`, centred
+  horizontally; the edge the island is attached to stays put and the panel grows away from it (down from the top,
+  up from the bottom; a side-attached pill widens inwards). That is a render-only change: **no measure/arrange per
+  frame**.
 - Panel content is laid out **once** at its final size (420 × measured height, max 550) before the expand starts and is
   revealed by the growing clip. Height changes while expanded (rows added/removed, list switch) animate the clip
-  (`normal`, 200 ms), not the layout of the rows.
+  (`normal`, 200 ms), not the layout of the rows. The measured height is capped to the room between the pill and the
+  screen edge the panel opens towards (`IslandPlacement.PanelHeightLimit`): a floating or side-attached pill near the
+  middle gets a shorter panel whose task list scrolls, instead of a panel that runs off the monitor.
 - Background colour lerps `Pill` → `Surface` over Morph 0 → 0.5 (frozen brushes swapped at the ends, a single
   animated `SolidColorBrush` during the transition).
 - Content crossfade: pill content opacity = `1 − clamp(Morph / 0.3)`; panel content opacity = `clamp((Morph − 0.35) / 0.65)`
@@ -649,10 +655,13 @@ screenshots must be compared side by side with the reference sheet.
 still passes the design sizes above and the face/info content keeps its 1:1 reference geometry under the scale. The panel is not
 scaled.
 
-**Flush notch (2026-11-03 change):** with `TopMargin` 0 (the new default) the island touches the top of the screen like a
-notch: flat top, rounded bottom corners (compact states radius 0.3 × height, panel 24). `IslandHost.Flush` extends the shared
-geometry upward by its radius so the top corners and top outline fall outside the window. A `TopMargin` above 0 gives the old
-floating pill.
+**Edge shapes (2026-11-25 change):** dropping the pill near an edge sticks it there and changes the shape: top = the
+notch (flat top, rounded bottom corners), bottom = the same upside down, left/right = a flat side. Away from every edge
+it is a round floating pill. `IslandHost.Edge` extends the shared geometry by its radius on the attached side, so the
+flat edge and its outline fall outside the window. `TopMargin` 0 is still the default top notch; a drag or the
+Vertical position slider can put the pill anywhere on the monitor. A floating or side pill near the middle may not
+have room for the full 550 DIP panel above or below; the panel then opens towards the larger side with the height it
+has (`PanelHeightLimit`) and the task list scrolls, so the panel is never cut off by the screen edge.
 
 Hover (Phase 2): Mini → Curious for 400 ms → Info pill → peek after another 600 ms. Clicking the hover face or the Info pill opens
 the panel; clicking a face that popped up by itself shows Laughing and a second click opens the panel.
@@ -762,14 +771,18 @@ Remove `WS_EX_APPWINDOW`. Use `GetWindowLongPtr/SetWindowLongPtr(GWL_EXSTYLE)`.
 - `app.manifest`: `<dpiAwareness>PerMonitorV2</dpiAwareness>` + `<dpiAware>true/pm</dpiAware>`.
 - Enumerate with `EnumDisplayMonitors` + `GetMonitorInfo` (`MONITORINFOEX`, `szDevice`, `rcMonitor`, primary flag).
   DPI via `GetDpiForMonitor(MDT_EFFECTIVE_DPI)`.
-- Target monitor = `MonitorDeviceName` match, else primary. Position in **physical pixels**:
-  `scale = dpi/96`, window size in DIP = collapsed 452 × 64 or expanded 452 × 600 (§6.2), `wPx = wDip*scale`,
-  `centreX = rc.Left + rc.Width/2 + HorizontalOffset*scale`, `x = centreX - wPx/2`, `y = rc.Top + TopMargin*scale`.
-  Clamp `centreX` (not x) so the 420-wide panel stays inside `rcMonitor`; both sizes share the same centre and top, so
-  the pill does not move when the window switches size. Apply with `SetWindowPos(HWND_TOPMOST, x, y, wPx, hPx, SWP_NOACTIVATE)`.
+- Target monitor = `MonitorDeviceName` match, else primary. Position in **physical pixels**. The saved place is two
+  DIP offsets: `HorizontalOffset` (pill centre from the monitor centre) and `TopMargin` (pill top from the monitor top).
+  `IslandPlacement.PillAt` builds the resting pill (clamped fully on the monitor; within 1 DIP of an edge it is flush),
+  `Snap` is the drag rule (24 DIP to the nearest edge), `OffsetsFor` turns a dropped pill back into the two settings,
+  `OpensUp` chooses the panel direction, `PanelHeightLimit` caps the open panel to the room it has on that side, and
+  `WindowFor` gives the window rectangle: collapsed 452 × 64 around the pill; expanded 452 × 600, slid inwards so the
+  420 panel fits, flush to a side edge, growing up from the bottom or down from the top. `wPx = wDip*scale`, `x/y` from the monitor origin; apply with
+  `SetWindowPos(HWND_TOPMOST, x, y, wPx, hPx, SWP_NOACTIVATE)`.
 - Handle `WM_DPICHANGED` in an `HwndSource` hook: let WPF rescale, then re-run positioning (ignore the
   suggested rect, use our own).
-- Use `rcMonitor` (top of the actual screen), not `rcWork`. The island sits over the top edge.
+- Use `rcMonitor` (the actual screen), not `rcWork`: the island may sit over the top edge, the bottom edge (and the
+  taskbar) or a side edge.
 
 ### 7.3 Power, session & display recovery (`PowerEventsService`, `RecoveryCoordinator`)
 
@@ -849,7 +862,8 @@ ring, Surprised face. Phase 5 adds the **widening pill alert** (`ReminderPillAle
 - The collapsed island widens (same width tween as the hover peek) and shows
   "⏰ <task title>" with the list-colour dot, holds **5 s**, then shrinks back. Width (changed after rc.1 at the user's
   request): `ReminderAlertWidthPercent` of the screen, default **50 %** (Compact = the old `min(NotchWidth + 200, 420)`),
-  kept on the screen around the island's centre (`IslandPlacement.AlertWidthDip`). The window widens for the alert and
+  kept on the screen around the island's centre; a side-attached pill widens inwards instead
+  (`IslandPlacement.AlertWidthDip`). The window widens for the alert and
   narrows again once the island has rested (or once the panel has opened). With `ReminderBlink` (default on) a **red border
   blinks** around the island (about once a second, well under the 3-flashes-a-second limit) instead of the accent pulse;
   steady red in reduced motion; removed when the alert ends. The height does not change and the panel does

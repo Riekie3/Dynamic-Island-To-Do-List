@@ -1,3 +1,40 @@
+# TaskIsland next release (draft — not released yet)
+
+A Dynamic Island-style to-do list for Windows 11 (x64), by **RieSources** (https://rie-sources.com).
+
+## What's new since 1.0.8
+
+- **Drag the island anywhere on the screen.** Press the collapsed pill and move it in any direction. Drop it near the
+  top, bottom, left or right edge and it sticks there; drop it in the middle and it stays a free, round floating pill.
+- **The shape follows the edge.** A top-edge pill is the familiar notch (flat top, rounded bottom); a bottom-edge pill
+  is the same upside down; a side-edge pill is flat on that side. The auto-hide sliver tucks towards the attached edge.
+- **The panel follows the pill.** Near the bottom the panel opens upwards from the pill. A side-attached pill keeps its
+  side flush and the 420-wide panel slides inwards, so it stays on screen. A free pill opens downwards unless there is
+  more room above. If the full-height panel does not fit either way (a free or side pill near the middle), it opens to
+  the room it has and the task list scrolls, so the panel never runs off the screen.
+- **The place is remembered exactly.** Both the horizontal and vertical place are saved and restored after a restart,
+  sleep or monitor change. The attached edge is derived from them, so a 125 % screen puts the pill back on the same
+  pixel. Settings > Appearance has "Horizontal position" (−4000…+4000) and "Vertical position" (0…8000) sliders.
+- A wide reminder alert grows inwards from a side edge instead of being cut off.
+
+## Upgrading
+
+Exit TaskIsland from the tray menu, then run the new installer over the old one. Tasks and settings stay (same data
+folder, `%LocalAppData%\TaskIsland`). The installer refuses to run while TaskIsland is open.
+
+## Checks done for this release (draft)
+
+- 505 automated tests green (366 Core, 139 Data), including the new free-placement, snap, panel-height and window tests.
+- Build: 0 warnings, 0 errors.
+- Real-mouse UI test `tools/ui-tests/dragplace.ps1` 32/32; `t1.ps1`, `chipdrag.ps1`, `rowdrag.ps1` and `p5b.ps1` passed.
+- The four edge shapes and the open layouts were rendered with the app's `--snap` renderer; the mid-height panel
+  overflow found that way is fixed and the re-rendered panels end exactly at the screen edge.
+- A manual look at the shapes and the upward/side panels on the real desktop is still to do before this release is
+  published.
+- The installer, Defender scan, version tag and hashes are added when the release is cut.
+
+---
+
 # TaskIsland 1.0.8 (installer + portable)
 
 A Dynamic Island-style to-do list for Windows 11 (x64), by **RieSources** (https://rie-sources.com).

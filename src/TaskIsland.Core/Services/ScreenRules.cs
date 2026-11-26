@@ -14,9 +14,35 @@ public readonly record struct PixelRect(int Left, int Top, int Right, int Bottom
 /// <summary>A monitor as the placement rules see it.</summary>
 public sealed record ScreenInfo(string DeviceName, PixelRect Bounds, double Scale, bool IsPrimary);
 
-/// <summary>Monitor choice and window placement (PLAN.md section 7.2). Pure arithmetic, unit-tested.</summary>
+/// <summary>The screen edge the resting pill touches, if any (docs/DRAG-PLACE-PLAN.md).</summary>
+public enum IslandEdge { None, Top, Bottom, Left, Right }
+
+/// <summary>The resting pill on its monitor, in DIPs from the monitor's top-left.</summary>
+public readonly record struct PillPlacement(double LeftDip, double TopDip, double WidthDip, double HeightDip, IslandEdge Edge)
+{
+    public double Right => LeftDip + WidthDip;
+    public double Bottom => TopDip + HeightDip;
+    public double CentreX => LeftDip + WidthDip / 2;
+}
+
+/// <summary>
+/// One window rectangle in physical pixels, plus where the collapsed island sits inside it (host DIPs).
+/// <see cref="BottomAnchored"/> is true when the island is drawn at the bottom of the window (a bottom-edge pill, or an
+/// expanded panel that grows upwards); <see cref="OpenUp"/> is true only for the expanded panel.
+/// </summary>
+public readonly record struct IslandWindowPlacement(PixelRect Bounds, double CompactCentreDip, bool BottomAnchored,
+    bool OpenUp, IslandEdge Edge);
+
+/// <summary>
+/// Free island placement and edge snapping (docs/DRAG-PLACE-PLAN.md), plus monitor choice (PLAN.md section 7.2).
+/// The resting pill may sit anywhere on its monitor; saved offsets are in DIPs from the monitor centre (x) and top (y),
+/// so a screen at 125 % puts the pill on the same pixel it was dropped on. Pure arithmetic, unit-tested.
+/// </summary>
 public static class IslandPlacement
 {
+    /// <summary>Within this many DIPs of a screen edge a placed pill is flush with that edge.</summary>
+    private const double EdgeToleranceDip = 1.0;
+
     /// <summary>The monitor named in the settings, else the primary, else the first one. Null only for an empty list.</summary>
     public static ScreenInfo? PickMonitor(IReadOnlyList<ScreenInfo> monitors, string? deviceName)
     {
@@ -28,58 +54,171 @@ public static class IslandPlacement
     }
 
     /// <summary>
-    /// Window rectangle in physical pixels: top-centred on the monitor (plus the horizontal offset), with the centre clamped
-    /// so the 420-wide panel stays on the screen. Both window sizes share the same centre and top edge, so the pill
-    /// does not move when the window switches size.
+    /// The resting pill for the saved offsets: <paramref name="widthDip"/> x <paramref name="heightDip"/> with its centre
+    /// at the monitor centre plus <paramref name="horizontalOffsetDip"/>, and its top at <paramref name="topMarginDip"/>.
+    /// The pill is kept fully on the monitor; a value on an edge makes it flush with that edge.
     /// </summary>
-    public static PixelRect Compute(PixelRect monitor, double scale, double widthDip, double heightDip, double panelWidthDip,
+    public static PillPlacement PillAt(PixelRect monitor, double scale, double widthDip, double heightDip,
         int horizontalOffsetDip, int topMarginDip)
     {
-        if (scale <= 0 || double.IsNaN(scale)) scale = 1;
-        double half = panelWidthDip / 2 * scale;
-        double centreX = monitor.Left + monitor.Width / 2.0 + horizontalOffsetDip * scale;
-        double lo = monitor.Left + half, hi = monitor.Right - half;
-        centreX = lo <= hi ? Math.Clamp(centreX, lo, hi) : monitor.Left + monitor.Width / 2.0;
-        int w = (int)Math.Round(widthDip * scale);
-        int h = (int)Math.Round(heightDip * scale);
-        int x = (int)Math.Round(centreX - w / 2.0);
-        int y = monitor.Top + (int)Math.Round(topMarginDip * scale);
-        return new PixelRect(x, y, x + w, y + h);
+        scale = Normalize(scale);
+        double monW = monitor.Width / scale;
+        double left = monW / 2 + horizontalOffsetDip - widthDip / 2;
+        return Normalize(monitor, scale, widthDip, heightDip, left, topMarginDip);
     }
 
     /// <summary>
-    /// Drag to place: the horizontal offset (DIPs from the monitor centre) that puts the island's centre at
-    /// <paramref name="centreX"/> (physical pixels), clamped the same way as <see cref="Compute"/> so the 420-wide panel
-    /// still fits on the monitor. The saved value is therefore always exactly where the island is drawn.
+    /// Drag to place: the pill follows the pointer (both axes), stays fully on the monitor and snaps to the nearest edge
+    /// when it is within <paramref name="snapDip"/> of one. Positions are DIPs from the monitor's top-left.
     /// </summary>
-    public static int OffsetForCentre(PixelRect monitor, double scale, double centreX, double panelWidthDip)
+    public static PillPlacement Snap(PixelRect monitor, double scale, double widthDip, double heightDip,
+        double leftDip, double topDip, double snapDip)
     {
-        if (scale <= 0 || double.IsNaN(scale)) scale = 1;
-        double half = panelWidthDip / 2 * scale;
-        double lo = monitor.Left + half, hi = monitor.Right - half;
-        double mid = monitor.Left + monitor.Width / 2.0;
-        double x = lo <= hi ? Math.Clamp(centreX, lo, hi) : mid;
-        return (int)Math.Round((x - mid) / scale);
+        scale = Normalize(scale);
+        double monW = monitor.Width / scale;
+        double monH = monitor.Height / scale;
+        leftDip = widthDip >= monW ? (monW - widthDip) / 2 : Math.Clamp(leftDip, 0, monW - widthDip);
+        topDip = heightDip >= monH ? (monH - heightDip) / 2 : Math.Clamp(topDip, 0, monH - heightDip);
+        var edge = NearestEdge(leftDip, topDip, widthDip, heightDip, monW, monH, snapDip);
+        return ApplyEdge(leftDip, topDip, widthDip, heightDip, edge, monW, monH);
+    }
+
+    /// <summary>The DIPs to save for <paramref name="pill"/>: horizontal offset from the monitor centre and the top.</summary>
+    public static (int HorizontalOffsetDip, int TopMarginDip) OffsetsFor(PixelRect monitor, double scale, PillPlacement pill)
+    {
+        scale = Normalize(scale);
+        double monW = monitor.Width / scale;
+        return ((int)Math.Round(pill.CentreX - monW / 2), (int)Math.Round(pill.TopDip));
+    }
+
+    /// <summary>
+    /// Whether the open panel should grow upwards from the pill. Down is preferred while the panel (max height
+    /// <paramref name="panelHeightDip"/>) fits below the pill; otherwise the side with more room wins.
+    /// </summary>
+    public static bool OpensUp(PixelRect monitor, double scale, PillPlacement pill, double panelHeightDip)
+    {
+        scale = Normalize(scale);
+        double monH = monitor.Height / scale;
+        double below = monH - pill.TopDip;
+        double above = pill.Bottom;
+        if (below >= panelHeightDip) return false;
+        if (above >= panelHeightDip) return true;
+        return above > below;
+    }
+
+    /// <summary>
+    /// Tallest the open panel can be while staying on the monitor. The panel starts at the pill's top edge when it
+    /// opens down and ends at its bottom edge when it opens up, so the room is the distance to that screen edge.
+    /// A free or side-attached pill near the middle may not have room for the full 550-DIP panel in either direction;
+    /// the panel is then shortened and its task list scrolls instead of running off the screen.
+    /// </summary>
+    public static double PanelHeightLimit(PixelRect monitor, double scale, PillPlacement pill, bool openUp,
+        double wantedDip)
+    {
+        scale = Normalize(scale);
+        double monH = monitor.Height / scale;
+        double room = openUp ? pill.Bottom : monH - pill.TopDip;
+        return Math.Clamp(room, 0, wantedDip);
+    }
+
+    /// <summary>
+    /// The window rectangle for the current state. Collapsed: 452 x 64 around the pill. Expanded: the panel should be
+    /// visible, so the window slides inwards (the compact pill keeps its screen place inside the host) and grows up or
+    /// down from the pill. A side-attached pill keeps the window flush with that side.
+    /// </summary>
+    public static IslandWindowPlacement WindowFor(PixelRect monitor, double scale, PillPlacement pill, double hostWidthDip,
+        double hostHeightDip, double panelWidthDip, bool expanded, bool openUp)
+    {
+        scale = Normalize(scale);
+        double monW = monitor.Width / scale;
+        double windowLeft;
+        if (pill.Edge == IslandEdge.Left) windowLeft = 0;
+        else if (pill.Edge == IslandEdge.Right) windowLeft = monW - hostWidthDip;
+        else
+        {
+            windowLeft = pill.CentreX - hostWidthDip / 2;
+            if (expanded)
+            {
+                // Keep the 420-wide panel inside the monitor; the compact pill may then sit off-centre in the host.
+                double lo = (panelWidthDip - hostWidthDip) / 2;
+                double hi = monW - (hostWidthDip + panelWidthDip) / 2;
+                windowLeft = lo <= hi ? Math.Clamp(windowLeft, lo, hi) : (monW - hostWidthDip) / 2;
+            }
+        }
+        bool bottomAnchored = expanded ? openUp : pill.Edge == IslandEdge.Bottom;
+        double windowTop = bottomAnchored ? pill.Bottom - hostHeightDip : pill.TopDip;
+        // For a side edge this is the pill's own (small) centre; for a wide reminder pill the host stays flush and the
+        // host-side anchoring in IslandHost grows it inwards.
+        double compactCentre = pill.CentreX - windowLeft;
+        int w = (int)Math.Round(hostWidthDip * scale);
+        int h = (int)Math.Round(hostHeightDip * scale);
+        int x = monitor.Left + (int)Math.Round(windowLeft * scale);
+        int y = monitor.Top + (int)Math.Round(windowTop * scale);
+        return new IslandWindowPlacement(new PixelRect(x, y, x + w, y + h), compactCentre, bottomAnchored,
+            expanded && openUp, pill.Edge);
     }
 
     /// <summary>
     /// On-screen width (DIPs) of the reminder pill: <paramref name="percent"/> of the monitor width, kept on the monitor
-    /// around the island's centre (the same centre and clamp as <see cref="Compute"/>, with an 8 DIP gap to each edge) and
-    /// never narrower than <paramref name="minDip"/>. Percent 0 (or less) means <paramref name="minDip"/>.
+    /// around the island's centre (with an 8 DIP gap to each edge) and never narrower than <paramref name="minDip"/>.
+    /// A pill attached to the left or right edge widens inwards instead, so it may use almost the whole monitor.
+    /// Percent 0 (or less) means <paramref name="minDip"/>.
     /// </summary>
     public static double AlertWidthDip(PixelRect monitor, double scale, int percent, int horizontalOffsetDip,
-        double panelWidthDip, double minDip)
+        double panelWidthDip, double minDip, IslandEdge edge = IslandEdge.None)
     {
         if (percent <= 0) return minDip;
-        if (scale <= 0 || double.IsNaN(scale)) scale = 1;
+        scale = Normalize(scale);
         double width = monitor.Width / scale;
         double half = panelWidthDip / 2;
         double centre = width / 2 + horizontalOffsetDip;
         centre = half <= width - half ? Math.Clamp(centre, half, width - half) : width / 2;
-        double room = 2 * Math.Min(centre, width - centre) - 16;
+        double room = edge is IslandEdge.Left or IslandEdge.Right
+            ? width - 16
+            : 2 * Math.Min(centre, width - centre) - 16;
         double wanted = width * Math.Min(percent, 100) / 100.0;
         return Math.Max(minDip, Math.Min(wanted, room));
     }
+
+    private static PillPlacement Normalize(PixelRect monitor, double scale, double widthDip, double heightDip,
+        double leftDip, double topDip)
+    {
+        double monW = monitor.Width / scale;
+        double monH = monitor.Height / scale;
+        leftDip = widthDip >= monW ? (monW - widthDip) / 2 : Math.Clamp(leftDip, 0, monW - widthDip);
+        topDip = heightDip >= monH ? (monH - heightDip) / 2 : Math.Clamp(topDip, 0, monH - heightDip);
+        var edge = NearestEdge(leftDip, topDip, widthDip, heightDip, monW, monH, EdgeToleranceDip);
+        return ApplyEdge(leftDip, topDip, widthDip, heightDip, edge, monW, monH);
+    }
+
+    private static PillPlacement ApplyEdge(double left, double top, double width, double height, IslandEdge edge,
+        double monW, double monH)
+    {
+        switch (edge)
+        {
+            case IslandEdge.Top: top = 0; break;
+            case IslandEdge.Bottom: top = monH - height; break;
+            case IslandEdge.Left: left = 0; break;
+            case IslandEdge.Right: left = monW - width; break;
+        }
+        return new PillPlacement(left, top, width, height, edge);
+    }
+
+    private static IslandEdge NearestEdge(double left, double top, double width, double height, double monW,
+        double monH, double limit)
+    {
+        if (width >= monW || height >= monH) return IslandEdge.None;
+        double dTop = top, dBottom = monH - (top + height), dLeft = left, dRight = monW - (left + width);
+        double min = Math.Min(Math.Min(dTop, dBottom), Math.Min(dLeft, dRight));
+        if (min > limit) return IslandEdge.None;
+        if (dTop <= min + 0.001) return IslandEdge.Top;
+        if (dBottom <= min + 0.001) return IslandEdge.Bottom;
+        if (dLeft <= min + 0.001) return IslandEdge.Left;
+        return IslandEdge.Right;
+    }
+
+    private static double Normalize(double scale) =>
+        scale > 0 && !double.IsNaN(scale) && !double.IsInfinity(scale) ? scale : 1;
 }
 
 /// <summary>Values of <c>SHQueryUserNotificationState</c>.</summary>

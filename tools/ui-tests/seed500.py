@@ -1,6 +1,6 @@
 ﻿import sqlite3, sys, datetime as dt
 c = sqlite3.connect(sys.argv[1])
-now = dt.datetime.utcnow()
+now = dt.datetime.now(dt.UTC).replace(tzinfo=None)
 for i in range(500):
     created = (now - dt.timedelta(minutes=i)).strftime('%Y-%m-%dT%H:%M:%S.0000000Z')
     c.execute("insert into Tasks(ListId,Title,Priority,IsCompleted,CreatedAt,UpdatedAt,SortOrder) values(?,?,?,0,?,?,?)",

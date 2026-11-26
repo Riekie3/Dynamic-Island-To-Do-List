@@ -50,7 +50,7 @@ public class AppSettingsTests
         var original = new AppSettings
         {
             LaunchAtStartup = false, StartCollapsed = false, CollapseOnClickOutside = false, CollapseOnEscape = false,
-            AlwaysShowNotch = false, Theme = ThemeMode.System, NotchWidth = 240, HorizontalOffset = -120, TopMargin = 20,
+            AlwaysShowNotch = false, Theme = ThemeMode.System, NotchWidth = 240, HorizontalOffset = -1200, TopMargin = 640,
             PanelOpacity = 0.8, AnimationsEnabled = false, FollowWindowsAnimations = true, MascotEnabled = false,
             IdleReactions = IdleReactions.Lively, Companion = CompanionLevel.Lively, Density = DensityMode.Compact, HideInFullScreen = false,
             MonitorDeviceName = @"\\.\DISPLAY2", AutoCollapseSeconds = 30, RestoreAfterWake = false, PeekOnHover = false,
@@ -66,10 +66,12 @@ public class AppSettingsTests
     [Theory]
     [InlineData("NotchWidth", "50", 160)]
     [InlineData("NotchWidth", "9999", 280)]
-    [InlineData("HorizontalOffset", "-9999", -2000)]
-    [InlineData("HorizontalOffset", "9999", 2000)]
+    [InlineData("HorizontalOffset", "-9999", -4000)]
+    [InlineData("HorizontalOffset", "9999", 4000)]
+    [InlineData("HorizontalOffset", "1300", 1300)]
     [InlineData("TopMargin", "-5", 0)]
-    [InlineData("TopMargin", "500", 40)]
+    [InlineData("TopMargin", "500", 500)]
+    [InlineData("TopMargin", "99999", 8000)]
     [InlineData("AutoCollapseSeconds", "-1", 0)]
     public void Numbers_are_clamped_to_their_range(string key, string value, int expected)
     {

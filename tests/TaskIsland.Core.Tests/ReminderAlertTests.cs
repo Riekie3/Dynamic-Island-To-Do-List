@@ -85,4 +85,15 @@ public class ReminderAlertTests
     {
         Assert.Equal(640, IslandPlacement.AlertWidthDip(new PixelRect(1920, 0, 3200, 1024), 1, 50, 0, 420, 320), 3);
     }
+
+    [Fact]
+    public void A_pill_on_a_side_edge_grows_inwards()
+    {
+        // Left edge: the pill centre is 48 DIPs from the monitor's left, so the old symmetric room was only 80.
+        int leftEdgeOffset = 48 - 960;
+        Assert.Equal(1440, IslandPlacement.AlertWidthDip(FullHd, 1, 75, leftEdgeOffset, 420, 320, IslandEdge.Left), 3);
+        int rightEdgeOffset = 912;
+        Assert.Equal(1920 - 16,
+            IslandPlacement.AlertWidthDip(FullHd, 1, 100, rightEdgeOffset, 420, 320, IslandEdge.Right), 3);
+    }
 }

@@ -67,7 +67,7 @@ python -I "$sp\seed.py" "$root\Data\taskisland.db" | Out-Null
 $py = @"
 import sqlite3, sys, datetime as dt
 c = sqlite3.connect(sys.argv[1])
-n = dt.datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.0000000Z')
+n = dt.datetime.now(dt.UTC).replace(tzinfo=None).strftime('%Y-%m-%dT%H:%M:%S.0000000Z')
 c.execute("insert into Tasks(ListId,Title,Priority,IsCompleted,CreatedAt,UpdatedAt,SortOrder) values(2,'Draft roadmap',1,0,?,?,20)", (n, n))
 # No startup reminder: its pill resizes the panel and can move the rows out from under the mouse.
 c.execute("update Tasks set DueDate=NULL, DueHasTime=0 where ListId=1 and Title='Renew car insurance'")

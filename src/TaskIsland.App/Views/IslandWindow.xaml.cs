@@ -42,6 +42,7 @@ public partial class IslandWindow : Window
     private IntPtr _hwnd;
     private bool _hovering, _expanded, _peeking, _allowClose;
     private bool _windowLarge;                    // the window currently has the expanded size
+    private bool _openUp;                         // the open panel grows upwards from the pill
     private double _windowWidth = IslandPositioner.WidthDip; // wider only while a wide reminder pill shows
     private bool _userHidden, _paused, _fullScreen; // reasons the notch is hidden (PLAN.md sections 7.4 and 7.5)
     private DateTime _lastAutoCollapse = DateTime.MinValue;
@@ -64,7 +65,9 @@ public partial class IslandWindow : Window
 
         Host.Face = _face;
         Host.PanelOpacity = settings.PanelOpacity;
-        Host.Flush = settings.TopMargin == 0;
+        // Refined by the first Reposition once a monitor is known; this keeps the initial paint a top notch when at the
+        // top edge and a round pill otherwise.
+        Host.Edge = settings.TopMargin == 0 ? IslandEdge.Top : IslandEdge.None;
         Host.SetMascotLook(settings.MascotEnabled);
         Host.MouseEnter += OnHostMouseEnter;
         Host.MouseLeave += OnHostMouseLeave;
@@ -217,7 +220,24 @@ public partial class IslandWindow : Window
     public void Reposition()
     {
         if (_hwnd == IntPtr.Zero) return;
-        _positioner.Apply(_hwnd, _windowLarge, _windowWidth);
+        // A display or DPI change while the panel is open may move it to another monitor: re-pick the opening side.
+        if (_windowLarge) _openUp = _positioner.ShouldOpenUp(MaxPanelHeight);
+        var p = _positioner.Compute(_windowLarge, _openUp, _windowWidth);
+        if (p is null) return;
+        ApplyPlacement(p, _windowLarge);
+        IslandPositioner.Place(_hwnd, p);
+    }
+
+    /// <summary>
+    /// Gives the host the shape and anchor of a placement (flat edge, bottom-up panel, compact centre) before the window
+    /// is moved, so the island never jumps between the old and new layout.
+    /// </summary>
+    private void ApplyPlacement(Placement p, bool expanded)
+    {
+        Host.SetHostHeight(expanded ? IslandPositioner.ExpandedHeightDip : IslandPositioner.CollapsedHeightDip);
+        Host.Edge = p.Pill.Edge;
+        Host.BottomAnchored = p.Window.BottomAnchored;
+        Host.CompactCentre = p.Window.CompactCentreDip;
     }
 
     /// <summary>After wake, display change or an Explorer restart: our window styles and topmost again.</summary>
@@ -242,9 +262,24 @@ public partial class IslandWindow : Window
     {
         if (_tucked == tucked) return;
         _tucked = tucked;
-        double y = tucked ? -Math.Max(0, Host.IslandRect.Height - SliverHeight) : 0;
-        Anim.To(_tuckSlide, TranslateTransform.YProperty, y, _motion.IsReduced ? TimeSpan.Zero : TimeSpan.FromMilliseconds(160),
-            tucked ? FluentEase.Accelerate : FluentEase.Decelerate);
+        // Tuck towards the edge the island is attached to, leaving a 6 px sliver; a floating pill slides up.
+        double x = 0, y = 0;
+        if (tucked)
+        {
+            var r = Host.IslandRect;
+            double dx = Math.Max(0, r.Width - SliverHeight), dy = Math.Max(0, r.Height - SliverHeight);
+            switch (Host.Edge)
+            {
+                case IslandEdge.Bottom: y = dy; break;
+                case IslandEdge.Left: x = -dx; break;
+                case IslandEdge.Right: x = dx; break;
+                default: y = -dy; break;
+            }
+        }
+        var d = _motion.IsReduced ? TimeSpan.Zero : TimeSpan.FromMilliseconds(160);
+        var ease = tucked ? FluentEase.Accelerate : FluentEase.Decelerate;
+        Anim.To(_tuckSlide, TranslateTransform.XProperty, x, d, ease);
+        Anim.To(_tuckSlide, TranslateTransform.YProperty, y, d, ease);
         FileLogger.Info(tucked ? "notch tucked to a sliver" : "notch revealed");
     }
 
@@ -379,8 +414,9 @@ public partial class IslandWindow : Window
         double compact = Math.Min(_settings.NotchWidth + 200, 420);
         var m = _positioner.Monitor;
         if (m is null || _settings.ReminderAlertWidthPercent <= 0) return compact;
+        var edge = _positioner.LastPlacement?.Pill.Edge ?? IslandEdge.None;
         double dip = IslandPlacement.AlertWidthDip(IslandPositioner.Bounds(m), m.Scale, _settings.ReminderAlertWidthPercent,
-            _settings.HorizontalOffset, IslandPositioner.PanelWidthDip, compact * IslandHost.CompactScale);
+            _settings.HorizontalOffset, IslandPositioner.PanelWidthDip, compact * IslandHost.CompactScale, edge);
         return Math.Round(dip / IslandHost.CompactScale);
     }
 
@@ -399,7 +435,7 @@ public partial class IslandWindow : Window
         _windowWidth = w;
         // Growing: window first, so the island never draws past it. Narrowing: island host first.
         if (!growing) Host.SetHostWidth(w);
-        if (_hwnd != IntPtr.Zero) _positioner.Apply(_hwnd, _windowLarge, w);
+        if (_hwnd != IntPtr.Zero) Reposition();
         if (growing) Host.SetHostWidth(w);
         FileLogger.Info($"window width {w:0}");
     }
@@ -425,7 +461,7 @@ public partial class IslandWindow : Window
     {
         _hwnd = new WindowInteropHelper(this).Handle;
         WindowStyler.ApplyIslandStyles(_hwnd);
-        _positioner.Apply(_hwnd, expanded: false);
+        Reposition();
         HwndSource.FromHwnd(_hwnd)?.AddHook(WndProc);
         GoResting(animate: false);
 #if DEBUG
@@ -610,25 +646,31 @@ public partial class IslandWindow : Window
         Expand();
     }
 
-    // ---- drag to place (docs/DRAG-PLACE-PLAN.md): the collapsed pill slides along the top edge ----
+    // ---- drag to place (docs/DRAG-PLACE-PLAN.md): the collapsed pill can go anywhere on the monitor ----
 
     private const double PlaceThresholdPx = 6;
+    private const double DragSnapDip = 24; // a drop this close to an edge sticks to it
     private Point? _pressAt;          // screen pixels where the button went down on the pill
+    private double _pressPillLeft, _pressPillTop; // resting pill (screen pixels) at the press
     private bool _placing;            // the pill is being carried
-    private double _pressCentre;      // island centre (screen pixels) at the press
-    private int _offsetBefore;        // HorizontalOffset before the drag, restored if the drag is cancelled
+    private int _offsetBefore, _topBefore; // saved position before the drag, restored if the drag is cancelled
     private DateTime _lastExcited;
 
     public bool IsPlacing => _placing;
 
     private bool CanPlace => !_expanded && _alert is null && !_tucked && !_fullScreen && _hwnd != IntPtr.Zero
-        && _positioner is { Monitor: not null, LastRect: not null };
+        && _positioner is { Monitor: not null, LastPlacement: not null };
 
     private void OnPlacePress(object sender, MouseButtonEventArgs e)
     {
-        _pressAt = CanPlace ? Host.PointToScreen(e.GetPosition(Host)) : null;
+        _pressAt = null;
+        if (!CanPlace) return;
+        var p = _positioner.LastPlacement!;
+        _pressAt = Host.PointToScreen(e.GetPosition(Host));
+        _pressPillLeft = p.Monitor.Left + p.Pill.LeftDip * p.Monitor.Scale;
+        _pressPillTop = p.Monitor.Top + p.Pill.TopDip * p.Monitor.Scale;
         // Hold the mouse from the press on, so a quick flick that leaves the pill before the 6 px threshold still drags.
-        if (_pressAt is not null) Host.CaptureMouse();
+        Host.CaptureMouse();
     }
 
     private void OnPlaceMove(object sender, MouseEventArgs e)
@@ -636,18 +678,24 @@ public partial class IslandWindow : Window
         if (_pressAt is not { } start) return;
         if (e.LeftButton != MouseButtonState.Pressed) { _pressAt = null; return; }
         var now = Host.PointToScreen(e.GetPosition(Host));
+        double dx = now.X - start.X, dy = now.Y - start.Y;
         if (!_placing)
         {
-            if (Math.Abs(now.X - start.X) < PlaceThresholdPx || !CanPlace) return;
+            if (dx * dx + dy * dy < PlaceThresholdPx * PlaceThresholdPx || !CanPlace) return;
             BeginPlace();
         }
         var m = _positioner.Monitor!;
-        int offset = IslandPlacement.OffsetForCentre(IslandPositioner.Bounds(m), m.Scale, _pressCentre + (now.X - start.X),
-            IslandPositioner.PanelWidthDip);
-        if (offset != _settings.HorizontalOffset)
+        var bounds = IslandPositioner.Bounds(m);
+        var (restW, restH) = _positioner.RestingPill();
+        // Drop the resting pill under the pointer, keep it on the monitor and stick it to a nearby edge.
+        var pill = IslandPlacement.Snap(bounds, m.Scale, restW, restH,
+            (_pressPillLeft + dx - m.Left) / m.Scale, (_pressPillTop + dy - m.Top) / m.Scale, DragSnapDip);
+        var (offset, top) = IslandPlacement.OffsetsFor(bounds, m.Scale, pill);
+        if (offset != _settings.HorizontalOffset || top != _settings.TopMargin)
         {
             _settings.HorizontalOffset = offset;
-            Reposition(); // moves the window only (same size): no layout, no resize
+            _settings.TopMargin = top;
+            Reposition(); // moves the window and changes the shape only: no layout, no resize
         }
         // Keep the excited face up while it is carried (restarting its hold at most every 400 ms).
         if (Mascot && DateTime.UtcNow - _lastExcited > TimeSpan.FromMilliseconds(400))
@@ -660,9 +708,8 @@ public partial class IslandWindow : Window
 
     private void BeginPlace()
     {
-        var r = _positioner.LastRect!.Value;
-        _pressCentre = r.Left + r.Width / 2.0;
         _offsetBefore = _settings.HorizontalOffset;
+        _topBefore = _settings.TopMargin;
         _placing = true;
         _peekTimer.Stop();
         _director.NoteInteraction();
@@ -696,24 +743,28 @@ public partial class IslandWindow : Window
     private void EndPlace(bool keep)
     {
         _placing = false;
+        _pressAt = null;
         if (Host.IsMouseCaptured) Host.ReleaseMouseCapture();
         if (!keep)
         {
             _settings.HorizontalOffset = _offsetBefore;
+            _settings.TopMargin = _topBefore;
             Reposition();
             FileLogger.Info("island drag cancelled");
             return;
         }
         Hop(lift: false);
         if (Mascot) _director.Request(Reaction.Happy);
-        int offset = _settings.HorizontalOffset;
-        FileLogger.Info($"island moved: offset {offset} on {_positioner.Monitor?.DeviceName}");
-        if (offset != _offsetBefore) _ = SavePlaceAsync(offset);
+        int offset = _settings.HorizontalOffset, top = _settings.TopMargin;
+        var edge = _positioner.LastPlacement?.Pill.Edge ?? IslandEdge.None;
+        FileLogger.Info($"island moved: offset {offset}, top {top}, edge {edge} on {_positioner.Monitor?.DeviceName}");
+        if (offset != _offsetBefore) _ = SavePlaceAsync(AppSettings.Keys.HorizontalOffset, offset);
+        if (top != _topBefore) _ = SavePlaceAsync(AppSettings.Keys.TopMargin, top);
     }
 
-    private async Task SavePlaceAsync(int offset)
+    private async Task SavePlaceAsync(string key, int value)
     {
-        try { await _store.SetAsync(AppSettings.Keys.HorizontalOffset, offset.ToString(System.Globalization.CultureInfo.InvariantCulture)); }
+        try { await _store.SetAsync(key, value.ToString(System.Globalization.CultureInfo.InvariantCulture)); }
         catch (Exception ex) { FileLogger.Error("could not save the island position", ex); }
     }
 
@@ -779,12 +830,13 @@ public partial class IslandWindow : Window
         DebugLog($"expand: EnsurePanel {sw.ElapsedMilliseconds} ms");
 
         _windowLarge = true;
-        _positioner.Apply(_hwnd, expanded: true, _windowWidth); // grow first, while nothing moves (still wide after a reminder pill)
+        _openUp = _positioner.ShouldOpenUp(MaxPanelHeight);
+        Reposition(); // grow first, while nothing moves (still wide after a reminder pill)
         WindowStyler.SetNoActivate(_hwnd, false);
         Activate();
         WindowStyler.BringToForeground(_hwnd);
 
-        double h = Host.MeasurePanel(MaxPanelHeight);
+        double h = Host.MeasurePanel(_positioner.PanelHeightLimit(_openUp, MaxPanelHeight));
         DebugLog($"expand: measured {sw.ElapsedMilliseconds} ms");
         Host.AnimateTo(IslandState.Panel, IslandPositioner.PanelWidthDip, h, _motion.MorphExpand, FluentEase.Decelerate,
             () => { RestoreWindowWidth(); Host.ShowShadow(true, _motion.Fast); });
@@ -805,7 +857,8 @@ public partial class IslandWindow : Window
         {
             if (_expanded) return; // re-expanded during the collapse
             _windowLarge = false;
-            _positioner.Apply(_hwnd, expanded: false, _windowWidth); // shrink after, while nothing moves
+            _openUp = false;
+            Reposition(); // shrink after, while nothing moves
             WindowStyler.SetNoActivate(_hwnd, true);
             _director.SetSuppressed(Suppression.PanelOpen, false);
             ApplyVisibility(); // hidden again if Hide, Pause or a full-screen app is still in effect
@@ -844,7 +897,7 @@ public partial class IslandWindow : Window
     private void OnPanelSizeChanged(object sender, SizeChangedEventArgs e)
     {
         if (!_expanded || Host.State != IslandState.Panel || !e.HeightChanged) return;
-        double h = Math.Min(e.NewSize.Height, MaxPanelHeight);
+        double h = Math.Min(e.NewSize.Height, _positioner.PanelHeightLimit(_openUp, MaxPanelHeight));
         if (Math.Abs(h - Host.IslandRect.Height) < 0.5) return;
         bool wasStill = !Host.IsAnimating;
         Host.ShowShadow(false, TimeSpan.Zero);
@@ -925,9 +978,8 @@ public partial class IslandWindow : Window
     /// <summary>Settings that change the island's look live (Phase 5 calls this from the Settings window).</summary>
     public void ApplyLookSettings()
     {
-        FileLogger.Info($"look applied: mascot {Mascot}, notch width {_settings.NotchWidth}, opacity {_settings.PanelOpacity:0.##}, flush {_settings.TopMargin == 0}");
+        FileLogger.Info($"look applied: mascot {Mascot}, notch width {_settings.NotchWidth}, opacity {_settings.PanelOpacity:0.##}, edge {_positioner.LastPlacement?.Pill.Edge}");
         Host.SetMascotLook(Mascot);
-        Host.Flush = _settings.TopMargin == 0;
         Host.PanelOpacity = _settings.PanelOpacity;
         _panel?.SetMascot(Mascot);
         _panel?.SetListSwitcher(_settings.ListSwitcher);

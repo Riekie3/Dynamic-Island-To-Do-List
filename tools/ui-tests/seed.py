@@ -1,7 +1,7 @@
 ﻿import sqlite3, sys, datetime as dt
 db = sys.argv[1]
 c = sqlite3.connect(db)
-now = dt.datetime.utcnow()
+now = dt.datetime.now(dt.UTC).replace(tzinfo=None)
 loc = dt.datetime.now()
 def iso(d): return d.strftime('%Y-%m-%dT%H:%M:%S.0000000Z')
 def due(d, t=True): return d.strftime('%Y-%m-%dT%H:%M:%S') if t else d.strftime('%Y-%m-%dT00:00:00')

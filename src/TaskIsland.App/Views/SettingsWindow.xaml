@@ -110,16 +110,16 @@
                                 </StackPanel>
                             </c:SettingRow>
                             <Rectangle Style="{StaticResource CardDivider}"/>
-                            <c:SettingRow Title="Position" Description="Left or right of the screen centre. You can also drag the pill along the top.">
+                            <c:SettingRow Title="Horizontal position" Description="Relative to the monitor centre. You can also drag the island anywhere on the screen.">
                                 <StackPanel Orientation="Horizontal">
-                                    <Slider Style="{StaticResource SettingsSlider}" Minimum="-2000" Maximum="2000" SmallChange="1" LargeChange="20" Value="{Binding HorizontalOffset}"/>
+                                    <Slider Style="{StaticResource SettingsSlider}" Minimum="-4000" Maximum="4000" SmallChange="1" LargeChange="100" Value="{Binding HorizontalOffset}"/>
                                     <TextBlock Width="52" TextAlignment="Right" VerticalAlignment="Center" Style="{StaticResource MutedText}" Text="{Binding HorizontalOffset, StringFormat='{}{0:+0;-0;0} px'}"/>
                                 </StackPanel>
                             </c:SettingRow>
                             <Rectangle Style="{StaticResource CardDivider}"/>
-                            <c:SettingRow Title="Gap from the top" Description="0 keeps it flush with the top edge; more makes a floating pill.">
+                            <c:SettingRow Title="Vertical position" Description="Distance from the top of the monitor. 0 sticks it to the top edge; drag it anywhere to move it.">
                                 <StackPanel Orientation="Horizontal">
-                                    <Slider Style="{StaticResource SettingsSlider}" Minimum="0" Maximum="40" SmallChange="1" LargeChange="4" Value="{Binding TopMargin}"/>
+                                    <Slider Style="{StaticResource SettingsSlider}" Minimum="0" Maximum="8000" SmallChange="1" LargeChange="100" Value="{Binding TopMargin}"/>
                                     <TextBlock Width="52" TextAlignment="Right" VerticalAlignment="Center" Style="{StaticResource MutedText}" Text="{Binding TopMargin, StringFormat='{}{0:0} px'}"/>
                                 </StackPanel>
                             </c:SettingRow>

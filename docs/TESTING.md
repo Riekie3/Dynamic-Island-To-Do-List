@@ -24,6 +24,7 @@ Only mark ✅ after actually testing. Record date + build/commit in the Notes co
 | UI13 | Modern look per PLAN §6.0–6.1 in dark + light: progress ring, hover-only row actions (also shown on keyboard focus), sliding filter indicator, focus ring visible | A | ⏳ | 2026-11-03 Phase 2: progress ring, sliding filter indicator, hover-only row actions built; keyboard-focus actions and focus ring not checked yet. |
 | UI14 | Reduced motion turns on by itself when Windows "Animation effects" is off, and on Battery saver | A | ⏳ | 2026-11-03 Phase 2: implemented (MotionPolicy); needs Windows "Animation effects" off / Battery saver on to test. |
 | UI15 | Pill doesn't move by a single pixel when the window switches between collapsed and expanded size | A | ✅ | 2026-11-03 Phase 2: window left/top identical collapsed (565×80 px) and expanded (565×750 px); collapsed rect identical after collapse. |
+| UI16 | Drag the pill anywhere; snap to each edge; free pill is round; bottom opens up; side panel stays on screen; place survives a restart | A | ✅ | 2026-11-25: `dragplace.ps1` 32/32 (free middle, all four edges, bottom open-up, side panel on-screen, restart). 2026-11-26: all four shapes and the open layouts checked with the app's `--snap` renderer; that found a full 550 DIP panel running off the bottom from a mid-height free/side pill, fixed by `PanelHeightLimit` (panel now ends exactly at the screen edge and the list scrolls). Manual desktop look still nice-to-have, not blocking. |
 
 ## Mascot face (PLAN §6.8)
 

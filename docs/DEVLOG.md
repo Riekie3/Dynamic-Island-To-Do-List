@@ -894,3 +894,41 @@ Release checks (2026-11-24): installer test 29/29 (the real-installer probe was 
 installed); Defender signatures 1.463.443.0 clean on `publish\win-x64`, the portable zip and the installer; `t1.ps1`
 passed. `p4b.ps1` passed 37/38: the old "pill pulse" assertion fails because the default pill alert is on (the same
 behaviour on 1.0.7, not a regression).
+
+### Free drag-to-place (2026-11-25, DeepSeek V4.1 Flash)
+
+The owner asked to extend 1.0.6's top-edge drag to free placement anywhere on the screen. The pill now follows the
+pointer on both axes; a drop within 24 DIP of an edge sticks there (top notch, bottom notch, flat left/right side) and a
+drop in the middle stays free and round. Both offsets are saved (`HorizontalOffset` from the monitor centre,
+`TopMargin` from the monitor top) and the edge is derived on restore (1 DIP), so a 125 % screen restores the same
+pixels. A bottom-edge pill opens its panel upwards; a side-attached pill's expanded window stays flush while the 420
+panel is inset 16 DIP and on-screen. Free pills open down unless there is more room above. The expanded window may
+overhang by 16 DIP so the panel reaches the edge; the reminder alert grows inwards from a side; auto-tuck follows the
+attached edge. `IslandPlacement` was rewritten around `IslandEdge`, `PillPlacement`, `PillAt`, `Snap`, `OffsetsFor`,
+`OpensUp`, `WindowFor` and edge-aware `AlertWidthDip`; `IslandHost` gained `Edge`, `BottomAnchored` and `CompactCentre`
+(replacing `Flush`); `IslandWindow` does the 2D drag/snap/save and picks the opening side. Settings ranges are now
+±4000 and 0–8000 DIP. The tuck log text is "notch tucked to a sliver"/"notch revealed" again, which `p5b.ps1` reads.
+
+Tests: 502 unit green (363 Core + 139 Data), including 15 new/rewritten `DragPlaceTests` methods and updated
+`Phase4RulesTests`, `AppSettingsTests`, `ReminderAlertTests`. `tools/ui-tests/dragplace.ps1` grew to 32 checks (free
+middle, all four edges, bottom open-up, side panel on-screen, restart). It uses the real mouse, raises its own window
+above a running installed copy, and must be run when the pointer is idle: a first run reached 27/32, with the two
+bottom/left clicks landing on a spontaneous face reaction instead of opening the panel; the test now clicks a second
+time (the app's designed "second click opens the panel" path). A later run overlapped with the owner using the laptop
+and is not counted. `p5b.ps1`'s slider names were updated to "Horizontal position"/"Vertical position". Build clean,
+0 warnings. Not yet released; the four shapes were checked with `--snap`, a manual look on the real desktop is still
+to do.
+
+Second run with the pointer free (2026-11-25): `dragplace.ps1` 32/32; `t1.ps1`, `chipdrag.ps1`, `rowdrag.ps1` and
+`p5b.ps1` passed. (The first `t1.ps1` attempt failed only because it and `p5b.ps1` ran at the same time and stole each
+other's foreground focus; alone it passed.) `seed.py`, `seed500.py`, `seed_p5.py`, `seed_reminders.py` and
+`rowdrag.ps1` no longer call the deprecated `datetime.utcnow()`.
+
+The four shapes and the open layouts were rendered without the pointer with the app's own `--snap` renderer (settings
+written straight into a throwaway database). Top/bottom notches, flat left/right sides and the round free pill are
+correct. The shots also exposed a real bug: a full 550 DIP panel opened from a free or side pill at mid-height ran
+170 px off the bottom of the 864-DIP-tall screen. `IslandPlacement.PanelHeightLimit` now caps the panel to the room
+between the pill and the edge it opens towards (464 DIP down, 525.6 DIP up in that shot), and `IslandHost.MeasurePanel`
+applies the cap as `MaxHeight`, so the task list scrolls instead of the footer being cut off. 3 new tests; 505 unit
+green (366 Core + 139 Data). Re-rendered shots show the top/bottom panels at the full 550 DIP and the mid-height
+free/side panels ending exactly at the screen edge.

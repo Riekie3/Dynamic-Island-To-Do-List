@@ -103,13 +103,13 @@ public sealed partial class SettingsViewModel : ObservableObject
     public double HorizontalOffset
     {
         get => _s.HorizontalOffset;
-        set => Set(_s.HorizontalOffset, (int)Math.Round(Math.Clamp(value, -2000, 2000)), v => _s.HorizontalOffset = v, AppSettings.Keys.HorizontalOffset, debounce: true);
+        set => Set(_s.HorizontalOffset, (int)Math.Round(Math.Clamp(value, -4000, 4000)), v => _s.HorizontalOffset = v, AppSettings.Keys.HorizontalOffset, debounce: true);
     }
 
     public double TopMargin
     {
         get => _s.TopMargin;
-        set => Set(_s.TopMargin, (int)Math.Round(Math.Clamp(value, 0, 40)), v => _s.TopMargin = v, AppSettings.Keys.TopMargin, debounce: true);
+        set => Set(_s.TopMargin, (int)Math.Round(Math.Clamp(value, 0, 8000)), v => _s.TopMargin = v, AppSettings.Keys.TopMargin, debounce: true);
     }
 
     public double PanelOpacity

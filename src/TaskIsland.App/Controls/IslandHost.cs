@@ -4,6 +4,7 @@ using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Media.Effects;
 using System.Windows.Shapes;
+using TaskIsland.Core.Services;
 
 namespace TaskIsland.App.Controls;
 
@@ -14,7 +15,8 @@ public enum IslandState { Mini, Reaction, Info, Panel }
 /// The island morph (PLAN.md section 6.2). One <see cref="RectangleGeometry"/> is shared by the background paths and
 /// the content clip; a morph only changes that geometry's rectangle/radius and a few opacities, so no element is
 /// measured or arranged per frame. Content is laid out once at its final size and revealed by the growing clip.
-/// The island is drawn top-centred with no top inset, so it sits on the same pixels whatever the window height.
+/// The island may sit on any screen edge (docs/DRAG-PLACE-PLAN.md): the attached side is drawn flat by extending the
+/// geometry past the window, and a bottom-attached layout is anchored to the host's bottom so the open panel grows up.
 /// </summary>
 public sealed class IslandHost : Grid
 {
@@ -40,16 +42,19 @@ public sealed class IslandHost : Grid
     private readonly Path _glow, _body, _panelBody, _gloss, _outline;
     private Path? _pulse;
     private Grid? _alertBorder;
-    private double _hostW = HostWidth;
+    private double _hostW = HostWidth, _hostH = 64;
     private readonly Border _shadow;
     private readonly Grid _shadowHost = new() { IsHitTestVisible = false };
     private readonly DropShadowEffect _shadowEffect;
     private readonly Grid _clipLayer;
     private readonly TranslateTransform _panelSlide = new();
+    private readonly TranslateTransform _contentShift = new();
     private FrameworkElement? _face, _info, _panel;
     private Look _from, _to, _now;
     private Size _requested = new(120, 32);
-    private bool _fromPanel, _toPanel, _resetting, _mascotLook = true, _flush;
+    private bool _fromPanel, _toPanel, _resetting, _mascotLook = true, _bottomAnchored;
+    private IslandEdge _edge = IslandEdge.Top;
+    private double _compactCentre = HostWidth / 2, _contentAnchor = HostWidth / 2;
     private int _generation;
     private double _panelOpacity = 0.94;
 
@@ -104,7 +109,8 @@ public sealed class IslandHost : Grid
         if (_pulse is not null) return;
         var geo = _geo.Clone();
         geo.Freeze();
-        var scale = new ScaleTransform(1, 1, _hostW / 2, 0);
+        var r = IslandRect;
+        var scale = new ScaleTransform(1, 1, r.Left + r.Width / 2, r.Top + r.Height / 2);
         var ring = new Path { Data = geo, StrokeThickness = 2, IsHitTestVisible = false, RenderTransform = scale };
         ring.SetResourceReference(Shape.StrokeProperty, "AccentBrush");
         _pulse = ring;
@@ -132,10 +138,21 @@ public sealed class IslandHost : Grid
     public IslandState State { get; private set; } = IslandState.Mini;
     public bool IsAnimating { get; private set; }
     /// <summary>Current visible island rectangle in host coordinates.</summary>
-    public Rect IslandRect => new((_hostW - _now.W) / 2, 0, _now.W, _now.H);
+    public Rect IslandRect
+    {
+        get
+        {
+            double cx = State == IslandState.Panel ? _hostW / 2 : CompactCentreFor(_now.W);
+            double y = _bottomAnchored ? _hostH - _now.H : 0;
+            return new Rect(cx - _now.W / 2, y, _now.W, _now.H);
+        }
+    }
 
     /// <summary>Current host width in DIPs (<see cref="HostWidth"/> except while a wide reminder pill shows).</summary>
     public double CurrentHostWidth => _hostW;
+
+    /// <summary>Current host height in DIPs (64 collapsed, 600 expanded).</summary>
+    public double CurrentHostHeight => _hostH;
 
     /// <summary>
     /// Widens or narrows the host. The island stays centred, and the window is resized by the same amount around the
@@ -146,6 +163,14 @@ public sealed class IslandHost : Grid
         if (Math.Abs(width - _hostW) < 0.5) return;
         _hostW = width;
         Width = width;
+        Render(_now);
+    }
+
+    /// <summary>Collapsed 64 or expanded 600. Bottom-anchored layouts are drawn against the host's bottom edge.</summary>
+    public void SetHostHeight(double height)
+    {
+        if (Math.Abs(height - _hostH) < 0.5) return;
+        _hostH = height;
         Render(_now);
     }
 
@@ -189,17 +214,52 @@ public sealed class IslandHost : Grid
     }
 
     /// <summary>
-    /// Flush with the top of the screen (TopMargin 0): flat top, rounded bottom corners. The shared geometry is simply
-    /// extended upward by its radius, so the top corners and the top outline fall outside the window.
+    /// The screen edge the island touches (docs/DRAG-PLACE-PLAN.md): that side is drawn flat by extending the shared
+    /// geometry by its radius, while the other corners stay rounded. <see cref="IslandEdge.None"/> is the round,
+    /// floating pill.
     /// </summary>
-    public bool Flush
+    public IslandEdge Edge
     {
-        get => _flush;
+        get => _edge;
         set
         {
-            _flush = value;
-            _shadow.CornerRadius = value ? new CornerRadius(0, 0, 24, 24) : new CornerRadius(24);
-            if (!IsAnimating) Snap();
+            if (_edge == value) return;
+            _edge = value;
+            _shadow.CornerRadius = EffectiveEdge switch
+            {
+                IslandEdge.Top => new CornerRadius(0, 0, 24, 24),
+                IslandEdge.Bottom => new CornerRadius(24, 24, 0, 0),
+                _ => new CornerRadius(24),
+            };
+            if (!IsAnimating) Snap(); else Render(_now);
+        }
+    }
+
+    /// <summary>True when the island is drawn against the bottom of the window (a bottom-edge pill or an upward panel).</summary>
+    public bool BottomAnchored
+    {
+        get => _bottomAnchored;
+        set
+        {
+            if (_bottomAnchored == value) return;
+            _bottomAnchored = value;
+            if (_panel is not null) _panel.VerticalAlignment = value ? VerticalAlignment.Bottom : VerticalAlignment.Top;
+            if (!IsAnimating) Snap(); else Render(_now);
+        }
+    }
+
+    /// <summary>
+    /// Centre of the compact island in host DIPs. Normally the host centre; while the expanded window slides inwards so
+    /// the panel fits, this keeps the pill where it was dropped. Side-attached pills align by <see cref="Edge"/>.
+    /// </summary>
+    public double CompactCentre
+    {
+        get => _compactCentre;
+        set
+        {
+            if (Math.Abs(_compactCentre - value) < 0.01) return;
+            _compactCentre = value;
+            if (!IsAnimating) Snap(); else Render(_now);
         }
     }
 
@@ -215,6 +275,7 @@ public sealed class IslandHost : Grid
             value.HorizontalAlignment = HorizontalAlignment.Center;
             value.VerticalAlignment = VerticalAlignment.Top;
             value.LayoutTransform = CompactTransform;
+            value.RenderTransform = _contentShift;
             value.Margin = new Thickness(0, -4 * CompactScale, 0, 0); // the rig's pill starts at y = 4
             Children.Add(value);
             Render(_now);
@@ -228,7 +289,11 @@ public sealed class IslandHost : Grid
         set
         {
             SetClipped(ref _info, value);
-            if (value is not null) value.LayoutTransform = CompactTransform;
+            if (value is not null)
+            {
+                value.LayoutTransform = CompactTransform;
+                value.RenderTransform = _contentShift;
+            }
         }
     }
 
@@ -239,7 +304,11 @@ public sealed class IslandHost : Grid
         set
         {
             SetClipped(ref _panel, value);
-            if (value is not null) value.RenderTransform = _panelSlide;
+            if (value is not null)
+            {
+                value.VerticalAlignment = _bottomAnchored ? VerticalAlignment.Bottom : VerticalAlignment.Top;
+                value.RenderTransform = _panelSlide;
+            }
         }
     }
 
@@ -265,10 +334,15 @@ public sealed class IslandHost : Grid
         if (!_mascotLook) _body.SetResourceReference(Shape.FillProperty, hover ? "PillHoverBrush" : "PillBrush");
     }
 
-    /// <summary>Lays the panel out at its final width (once, before the expand) and returns its height.</summary>
+    /// <summary>
+    /// Lays the panel out at its final width (once, before the expand) and returns its height. The panel never grows
+    /// past <paramref name="maxHeight"/>: a pill near the middle gets a shorter, scrolling panel instead of one that
+    /// runs off the monitor.
+    /// </summary>
     public double MeasurePanel(double maxHeight)
     {
         if (_panel is null) return 0;
+        _panel.MaxHeight = maxHeight;
         if (_panel.Visibility != Visibility.Visible)
         {
             _panel.Opacity = 0;
@@ -288,6 +362,7 @@ public sealed class IslandHost : Grid
         var snapshot = _now;
         _fromPanel = State == IslandState.Panel;
         _toPanel = state == IslandState.Panel;
+        if (_toPanel) _contentAnchor = CompactCentreFor(snapshot.W);
         State = state;
         _requested = new Size(width, height);
         _from = snapshot;
@@ -330,11 +405,22 @@ public sealed class IslandHost : Grid
         if (TryFindResource("ShadowOpacity") is double o && Math.Abs(_shadowEffect.Opacity - o) > 0.001) _shadowEffect.Opacity = o;
         _shadow.Width = _to.W;
         _shadow.Height = _to.H;
+        _shadow.VerticalAlignment = _bottomAnchored ? VerticalAlignment.Bottom : VerticalAlignment.Top;
+        _shadow.CornerRadius = EffectiveEdge switch
+        {
+            IslandEdge.Top => new CornerRadius(0, 0, 24, 24),
+            IslandEdge.Bottom => new CornerRadius(24, 24, 0, 0),
+            _ => new CornerRadius(24),
+        };
         // The shadow layer is solid, so it is cut out under the panel; otherwise it would hide the panel opacity setting.
-        double sx = (_hostW - _to.W) / 2, up = _flush ? 24 : 0;
+        double sx = (_hostW - _to.W) / 2;
+        double sy = _bottomAnchored ? _hostH - _to.H : 0;
+        var flush = EffectiveEdge;
+        double left = flush == IslandEdge.Left ? 24 : 0, right = flush == IslandEdge.Right ? 24 : 0;
+        double up = flush == IslandEdge.Top ? 24 : 0, down = flush == IslandEdge.Bottom ? 24 : 0;
         _shadowHost.Clip = new CombinedGeometry(GeometryCombineMode.Exclude,
-            new RectangleGeometry(new Rect(-100, -100, _hostW + 200, _to.H + 300)),
-            new RectangleGeometry(new Rect(sx, -up, _to.W, _to.H + up), 24, 24));
+            new RectangleGeometry(new Rect(-100, -100, _hostW + 200, _hostH + 200)),
+            new RectangleGeometry(new Rect(sx - left, sy - up, _to.W + left + right, _to.H + up + down), 24, 24));
         _shadow.Visibility = Visibility.Visible;
         Anim.To(_shadow, OpacityProperty, 1, fade);
     }
@@ -360,7 +446,7 @@ public sealed class IslandHost : Grid
         var f = _from;
         var t = _to;
         Render(new Look(
-            Lerp(f.W, t.W, p), Lerp(f.H, t.H, p), Lerp(f.R, t.R, p),
+            Lerp(f.W, t.W, p), Lerp(f.H, t.H, p), Lerp(f.R, t.R, p), Lerp(f.Cx, t.Cx, p),
             Lerp(f.Body, t.Body, c), Lerp(f.PanelBody, t.PanelBody, c), Lerp(f.Gloss, t.Gloss, c),
             Lerp(f.Outline, t.Outline, p), Lerp(f.Glow, t.Glow, c),
             Fade(f.Face, t.Face, p), Fade(f.Info, t.Info, p), Fade(f.Panel, t.Panel, p)));
@@ -369,20 +455,28 @@ public sealed class IslandHost : Grid
     private void Render(Look l)
     {
         _now = l;
-        double x = (_hostW - l.W) / 2;
-        double up = _flush ? l.R : 0;
-        _geo.Rect = new Rect(x, -up, l.W, l.H + up);
+        double x = l.Cx - l.W / 2;
+        double y = _bottomAnchored ? _hostH - l.H : 0;
+        var flush = EffectiveEdge;
+        double left = flush == IslandEdge.Left ? l.R : 0;
+        double right = flush == IslandEdge.Right ? l.R : 0;
+        double up = flush == IslandEdge.Top ? l.R : 0;
+        double down = flush == IslandEdge.Bottom ? l.R : 0;
+        _geo.Rect = new Rect(x - left, y - up, l.W + left + right, l.H + up + down);
         _geo.RadiusX = _geo.RadiusY = l.R;
         // The gloss is only visible in the compact states, so it uses their scale.
         const double k = CompactScale;
         double gh = Math.Min(20 * k, l.H * 0.36);
-        _glossGeo.Rect = new Rect(x + 10 * k, 4 * k, Math.Max(0, l.W - 20 * k), gh);
+        _glossGeo.Rect = new Rect(x + 10 * k, y + 4 * k, Math.Max(0, l.W - 20 * k), gh);
         _glossGeo.RadiusX = _glossGeo.RadiusY = gh / 2;
         _body.Opacity = l.Body;
         _panelBody.Opacity = l.PanelBody;
         _gloss.Opacity = l.Gloss;
         _outline.Opacity = l.Outline;
         _glow.Opacity = l.Glow * 0.22;
+        double anchor = State == IslandState.Panel ? _contentAnchor : CompactCentreFor(l.W);
+        _contentShift.X = anchor - _hostW / 2;
+        _contentShift.Y = _bottomAnchored ? _hostH - l.H : 0;
         if (_face is not null) _face.Opacity = l.Face;
         if (_info is not null) _info.Opacity = l.Info;
         if (_panel is not null)
@@ -400,15 +494,40 @@ public sealed class IslandHost : Grid
             w *= CompactScale;
             h *= CompactScale;
         }
-        double r = _flush ? h * FlushRadius : h / 2;
+        double r = state == IslandState.Panel ? 24
+            : EffectiveEdge is IslandEdge.Top or IslandEdge.Bottom ? h * FlushRadius : h / 2;
+        double cx = state == IslandState.Panel ? _hostW / 2 : CompactCentreFor(w);
         return state switch
         {
-            IslandState.Mini => new Look(w, h, r, 1, 0, m, m, m, 1, 0, 0),
-            IslandState.Reaction => new Look(w, h, r, 1, 0, m, m, m, 1, 0, 0),
-            IslandState.Info => new Look(w, h, r, 1, 0, m, m, m, 0, 1, 0),
-            _ => new Look(w, h, 24, 0, _panelOpacity, 0, _mascotLook ? 0.4 : 1, 0, 0, 0, 1),
+            IslandState.Mini => new Look(w, h, r, cx, 1, 0, m, m, m, 1, 0, 0),
+            IslandState.Reaction => new Look(w, h, r, cx, 1, 0, m, m, m, 1, 0, 0),
+            IslandState.Info => new Look(w, h, r, cx, 1, 0, m, m, m, 0, 1, 0),
+            _ => new Look(w, h, 24, cx, 0, _panelOpacity, 0, _mascotLook ? 0.4 : 1, 0, 0, 0, 1),
         };
     }
+
+    /// <summary>
+    /// The side that is flat against the screen for the current top/bottom anchoring. A side-attached panel is drawn
+    /// rounded (it is inset by the host's side margin); only the compact pill touches a left or right edge.
+    /// </summary>
+    private IslandEdge EffectiveEdge => _edge switch
+    {
+        IslandEdge.Top => _bottomAnchored ? IslandEdge.None : IslandEdge.Top,
+        IslandEdge.Bottom => _bottomAnchored ? IslandEdge.Bottom : IslandEdge.None,
+        IslandEdge.Left or IslandEdge.Right when State == IslandState.Panel => IslandEdge.None,
+        _ => _edge,
+    };
+
+    /// <summary>
+    /// Where the compact shape is drawn horizontally. A side-attached pill (and a reminder pill that widens from it)
+    /// is anchored to that screen side; otherwise it uses the free centre given by the window placement.
+    /// </summary>
+    private double CompactCentreFor(double width) => _edge switch
+    {
+        IslandEdge.Left => width / 2,
+        IslandEdge.Right => _hostW - width / 2,
+        _ => _compactCentre,
+    };
 
     private void SetClipped(ref FrameworkElement? field, FrameworkElement? value)
     {
@@ -443,6 +562,6 @@ public sealed class IslandHost : Grid
         : to > 0 ? to * Clamp01((p - 0.35) / 0.65)
         : from * (1 - Clamp01(p / 0.3));
 
-    private readonly record struct Look(double W, double H, double R, double Body, double PanelBody, double Gloss,
-        double Outline, double Glow, double Face, double Info, double Panel);
+    private readonly record struct Look(double W, double H, double R, double Cx, double Body, double PanelBody,
+        double Gloss, double Outline, double Glow, double Face, double Info, double Panel);
 }

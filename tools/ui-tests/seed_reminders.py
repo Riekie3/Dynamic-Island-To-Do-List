@@ -2,7 +2,7 @@ import sqlite3, sys, datetime as dt
 # Phase 4 reminder test data: two tasks overdue (different lists), one due in N seconds, one due tomorrow.
 db, soon = sys.argv[1], int(sys.argv[2])
 c = sqlite3.connect(db)
-now = dt.datetime.utcnow()
+now = dt.datetime.now(dt.UTC).replace(tzinfo=None)
 loc = dt.datetime.now().replace(microsecond=0)
 def iso(d): return d.strftime('%Y-%m-%dT%H:%M:%S.0000000Z')
 def due(d): return d.strftime('%Y-%m-%dT%H:%M:%S')

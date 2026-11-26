@@ -175,17 +175,17 @@ Check 'Density Compact applies' ((Log) -match 'appearance applied: density Compa
 Check 'Density saved' ((Setting 'Density') -eq 'Compact')
 Seg 'Row size' 'Comfortable'
 $placedBefore = [regex]::Matches((Log), 'island placed on [^)]*\) at (-?\d+),(-?\d+) ') | Select-Object -Last 1
-Set-Slider 'Position' 120
+Set-Slider 'Horizontal position' 120
 $placed = [regex]::Matches((Log), 'island placed on [^)]*\) at (-?\d+),(-?\d+) ') | Select-Object -Last 1
-Check 'Position slider moves the notch live' (($placed.Groups[1].Value -ne $placedBefore.Groups[1].Value))
+Check 'Horizontal position slider moves the notch live' (($placed.Groups[1].Value -ne $placedBefore.Groups[1].Value))
 Start-Sleep -Milliseconds 500
-Check 'Position saved (debounced)' ((Setting 'HorizontalOffset') -eq '120')
-Set-Slider 'Position' 0
-Set-Slider 'Gap from the top' 20
+Check 'Horizontal position saved (debounced)' ((Setting 'HorizontalOffset') -eq '120')
+Set-Slider 'Horizontal position' 0
+Set-Slider 'Vertical position' 20
 $placed2 = [regex]::Matches((Log), 'island placed on [^)]*\) at (-?\d+),(-?\d+) ') | Select-Object -Last 1
-Check 'Gap slider moves the notch down' ([int]$placed2.Groups[2].Value -gt [int]$placed.Groups[2].Value -or $placed2.Groups[2].Value -ne $placed.Groups[2].Value)
-Check 'Gap saved' ((Setting 'TopMargin') -eq '20')
-Set-Slider 'Gap from the top' 0
+Check 'Vertical position slider moves the notch down' ([int]$placed2.Groups[2].Value -ne [int]$placed.Groups[2].Value)
+Check 'Vertical position saved' ((Setting 'TopMargin') -eq '20')
+Set-Slider 'Vertical position' 0
 Set-Slider 'Notch width' 240
 Check 'Notch width applies' ((Log) -match 'look applied: mascot \w+, notch width 240')
 Start-Sleep -Milliseconds 500

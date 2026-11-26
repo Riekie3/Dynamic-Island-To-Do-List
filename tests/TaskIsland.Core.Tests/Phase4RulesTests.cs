@@ -137,46 +137,55 @@ public class Phase4RulesTests
     [Fact]
     public void Collapsed_window_is_top_centred_at_100_percent()
     {
-        var r = IslandPlacement.Compute(Primary.Bounds, 1.0, 452, 64, 420, 0, 0);
-        Assert.Equal(new PixelRect(734, 0, 1186, 64), r);
+        var pill = IslandPlacement.PillAt(Primary.Bounds, 1.0, 96, 25.6, 0, 0);
+        var win = IslandPlacement.WindowFor(Primary.Bounds, 1.0, pill, 452, 64, 420, false, false);
+        Assert.Equal(new PixelRect(734, 0, 1186, 64), win.Bounds);
+        Assert.Equal(226, win.CompactCentreDip, 3);
+        Assert.Equal(IslandEdge.Top, win.Edge);
     }
 
     [Fact]
     public void Placement_scales_to_physical_pixels_on_a_second_monitor()
     {
-        var r = IslandPlacement.Compute(Right.Bounds, 1.5, 452, 600, 420, 0, 10);
-        Assert.Equal(678, r.Width);
-        Assert.Equal(900, r.Height);
-        Assert.Equal(15, r.Top);                                   // 10 DIP margin at 150 %
-        Assert.Equal(1920 + 2560 / 2, r.Left + r.Width / 2);       // centred on that monitor
+        var pill = IslandPlacement.PillAt(Right.Bounds, 1.5, 96, 25.6, 0, 10);
+        var win = IslandPlacement.WindowFor(Right.Bounds, 1.5, pill, 452, 600, 420, true, false);
+        Assert.Equal(678, win.Bounds.Width);
+        Assert.Equal(900, win.Bounds.Height);
+        Assert.Equal(15, win.Bounds.Top);                              // 10 DIP margin at 150 %
+        Assert.Equal(1920 + 2560 / 2, win.Bounds.Left + win.Bounds.Width / 2); // centred on that monitor
     }
 
     [Fact]
     public void Both_window_sizes_share_left_edge_and_top()
     {
-        var small = IslandPlacement.Compute(Primary.Bounds, 1.25, 452, 64, 420, 120, 6);
-        var large = IslandPlacement.Compute(Primary.Bounds, 1.25, 452, 600, 420, 120, 6);
-        Assert.Equal(small.Left, large.Left);
-        Assert.Equal(small.Top, large.Top);
-        Assert.Equal(small.Width, large.Width);
+        var pill = IslandPlacement.PillAt(Primary.Bounds, 1.25, 96, 25.6, 120, 6);
+        var small = IslandPlacement.WindowFor(Primary.Bounds, 1.25, pill, 452, 64, 420, false, false);
+        var large = IslandPlacement.WindowFor(Primary.Bounds, 1.25, pill, 452, 600, 420, true, false);
+        Assert.Equal(small.Bounds.Left, large.Bounds.Left);
+        Assert.Equal(small.Bounds.Top, large.Bounds.Top);
+        Assert.Equal(small.Bounds.Width, large.Bounds.Width);
+        Assert.NotEqual(small.Bounds.Height, large.Bounds.Height);
     }
 
     [Fact]
-    public void Offset_is_clamped_so_the_panel_stays_on_the_monitor()
+    public void A_pill_dragged_to_the_edge_stays_on_the_monitor()
     {
-        var far = IslandPlacement.Compute(Primary.Bounds, 1.0, 452, 600, 420, 4000, 0);
-        int centre = far.Left + far.Width / 2;
-        Assert.Equal(1920 - 210, centre);
-        var left = IslandPlacement.Compute(Primary.Bounds, 1.0, 452, 600, 420, -4000, 0);
-        Assert.Equal(210, left.Left + left.Width / 2);
+        var pill = IslandPlacement.Snap(Primary.Bounds, 1.0, 96, 25.6, 4000, 300, 24);
+        Assert.Equal(IslandEdge.Right, pill.Edge);
+        Assert.Equal(1920 - 96, pill.LeftDip, 3);
+        var win = IslandPlacement.WindowFor(Primary.Bounds, 1.0, pill, 452, 600, 420, true, false);
+        Assert.Equal(1920, win.Bounds.Right);
+        Assert.Equal(1920 - 452, win.Bounds.Left);
     }
 
     [Fact]
     public void Placement_survives_a_bad_scale_and_a_tiny_monitor()
     {
-        var r = IslandPlacement.Compute(new PixelRect(0, 0, 300, 200), 0, 452, 64, 420, 0, 0);
-        Assert.Equal(452, r.Width);
-        Assert.Equal(150, r.Left + r.Width / 2); // too small to clamp: plain centre
+        var bounds = new PixelRect(0, 0, 300, 200);
+        var pill = IslandPlacement.PillAt(bounds, 0, 96, 25.6, 0, 0);
+        var win = IslandPlacement.WindowFor(bounds, 0, pill, 452, 64, 420, false, false);
+        Assert.Equal(452, win.Bounds.Width);
+        Assert.Equal(150, win.Bounds.Left + win.Bounds.Width / 2); // too small to clamp: plain centre
     }
 
     // ---- full screen (section 7.4) ----
